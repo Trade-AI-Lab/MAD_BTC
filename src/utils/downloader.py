@@ -5,7 +5,9 @@ import datetime
 import os
 import nest_asyncio
 
+import os
 nest_asyncio.apply()
+
 
 
 EXCHANGE_LIMIT_RATES = {
@@ -107,8 +109,9 @@ def download(*args, **kwargs):
 
 # Main function do modify
 async def main():
+    absolute_path = os.path.abspath(__file__)[:os.path.abspath(__file__).find("MAD_BTC")+len("MAD_BTC")]
     # check if data folder exists
-    dir = "../../data"
+    dir = absolute_path + "./data"
     if not os.path.exists(dir):
         # Create the folder
         os.makedirs(dir)
@@ -121,7 +124,7 @@ async def main():
 
     await _download(
         ["binance"], # select your exchange
-        symbols=["ETH/USDT"], # select your currencies
+        symbols=["BNB/USDT"], # select your currencies
         timeframe="4h", # the time frame
         dir=dir, # directory
         since=datetime.datetime(year=2018, month=4, day=1), # starting date
