@@ -5,6 +5,8 @@ __pycache__/
 # Folders
 data/*
 experience/*
+# Optuna extensions
+*.db
 # C extensions
 *.so
 # Distribution / packaging
