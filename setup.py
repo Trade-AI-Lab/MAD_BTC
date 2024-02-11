@@ -40,14 +40,16 @@ for i in range(len(df_filtered)):
     if df_filtered.iloc[i]['buy_signal'] and position != 1 and portfolio > 0:
         position = 1
         crypto = portfolio / (df_filtered.iloc[i]['open']*(1 + fee_percentage))
+        portfolio = 0
 
     elif df_filtered.iloc[i]['sell_signal'] and position != -1 and crypto > 0:
         position = -1
         portfolio = crypto * df_filtered.iloc[i]['open'] * (1-fee_percentage)
+        crypto = 0
 
-    # Store portfolio values for comparison
-    list_portfolio.append(portfolio)
-    list_buy_hold.append(df_filtered['buy_and_hold'].iloc[i])
+        # Store portfolio values for comparison
+        list_portfolio.append(portfolio)
+        list_buy_hold.append(df_filtered['buy_and_hold'].iloc[i])
 
 # Create a DataFrame with the evolution data
 evolution_df = pd.DataFrame({
