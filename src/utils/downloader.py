@@ -2,7 +2,7 @@ import asyncio
 import ccxt.async_support as ccxt
 import pandas as pd
 import datetime
-import numpy as np
+import os
 import nest_asyncio
 
 nest_asyncio.apply()
@@ -107,15 +107,29 @@ def download(*args, **kwargs):
 
 # Main function do modify
 async def main():
+    # check if data folder exists
+    dir = "../../data"
+    if not os.path.exists(dir):
+        # Create the folder
+        os.makedirs(dir)
+        created_or_exists = "was created"
+    else:
+        created_or_exists = "already exists"
+    # Get the name of the folder
+    folder_name = os.path.basename(dir)
+    print(f"The folder '{folder_name}' {created_or_exists}.")
+
     await _download(
         ["binance"], # select your exchange
         symbols=["ETH/USDT"], # select your currencies
         timeframe="4h", # the time frame
-        dir="./data", # directory
+        dir=dir, # directory
         since=datetime.datetime(year=2018, month=4, day=1), # starting date
     )
 
 
 if __name__ == "__main__":
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-    asyncio.run(main())
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
+    # asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+    # asyncio.run(main())
