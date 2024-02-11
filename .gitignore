@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 # Folders
 data/*
+experience/*
 # C extensions
 *.so
 # Distribution / packaging
