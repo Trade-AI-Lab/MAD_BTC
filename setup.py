@@ -8,12 +8,11 @@ import os
 
 absolute_path = os.path.abspath(__file__)[:os.path.abspath(__file__).find("MAD_BTC")+len("MAD_BTC")]
 
-def computing_saving_strategy(config):
+def computing_saving_strategy(config,dataframe):
 
     signature_config = create_signature(config)
 
-    PATH = absolute_path + rf"/data/{config['exchange']}-{config['crypto_currency']}-{config['time']}.pkl"
-    df = open_dataframe(PATH)
+    df = dataframe.copy(deep=True)
 
     df[f'{config["ratio_method"]}_{config["x"]}_{config["y"]}'] = getattr(indicator_momentum,config["ratio_method"])(df, config["x"],config["y"])
 
@@ -66,7 +65,17 @@ def computing_saving_strategy(config):
 
     experience_folder_path = absolute_path + "/experience"
     os.makedirs(experience_folder_path,exist_ok=True)
-    strategy_folder_path = experience_folder_path+f"/{signature_config}"
+
+    crypto_currency_efp = experience_folder_path +f"/{config['crypto_currency']}"
+    os.makedirs(crypto_currency_efp,exist_ok=True)
+
+    exchange_ccefp = crypto_currency_efp +f"/{config['exchange']}"
+    os.makedirs(exchange_ccefp,exist_ok=True)
+
+    time_eccefp = exchange_ccefp +f"/{config['time']}"
+    os.makedirs(time_eccefp,exist_ok=True)
+    
+    strategy_folder_path = time_eccefp+f"/{signature_config}"
     os.makedirs(strategy_folder_path,exist_ok=True)
     save_dict_to_json(config, strategy_folder_path, 'strategy.json')
 
@@ -86,6 +95,7 @@ def computing_saving_strategy(config):
     # plt.show()
     plt.close()
 
+
     return final_value
 
 
@@ -102,20 +112,23 @@ if __name__=="__main__":
             "initial_capital":1000
             
         }
+    PATH = absolute_path + rf"/data/{config['exchange']}-{config['crypto_currency']}-{config['time']}.pkl"
+    df = open_dataframe(PATH)
+
     def objective(trial):
         X = trial.suggest_int('x', 1, 30)
-        
         Y = trial.suggest_int('y', 60 ,90)
         ratio_method = trial.suggest_categorical('ratio_method',["ma_ratio","ema_ratio"])
         config["x"] = X
         config["y"] = Y
         config["ratio_method"] = ratio_method
-        return computing_saving_strategy(config)
+        return computing_saving_strategy(config,df)
     
-    study_name = "study_optuna_MAD"
+    study_name = "study"+f"_{config['crypto_currency']}_{config['exchange']}_{config['time']}"
+
     storage_name = "sqlite:///{}.db".format(study_name)
     study = optuna.create_study(storage_name, direction="maximize")
     study.optimize(objective, n_trials=200)
 
-    study.best_params  # E.g. {'x': 2.002108042}
+    study.best_params 
         
