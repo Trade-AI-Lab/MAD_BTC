@@ -103,7 +103,7 @@ if __name__=="__main__":
     import optuna
     
     config = {
-            "crypto_currency":"ETHUSDT",
+            "crypto_currency":"BTCUSDT",
             "time":"4h",
             "exchange":"binance",
             "x":12,
@@ -112,23 +112,37 @@ if __name__=="__main__":
             "initial_capital":1000
             
         }
-    PATH = absolute_path + rf"/data/{config['exchange']}-{config['crypto_currency']}-{config['time']}.pkl"
-    df = open_dataframe(PATH)
-
-    def objective(trial):
-        X = trial.suggest_int('x', 1, 30)
-        Y = trial.suggest_int('y', 60 ,90)
-        ratio_method = trial.suggest_categorical('ratio_method',["ma_ratio","ema_ratio"])
-        config["x"] = X
-        config["y"] = Y
-        config["ratio_method"] = ratio_method
-        return computing_saving_strategy(config,df)
+    def objective(trial,df):
+            X = trial.suggest_int('x', 1, 34)
+            Y = trial.suggest_int('y', 35 ,120)
+            ratio_method = trial.suggest_categorical('ratio_method',["ma_ratio","ema_ratio"])
+            config["x"] = X
+            config["y"] = Y
+            config["ratio_method"] = ratio_method
+            return computing_saving_strategy(config,df)
     
-    study_name = "study"+f"_{config['crypto_currency']}_{config['exchange']}_{config['time']}"
+    def loop_objective(config):
+        PATH = absolute_path + rf"/data/{config['exchange']}-{config['crypto_currency']}-{config['time']}.pkl"
+        df = open_dataframe(PATH)
+               
+        study_name = "study"+f"_{config['crypto_currency']}_{config['exchange']}_{config['time']}"
 
-    storage_name = "sqlite:///{}.db".format(study_name)
-    study = optuna.create_study(storage_name, direction="maximize")
-    study.optimize(objective, n_trials=200)
+        storage_name = "sqlite:///{}.db".format(study_name)
+        study = optuna.create_study(storage_name, direction="maximize")
+        study.optimize(lambda trial: objective(trial=trial,df=df), n_trials=200)
 
-    study.best_params 
+        study.best_params
+    for crypto_currency in ["BTCUSDT","ETHUSDT","ADAUSDT","BNBUSDT"]:
+         for time in ["4h","1h","1d"]:
+            config = {
+                    "crypto_currency":crypto_currency,
+                    "time":time,
+                    "exchange":"binance",
+                    "x":12,
+                    "y":90,
+                    "ratio_method":"ema_ratio",
+                    "initial_capital":1000
+                    
+                }
+            loop_objective(config) 
         
