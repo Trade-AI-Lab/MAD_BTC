@@ -56,3 +56,19 @@ if __name__=="__main__":
     loaded_data = load_json_to_dict( os.getcwd(), 'output.json')
     # Print the loaded data
     print(loaded_data)
+    config =  {
+    "crypto_currency":"ETHUSDT",
+    "time":"4h",
+    "exchange":"binance",
+    "strategy":{
+        "x":12,
+        "y":90,
+        "ratio_method":"ema_ratio"
+    },
+    "initial_capital":1000
+    
+    }
+    save_dict_to_json(config, os.getcwd(), 'output.json')
+    loaded_data = load_json_to_dict( os.getcwd(), 'output.json')
+    # Print the loaded data
+    print(loaded_data)
