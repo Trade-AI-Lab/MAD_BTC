@@ -19,7 +19,7 @@ def create_save_one_experience(config:dict,time_eccefp:str)->str:
     save_dict_to_json(config, strategy_folder_path, 'strategy.json')
     return strategy_folder_path
 
-def create_save_experiences(config:dict)->Tuple[str]:
+def create_save_experiences(config:dict)->str:
     """
     Create any necessary folder to store experiences
         config(dict) : configuration dictionnary which stores essential information
@@ -56,3 +56,4 @@ if __name__=="__main__":
     print(a)
     b = create_save_one_experience(config,a)
     print(b)
+    

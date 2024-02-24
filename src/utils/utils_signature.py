@@ -18,3 +18,18 @@ if __name__=="__main__":
     
     }
     print(create_signature(config))
+
+    config =  {
+    "crypto_currency":"ETHUSDT",
+    "time":"4h",
+    "exchange":"binance",
+    "strategy":{
+        "x":12,
+        "y":90,
+        "ratio_method":"ema_ratio"
+    },
+    "initial_capital":1000
+    
+    }
+    print(create_signature(config))
+    print(create_signature(config["strategy"]))

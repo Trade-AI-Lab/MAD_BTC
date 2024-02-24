@@ -7,7 +7,7 @@ from src.utils.utils_df import open_dataframe
 from src.strategy.momentum import indicator_momentum
 from src.strategy_utils.renderer_strategy import renderer,save
 from src.strategy_utils.save_experiences_strategy import create_save_one_experience,create_save_experiences
-
+from src.utils.utils_signature import create_signature
 class trading_strategy:
     def __init__(self,config) -> None:
         self.config = config
@@ -17,12 +17,12 @@ class trading_strategy:
         self.df_filtered = None
         self.strategy_folder_path = None
         self.time_eccefp = create_save_experiences(self.config)
-        self.title_image = f"{self.config['exchange']}-{self.config['crypto_currency']}-{self.config['time']}_portfolio_vs_buy_hold_{self.config['ratio_method']}_{self.config['x']}_{self.config['y']}_{self.config['initial_capital']}$"
+        self.evolution_df = None
+
 
     def compute_needed_features(self)->None:
         self.child_df = self.parent_df.copy(deep=True)
         self.child_df['buy_and_hold'] = self.child_df['open'] / self.child_df['open'][0] * self.config["initial_capital"]
-        return None
     
     def strategy_rules(self)->pd.Dataframe:
         raise "To be implemented"
@@ -58,13 +58,12 @@ class trading_strategy:
         list_buy_hold.append(self.child_df['open'].iloc[-1] / self.child_df['open'][0] * self.config["initial_capital"])
         list_time.append(self.child_df["open_date"].iloc[-1])
         
-        evolution_df = pd.DataFrame({
+        self.evolution_df = pd.DataFrame({
         "Time":list_time,
         'Portfolio': list_portfolio,
         'Buy_and_Hold': list_buy_hold})
-        self.strategy_folder_path = self.create_save_one_experience(self.config,self.time_eccefp)
-        save(self.title,self.strategy_folder_path,evolution_df)
-        return evolution_df
+        self.strategy_folder_path = create_save_one_experience(self.config,self.time_eccefp)
+        save("No strategy",self.strategy_folder_path,self.evolution_df) if self.title is None else save(self.title,self.strategy_folder_path,self.evolution_df)
     
     def renderer(self)->None:
         raise "To be implemented"
@@ -72,19 +71,37 @@ class trading_strategy:
 class momentum_strategy(trading_strategy):
     def __init__(self,config) -> None:
         super().__init__(config)
+        self.signature_strategy = create_signature(self.config["strategy"])
 
-    def compute_needed_features(self)->None:
+    def compute_needed_features(self):
         super().compute_needed_features()
-
-        self.child_df[f'{self.config["ratio_method"]}_{self.config["x"]}_{self.config["y"]}'] = getattr(indicator_momentum,self.config["ratio_method"])(self.child_df, self.config["x"],self.config["y"])
+        self.strategy_name = f'{self.config["strategy"]["ratio_method"]}_{self.config["strategy"]["x"]}_{self.config["strategy"]["y"]}'
+        self.title_image = f"{self.config['exchange']}-{self.config['crypto_currency']}-{self.config['time']}_portfolio_vs_buy_hold_{self.strategy_name}_{self.config['initial_capital']}$"
+        self.child_df[self.strategy_name] = getattr(indicator_momentum,self.config["strategy"]["ratio_method"])(self.child_df, self.config["strategy"]["x"],self.config["strategy"]["y"])
         self.child_df = self.child_df.dropna().reset_index(drop=True)
     
     def strategy_rules(self):
         self.compute_needed_features() if self.child_df is None else None
-        self.child_df['buy_signal'] = (self.child_df[f'{self.config["ratio_method"]}_{self.config["x"]}_{self.config["y"]}'] > 1) & (self.child_df[f'{self.config["ratio_method"]}_{self.config["x"]}_{self.config["y"]}'].shift(1) <= 1)
-        self.child_df['sell_signal'] = (self.child_df[f'{self.config["ratio_method"]}_{self.config["x"]}_{self.config["y"]}'] < 1) & (self.child_df[f'{self.config["ratio_method"]}_{self.config["x"]}_{self.config["y"]}'].shift(1) >= 1)
+        self.child_df['buy_signal'] = (self.child_df[self.strategy_name] > 1) & (self.child_df[self.strategy_name].shift(1) <= 1)
+        self.child_df['sell_signal'] = (self.child_df[self.strategy_name] < 1) & (self.child_df[self.strategy_name].shift(1) >= 1)
         self.df_filtered = self.child_df[self.child_df['buy_signal'] | self.child_df['sell_signal']].reset_index(drop=True)
-    
+
+    def compute_simulation(self)->pd.DataFrame:
+        self.compute_needed_features()
+        self.strategy_rules()
+        self.loop_simulation()
+        return self.evolution_df
+
     def renderer(self) -> None:
+        renderer(self.evolution_df,verbose=True)
+
+    def change_config(self,config):
+        if self.PATH == absolute_path + rf"/data/{config['exchange']}-{config['crypto_currency']}-{config['time']}.pkl":
+            if self.signature_strategy != create_signature(self.config["strategy"]):
+                self.child_df = None 
+        else:
+            super(momentum_strategy).__init__(config)
+
+    
         
-        renderer(title_image,self.strategy_folder_path,self.evolution_df)
+    
