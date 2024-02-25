@@ -11,8 +11,8 @@ This repository contains code specifically tailored for applying the MAD strateg
 
 # Answer : It may possible to establish a wealthy strategy for cryptocurrencies.
 ## Example 1 :
-![plot](img\example_1.jpg)
+<img src="img\example_1.jpg" width="128"/>
 ## Example 2 :
-![plot_2](img\example_2.jpg)
+<img src="img\example_2.jpg" width="128"/>
 
 
