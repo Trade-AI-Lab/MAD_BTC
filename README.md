@@ -11,8 +11,8 @@ This repository contains code specifically tailored for applying the MAD strateg
 
 # Answer : It may possible to establish a wealthy strategy for cryptocurrencies.
 ## Example 1 :
-![Example 1 ](img\binance-ETHUSDT-1d_portfolio_vs_buy_hold_ma_ratio_9_37_1000.jpeg)
+![Example 1 ](./img/binance-ETHUSDT-1d_portfolio_vs_buy_hold_ma_ratio_9_37_1000.jpeg)
 ## Example 2 :
-![Example 2 ](img\binance-ETHUSDT-1h_portfolio_vs_buy_hold_ma_ratio_11_119_1000.jpg)
+![Example 2 ](./img/binance-ETHUSDT-1h_portfolio_vs_buy_hold_ma_ratio_11_119_1000.jpg)
 
 
