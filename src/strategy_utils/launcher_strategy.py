@@ -8,6 +8,7 @@ from src.strategy.momentum import indicator_momentum
 from src.strategy_utils.renderer_strategy import renderer,save
 from src.strategy_utils.save_experiences_strategy import create_save_one_experience,create_save_experiences
 from src.utils.utils_signature import create_signature
+
 class trading_strategy:
     def __init__(self,config) -> None:
         self.config = config
@@ -64,8 +65,11 @@ class trading_strategy:
         'Buy_and_Hold': list_buy_hold})
         self.strategy_folder_path = create_save_one_experience(self.config,self.time_eccefp)
         save("No strategy",self.strategy_folder_path,self.evolution_df) if self.title_image is None else save(self.title_image,self.strategy_folder_path,self.evolution_df)
-    
+        
     def renderer(self)->None:
+        raise "To be implemented"
+    
+    def change_config(self,config):
         raise "To be implemented"
     
 class momentum_strategy(trading_strategy):

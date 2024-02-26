@@ -124,8 +124,8 @@ async def main():
 
     await _download(
         ["binance"], # select your exchange
-        symbols=["ADAUSDT"], # select your currencies
-        timeframe="5m", # the time frame
+        symbols=["ADAUSDT","ETHUSDT","BNBUSDT","BTCUSDT"], # select your currencies
+        timeframe="5m", # the time frame you can change
         dir=dir, # directory
         since=datetime.datetime(year=2018, month=4, day=1), # starting date
     )
