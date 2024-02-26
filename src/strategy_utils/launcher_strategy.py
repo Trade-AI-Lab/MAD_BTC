@@ -22,9 +22,9 @@ class trading_strategy:
 
     def compute_needed_features(self)->None:
         self.child_df = self.parent_df.copy(deep=True)
-        self.child_df['buy_and_hold'] = self.child_df['open'] / self.child_df['open'][0] * self.config["initial_capital"]
+        self.child_df['buy_and_hold'] = self.child_df['open'] / self.child_df['open'].iloc[0] * self.config["initial_capital"]
     
-    def strategy_rules(self)->pd.Dataframe:
+    def strategy_rules(self):
         raise "To be implemented"
     
     def loop_simulation(self)->None:
@@ -63,7 +63,7 @@ class trading_strategy:
         'Portfolio': list_portfolio,
         'Buy_and_Hold': list_buy_hold})
         self.strategy_folder_path = create_save_one_experience(self.config,self.time_eccefp)
-        save("No strategy",self.strategy_folder_path,self.evolution_df) if self.title is None else save(self.title,self.strategy_folder_path,self.evolution_df)
+        save("No strategy",self.strategy_folder_path,self.evolution_df) if self.title_image is None else save(self.title_image,self.strategy_folder_path,self.evolution_df)
     
     def renderer(self)->None:
         raise "To be implemented"
@@ -100,7 +100,7 @@ class momentum_strategy(trading_strategy):
             if self.signature_strategy != create_signature(self.config["strategy"]):
                 self.child_df = None 
         else:
-            super(momentum_strategy).__init__(config)
+            super(momentum_strategy, self).__init__(config)
 
     
         

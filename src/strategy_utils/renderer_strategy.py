@@ -11,7 +11,7 @@ def core_img(evolution_df:dict):
     plt.grid(True)
 
 def save(title_image:str,strategy_folder_path:str,evolution_df:dict):
-    core_img(title_image,strategy_folder_path,evolution_df)
+    core_img(evolution_df)
     plt.savefig(strategy_folder_path+"/"+title_image+".png")
     plt.close()
 
@@ -33,4 +33,3 @@ if __name__=="__main__":
                     "initial_capital":1000
                     
     }
-    title_image = f"{config['exchange']}-{config['crypto_currency']}-{config['time']}_portfolio_vs_buy_hold_{config['ratio_method']}_{config['x']}_{config['y']}_{config["initial_capital"]}$"
