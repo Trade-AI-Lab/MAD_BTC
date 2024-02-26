@@ -11,8 +11,19 @@ This repository contains code specifically tailored for applying the MAD strateg
 
 # Answer : It may possible to establish a wealthy strategy for cryptocurrencies.
 ## Example 1 :
-<img src="img\example_1.jpg" width="512"/>
+<img src="img\example_1.jpg" width="1024"/>
+
 ## Example 2 :
-<img src="img\example_2.jpg" width="512"/>
+<img src="img\example_2.jpg" width="1024"/>
+
+# How to launch the program
+It is needed to install [pandas](https://github.com/pandas-dev/pandas), [Technical Analysis](https://github.com/bukosabino/ta), [optuna](https://github.com/optuna/optuna), matplotlib
+
+Download BTC/USDT,ETH/USDT,ADA/USDT and BNB/USDT for 1h,4h,1d thanks to ``src\utils\downloader.py``
+
+Launch this command : 
+```
+python3 multi_optimiser_momentum_strategy.py
+```
 
 

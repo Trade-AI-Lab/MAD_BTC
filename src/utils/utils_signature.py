@@ -1,6 +1,6 @@
 import json
 import hashlib
-import os
+
 def create_signature(*args,**kwargs):
     json_data = json.dumps(*args,**kwargs, sort_keys=True).encode('utf-8')
     signature = hashlib.sha256(json_data).hexdigest()
