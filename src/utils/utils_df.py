@@ -1,6 +1,6 @@
 import pandas as pd
 from typing import Optional 
-def open_dataframe(PATH:str)->pd.DataFrame:
+def open_dataframe(PATH:str,light:bool=False)->pd.DataFrame:
     extension = PATH.split(".")[-1]
     if extension == "zip" or extension == "csv":
         df = pd.read_csv(PATH)
@@ -9,12 +9,13 @@ def open_dataframe(PATH:str)->pd.DataFrame:
     else:
         raise  "Error: unknown file type : ." + extension
     # Normalize columns name
-    df.columns = df.columns.str.lower()
-    if "close" not in df.columns:
-        if "open_price" in df.columns:
-            df["close"] = df["open_price"].shift(-1)
-        else:
-            raise "impossible to find an open price to create close price"
+    if not light:
+        df.columns = df.columns.str.lower()
+        if "close" not in df.columns:
+            if "open_price" in df.columns:
+                df["close"] = df["open_price"].shift(-1)
+            else:
+                raise "impossible to find an open price to create close price"
     return df
 
 def y_build(df:pd.DataFrame,column:str)->pd.DataFrame:
