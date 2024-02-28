@@ -1,5 +1,8 @@
 import pandas as pd
-from ta.momentum import RSIIndicator 
+from ta.momentum import RSIIndicator
+
+
+
 def merge_strategies(list_strategies):
 
     # Concatenate the dataframes along the rows
@@ -10,6 +13,7 @@ def merge_strategies(list_strategies):
 
     # Fill the missing values with the previous ones
     return df_sorted.ffill().fillna(0)
+
 def evalutation(df,column_A,column_B):
     df[f"{column_A}/{column_B}"] = df[column_A]/df[column_B]
     df[f"RSI_{column_A}/{column_B}"] = RSIIndicator(df[f"{column_A}/{column_B}"])

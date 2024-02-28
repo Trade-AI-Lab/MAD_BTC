@@ -1,9 +1,7 @@
 import pandas as pd
 from src.utils.utils_df import open_dataframe
 from src.strategy_utils.launcher_strategy import momentum_strategy
-import matplotlib.pyplot as plt
 import os
-import shutil
 import optuna
 
 def objective(trial,strategy):
@@ -23,7 +21,7 @@ def loop_objective(config:dict,storage_name:str,strategy)->None:
     PATH = absolute_path + rf"/data/{config['exchange']}-{config['crypto_currency']}-{config['time']}.pkl"
     df = open_dataframe(PATH)
             
-    study = optuna.create_study(storage_name, direction="maximize")
+    study = optuna.create_study(storage_name, direction="maximize",load_if_exists="True")
     study.optimize(lambda trial: objective(trial=trial,strategy=strategy), n_trials=200)
 
 def optimiser_multiple_currency(config,strategy,list_crypto_currency=["BTCUSDT","ETHUSDT","ADAUSDT","BNBUSDT"],list_time=["1h","4h","1d"]):
@@ -35,9 +33,8 @@ def optimiser_multiple_currency(config,strategy,list_crypto_currency=["BTCUSDT",
 
             os.makedirs(absolute_path+"/study",exist_ok=True)
             study_name = "study"+f"_{config['crypto_currency']}_{config['exchange']}_{config['time']}"
-            storage_name = "sqlite:///{}.db".format(study_name)
+            storage_name = f"sqlite:///{os.path.join(absolute_path, 'study', study_name)}.db"
             loop_objective(config,storage_name=storage_name,strategy=strategy) # an optuna is launched for the new config
-            shutil.move(storage_name, "./study")
             
 if __name__=="__main__":
     absolute_path = os.path.abspath(__file__)[:os.path.abspath(__file__).find("MAD_BTC")+len("MAD_BTC")]
