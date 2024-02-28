@@ -26,4 +26,14 @@ Launch this command :
 python3 multi_optimiser_momentum_strategy.py
 ```
 
+# Core Repository Structure
+- data ( folder containing your data)
+- experience (folder which is personal cointaing the results of different studies/strategies)
+- img ( folder containing images for the README.md)
+- src
+    - [strategy](https://github.com/Dante-Berth/MAD_BTC/tree/main/src/strategy) this folder is dedicated to trading strategies you need to add your strategies in this folder
+    - [strategy utils](https://github.com/Dante-Berth/MAD_BTC/tree/main/src/strategy_utils) this folder refers to main scripts used for computing/saving/optimizing a strategy or possible strategies 
+    - utils
+- study (folder which is personal containing your studies)
+
 
