@@ -33,9 +33,9 @@ if __name__=="__main__":
     for crypto_currency in list_crypto_currency:
          for time in list_time:
             print("#################")
-            print(f"Crypto_currency :{crypto_currency}\n")
-            print(f"Time :{time}\n")
-            print(f"exchange :{exchange}\n")
+            print(f"Crypto_currency: {crypto_currency}\n")
+            print(f"Time: {time}\n")
+            print(f"exchange: {exchange}\n")
             exchange = "binance"
             PATH_FOLDER = absolute_path+rf"\experience\{crypto_currency}\{exchange}\{time}"
             liste = os.listdir(PATH_FOLDER)
@@ -50,9 +50,8 @@ if __name__=="__main__":
                 if result>best:
                     best = result
                     best_PATH = PATH
-            print(f"Final mean rsi {best}\n")
-            print(f"Link {best_PATH}\n")
-            print("End")
+            print(f"Final mean rsi: {best}\n")
+            print(f"Link: {best_PATH}\n")
             
 
     # Convert the Date columns to datetime objects

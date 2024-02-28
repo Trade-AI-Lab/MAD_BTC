@@ -56,7 +56,7 @@ class trading_strategy:
                 break 
         
         list_portfolio.append(list_portfolio[-1])
-        list_buy_hold.append(self.child_df['open'].iloc[-1] / self.child_df['open'][0] * self.config["initial_capital"])
+        list_buy_hold.append(self.child_df['buy_and_hold'].iloc[-1])
         list_time.append(self.child_df["open_date"].iloc[-1])
         
         self.evolution_df = pd.DataFrame({
