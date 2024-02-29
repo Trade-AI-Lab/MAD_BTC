@@ -35,5 +35,6 @@ python3 multi_optimiser_momentum_strategy.py
     - [strategy utils](https://github.com/Dante-Berth/MAD_BTC/tree/main/src/strategy_utils) this folder refers to main scripts used for computing/saving/optimizing a strategy or possible strategies 
     - utils
 - study (folder which is personal containing your studies)
-
+# Contribution
+We developed a method to compare trading strategies. To compare two strategies we can divide strategy A by strategy B we can compare it as BTC/USDT for instance. Given this ratio, we can apply technocal indicators to observe, to compute how a method outperforms another method according the time. A good indicator for measuring the performance the RSI, indeed if the RSI is higher than 50 than means the strategy placed to the numerator outperformed the strategy placed to the denominator. 
 
