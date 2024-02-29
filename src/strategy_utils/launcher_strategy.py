@@ -33,14 +33,20 @@ class trading_strategy:
         portfolio = self.config["initial_capital"]
         fee_percentage = 0.1 / 100  # 0.1%
         crypto,position = 0,0
-        list_portfolio,list_buy_hold,list_time = [],[],[]
+        list_portfolio,list_buy_hold,list_time,list_position = [],[],[],[]
 
         for i in range(len(self.df_filtered)):
 
             if self.df_filtered.iloc[i]['buy_signal'] and position != 1 and portfolio > 0:
                 position = 1
+                list_portfolio.append(portfolio)
+                list_position.append(position)
                 crypto = portfolio / (self.df_filtered.iloc[i]['open']*(1 + fee_percentage))
                 portfolio = 0
+
+                
+                list_buy_hold.append(self.df_filtered['buy_and_hold'].iloc[i])
+                list_time.append(self.df_filtered["open_date"].iloc[i])
 
             elif self.df_filtered.iloc[i]['sell_signal'] and position != -1 and crypto > 0:
                 position = -1
@@ -49,6 +55,7 @@ class trading_strategy:
 
                 
                 list_portfolio.append(portfolio)
+                list_position.append(position)
                 list_buy_hold.append(self.df_filtered['buy_and_hold'].iloc[i])
                 list_time.append(self.df_filtered["open_date"].iloc[i])
 
@@ -56,13 +63,15 @@ class trading_strategy:
                 break 
         
         list_portfolio.append(list_portfolio[-1])
+        list_position.append(list_position[-1])
         list_buy_hold.append(self.child_df['buy_and_hold'].iloc[-1])
         list_time.append(self.child_df["open_date"].iloc[-1])
         
         self.evolution_df = pd.DataFrame({
         "Time":list_time,
         'Portfolio': list_portfolio,
-        'Buy_and_Hold': list_buy_hold})
+        'Buy_and_Hold': list_buy_hold,
+        "Position":list_position})
         self.strategy_folder_path = create_save_one_experience(self.config,self.time_eccefp)
         save("No strategy",self.strategy_folder_path,self.evolution_df) if self.title_image is None else save(self.title_image,self.strategy_folder_path,self.evolution_df)
         
