@@ -36,5 +36,52 @@ python3 multi_optimiser_momentum_strategy.py
     - utils
 - study (folder which is personal containing your studies)
 # Contribution
-We developed a method to compare trading strategies. To compare two strategies we can divide strategy A by strategy B we can compare it as BTC/USDT for instance. Given this ratio, we can apply technocal indicators to observe, to compute how a method outperforms another method according the time. A good indicator for measuring the performance the RSI, indeed if the RSI is higher than 50 than means the strategy placed to the numerator outperformed the strategy placed to the denominator. 
+We developed a method to compare trading strategies. To compare two strategies we can divide strategy A by strategy B we can compare it as BTC/USDT for instance. Given this ratio, we can apply technocal indicators to observe, to compute how a method outperforms another method according the time. 
+A good indicator for measuring the performance the RSI :
+The Relative Strength Index (RSI) is calculated using the following steps:
 
+First, calculate the daily price changes:
+
+\[
+\text{Daily Gain} = \max(\text{Close}_{\text{today}} - \text{Close}_{\text{yesterday}}, 0)
+\]
+
+\[
+\text{Daily Loss} = \max(\text{Close}_{\text{yesterday}} - \text{Close}_{\text{today}}, 0)
+\]
+
+Next, calculate the average gain and average loss over a specified period (\(n\)):
+
+\[
+\text{Average Gain} = \frac{\sum_{i=1}^{n} \text{Daily Gain}_i}{n}
+\]
+
+\[
+\text{Average Loss} = \frac{\sum_{i=1}^{n} \text{Daily Loss}_i}{n}
+\]
+
+Calculate the relative strength (RS):
+
+\[
+\text{RS} = \frac{\text{Average Gain}}{\text{Average Loss}}
+\]
+
+Finally, use the RS to calculate the RSI:
+
+\[
+\text{RSI} = 100 - \frac{100}{1 + \text{RS}}
+\]
+
+
+indeed if the RSI is higher than 50 than means the strategy placed to the numerator outperformed the strategy placed to the denominator. 
+## Example 1 :
+<img src="img\example_1_RSI.png" width="1024"/>
+
+## Example 2 :
+<img src="img\example_2_RSI.png" width="1024"/>
+
+## Example 3 :
+<img src="img\example_3_RSI.png" width="1024"/>
+
+## Example 4 :
+<img src="img\example_4_RSI.png" width="1024"/>
