@@ -37,41 +37,7 @@ python3 multi_optimiser_momentum_strategy.py
 - study (folder which is personal containing your studies)
 # Contribution
 We developed a method to compare trading strategies. To compare two strategies we can divide strategy A by strategy B we can compare it as BTC/USDT for instance. Given this ratio, we can apply technocal indicators to observe, to compute how a method outperforms another method according the time. 
-A good indicator for measuring the performance the RSI :
-The Relative Strength Index (RSI) is calculated using the following steps:
-
-First, calculate the daily price changes:
-
-```math
-\text{Daily Gain} = \max(\text{Close}_{\text{today}} - \text{Close}_{\text{yesterday}}, 0)
-```
-
-```math
-\text{Daily Loss} = \max(\text{Close}_{\text{yesterday}} - \text{Close}_{\text{today}}, 0)
-```
-
-Next, calculate the average gain and average loss over a specified period (\(n\)):
-
-```math
-\text{Average Gain} = \frac{\sum_{i=1}^{n} \text{Daily Gain}_i}{n}
-```
-
-```math
-\text{Average Loss} = \frac{\sum_{i=1}^{n} \text{Daily Loss}_i}{n}
-```
-
-Calculate the relative strength (RS):
-
-```math
-\text{RS} = \frac{\text{Average Gain}}{\text{Average Loss}}
-```
-
-Finally, use the RS to calculate the RSI:
-
-```math
-\text{RSI} = 100 - \frac{100}{1 + \text{RS}}
-```
-
+A good indicator for measuring the performance the [RSI](https://fr.wikipedia.org/wiki/Relative_strength_index) :
 
 indeed if the RSI is higher than 50 than means the strategy placed to the numerator outperformed the strategy placed to the denominator. 
 ## Example 1 :
