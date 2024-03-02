@@ -10,6 +10,9 @@ from src.strategy_utils.save_experiences_strategy import create_save_one_experie
 from src.utils.utils_signature import create_signature
 
 class trading_strategy:
+    """trading strategy is the core object to create trading strategies
+
+    """
     def __init__(self,config) -> None:
         self.config = config
         self.PATH = absolute_path + rf"/data/{config['exchange']}-{config['crypto_currency']}-{config['time']}.pkl"
@@ -22,13 +25,28 @@ class trading_strategy:
 
 
     def compute_needed_features(self)->None:
+        """Compute needed features, when you have a dataframe with OHLC 
+        you need to compute needed features such as RSI or EMA for your trading strategies
+        """
         self.child_df = self.parent_df.copy(deep=True)
         self.child_df['buy_and_hold'] = self.child_df['open'] / self.child_df['open'].iloc[0] * self.config["initial_capital"]
     
     def strategy_rules(self):
+        """Compute rules for the trading strategy
+        """
         raise "To be implemented"
     
     def loop_simulation(self)->None:
+        """
+        loop_simulation represents a trading strategy implementation that simulates buying and selling of a cryptocurrency.
+        It initializes a portfolio with a specified initial capital, defines a fee percentage for transactions,
+        and sets initial values for cryptocurrency holdings and position.
+        The strategy iterates through a filtered DataFrame of market data, executing buy and sell signals based on certain conditions.
+        It maintains track of the portfolio, position, and other relevant information over time.
+        The resulting evolution of the portfolio and associated metrics are stored in a Pandas DataFrame.
+        The code also creates a folder to save the strategy's results and visualizations.
+        The final results are saved, and the code appears to be part of a larger trading strategy analysis or backtesting framework.
+        """
 
         portfolio = self.config["initial_capital"]
         fee_percentage = 0.1 / 100  # 0.1%
@@ -76,9 +94,16 @@ class trading_strategy:
         save("No strategy",self.strategy_folder_path,self.evolution_df) if self.title_image is None else save(self.title_image,self.strategy_folder_path,self.evolution_df)
         
     def renderer(self)->None:
+        """renderer is the function for plotting, visualizing
+        """
         raise "To be implemented"
     
-    def change_config(self,config):
+    def change_config(self,config:dict):
+        """change_config allows to the user to change the configuration but it is needed to reinitialize the object
+
+        Args:
+            config (dict): configuration containing the main important elements for the trading strategy
+        """
         raise "To be implemented"
     
 class momentum_strategy(trading_strategy):

@@ -4,7 +4,7 @@ import os, sys
 absolute_path = os.path.abspath(__file__)[:os.path.abspath(__file__).find("MAD_BTC")+len("MAD_BTC")]
 sys.path.append(absolute_path)
 from src.utils.utils_df import open_dataframe
-
+import matplotlib.pyplot as plt
 
 def merge_strategies(list_strategies):
 
@@ -49,9 +49,13 @@ if __name__=="__main__":
                 result = (df[f"RSI_{col_1}/{col_2}"]/100).mean()
                 if result>best:
                     best = result
-                    best_PATH = PATH
+                    best_PATH = PATH             
+                    
             print(f"Final mean rsi: {best}\n")
             print(f"Link: {best_PATH}\n")
+            plt.plot(df["Time"],df[f"RSI_{col_1}/{col_2}"])
+            plt.title(f"RSI_{col_1}/{col_2}")
+            plt.show()
             
 
     # Convert the Date columns to datetime objects
