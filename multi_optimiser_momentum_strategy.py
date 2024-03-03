@@ -1,10 +1,12 @@
 import pandas as pd
 from src.utils.utils_df import open_dataframe
 from src.strategy_utils.launcher_strategy import momentum_strategy
+from src.strategy_utils.strategy_comparator import evalutation
 import os
 import optuna
 
 def objective(trial,strategy):
+    
     result_cache = {}
     
     X = trial.suggest_int('x', 1, 34)
@@ -18,11 +20,20 @@ def objective(trial,strategy):
     config["strategy"]["ratio_method"] = ratio_method
     strategy.change_config(config)
     final_df = strategy.compute_simulation()
-    result_cache[(X, Y, ratio_method)] = final_df["Portfolio"].iloc[-1]
+    
+    col_1,col_2 = "Portfolio","Buy_and_Hold"
+    final_df = evalutation(final_df,col_1,col_2)
+    result_cache[(X, Y, ratio_method)] = final_df["Portfolio"].iloc[-1]*(final_df[f"RSI_{col_1}/{col_2}"]/100).mean()
     return result_cache[(X, Y, ratio_method)]
     
 def loop_objective(config:dict,storage_name:str,strategy,study_name)->None:
-    """
+    """_summary_
+
+    Args:
+        config (dict): _description_
+        storage_name (str): _description_
+        strategy (_type_): _description_
+        study_name (_type_): _description_
     """
     PATH = absolute_path + rf"/data/{config['exchange']}-{config['crypto_currency']}-{config['time']}.pkl"
     df = open_dataframe(PATH)
@@ -31,6 +42,14 @@ def loop_objective(config:dict,storage_name:str,strategy,study_name)->None:
     study.optimize(lambda trial: objective(trial=trial,strategy=strategy), n_trials=200)
 
 def optimiser_multiple_currency(config,strategy,list_crypto_currency=["BTCUSDT","ETHUSDT","ADAUSDT","BNBUSDT"],list_time=["1h","4h","1d"]):
+    """_summary_
+
+    Args:
+        config (_type_): _description_
+        strategy (_type_): _description_
+        list_crypto_currency (list, optional): _description_. Defaults to ["BTCUSDT","ETHUSDT","ADAUSDT","BNBUSDT"].
+        list_time (list, optional): _description_. Defaults to ["1h","4h","1d"].
+    """
     for crypto_currency in list_crypto_currency:
          for time in list_time:
             # Modifying the config file
