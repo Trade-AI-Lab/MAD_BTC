@@ -20,7 +20,7 @@ class trading_strategy:
         self.child_df = None
         self.df_filtered = None
         self.strategy_folder_path = None
-        self.time_eccefp = create_save_experiences(self.config)
+        self.time_eccefpsn = create_save_experiences(self.config)
         self.evolution_df = None
 
 
@@ -90,7 +90,7 @@ class trading_strategy:
         'Portfolio': list_portfolio,
         'Buy_and_Hold': list_buy_hold,
         "Position":list_position})
-        self.strategy_folder_path = create_save_one_experience(self.config,self.time_eccefp)
+        self.strategy_folder_path = create_save_one_experience(self.config,self.time_eccefpsn)
         save("No strategy",self.strategy_folder_path,self.evolution_df) if self.title_image is None else save(self.title_image,self.strategy_folder_path,self.evolution_df)
         
     def renderer(self)->None:
@@ -122,6 +122,40 @@ class momentum_strategy(trading_strategy):
         self.compute_needed_features() if self.child_df is None else None
         self.child_df['buy_signal'] = (self.child_df[self.strategy_name] > 1) & (self.child_df[self.strategy_name].shift(1) <= 1)
         self.child_df['sell_signal'] = (self.child_df[self.strategy_name] < 1) & (self.child_df[self.strategy_name].shift(1) >= 1)
+        self.df_filtered = self.child_df[self.child_df['buy_signal'] | self.child_df['sell_signal']].reset_index(drop=True)
+
+    def compute_simulation(self)->pd.DataFrame:
+        self.compute_needed_features()
+        self.strategy_rules()
+        self.loop_simulation()
+        return self.evolution_df
+
+    def renderer(self) -> None:
+        renderer(self.evolution_df,verbose=True)
+
+    def change_config(self,config):
+        if self.PATH == absolute_path + rf"/data/{config['exchange']}-{config['crypto_currency']}-{config['time']}.pkl":
+            if self.signature_strategy != create_signature(self.config["strategy"]):
+                self.child_df = None 
+        else:
+            super(momentum_strategy, self).__init__(config)
+
+class donchian_strategy(trading_strategy):
+    def __init__(self,config) -> None:
+        super().__init__(config)
+        self.signature_strategy = create_signature(self.config["strategy"])
+
+    def compute_needed_features(self):
+        super().compute_needed_features()
+        self.strategy_name = f'{self.config["strategy"]["window"]}'
+        self.title_image = f"{self.config['exchange']}-{self.config['crypto_currency']}-{self.config['time']}_portfolio_vs_buy_hold_{self.strategy_name}_{self.config['initial_capital']}$"
+        self.child_df[[f"dcu_{self.strategy_name}",f"dcm_{self.strategy_name}",f"dcl_{self.strategy_name}"]] = indicator_momentum.donchian(self.child_df, self.config["strategy"]["window"])
+        self.child_df = self.child_df.dropna().reset_index(drop=True)
+    
+    def strategy_rules(self):
+        self.compute_needed_features() if self.child_df is None else None
+        self.child_df['buy_signal'] = self.child_df[f"dcu_{self.strategy_name}"]>=self.child_df["high"]
+        self.child_df['sell_signal'] = self.child_df[f"dcl_{self.strategy_name}"]<=self.child_df["low"]
         self.df_filtered = self.child_df[self.child_df['buy_signal'] | self.child_df['sell_signal']].reset_index(drop=True)
 
     def compute_simulation(self)->pd.DataFrame:

@@ -6,7 +6,7 @@ from src.utils.utils_signature import create_signature
 from src.utils.utils_json import save_dict_to_json
 from typing import Tuple
 
-def create_save_one_experience(config:dict,time_eccefp:str)->str:
+def create_save_one_experience(config:dict,time_eccefpsn:str)->str:
     """
     Create folder to store only one experience
     Return:
@@ -14,7 +14,7 @@ def create_save_one_experience(config:dict,time_eccefp:str)->str:
 
     """
     signature_config = create_signature(config)
-    strategy_folder_path = time_eccefp+f"/{signature_config}"
+    strategy_folder_path = time_eccefpsn+f"/{signature_config}"
     os.makedirs(strategy_folder_path,exist_ok=True)
     save_dict_to_json(config, strategy_folder_path, 'strategy.json')
     return strategy_folder_path
@@ -24,7 +24,7 @@ def create_save_experiences(config:dict)->str:
     Create any necessary folder to store experiences
         config(dict) : configuration dictionnary which stores essential information
     Return:
-        time_eccefp(str): refers to the path where all experiences will be saved
+        time_eccefpsn(str): refers to the path where all experiences will be saved
 
     """
     experience_folder_path = absolute_path + "/experience"
@@ -39,7 +39,10 @@ def create_save_experiences(config:dict)->str:
     time_eccefp = exchange_ccefp +f"/{config['time']}"
     os.makedirs(time_eccefp,exist_ok=True)
 
-    return time_eccefp
+    time_eccefpsn = time_eccefp +f"/{config["strategy"]["name"]}"
+    os.makedirs(time_eccefpsn,exist_ok=True)
+
+    return time_eccefpsn
 
 if __name__=="__main__":
     config = {

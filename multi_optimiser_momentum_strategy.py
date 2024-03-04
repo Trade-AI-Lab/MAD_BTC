@@ -1,11 +1,20 @@
 import pandas as pd
 from src.utils.utils_df import open_dataframe
-from src.strategy_utils.launcher_strategy import momentum_strategy
+from src.strategy_utils.launcher_strategy import trading_strategy,momentum_strategy
 from src.strategy_utils.strategy_comparator import evalutation
 import os
 import optuna
 
-def objective(trial,strategy):
+def objective(trial:optuna.trial,strategy:trading_strategy):
+    """_summary_
+
+    Args:
+        trial (optuna.trial): _description_
+        strategy (trading_strategy): _description_
+
+    Returns:
+        _type_: _description_
+    """
     
     result_cache = {}
     
@@ -26,29 +35,30 @@ def objective(trial,strategy):
     result_cache[(X, Y, ratio_method)] = final_df["Portfolio"].iloc[-1]*(final_df[f"RSI_{col_1}/{col_2}"]/100).mean()
     return result_cache[(X, Y, ratio_method)]
     
-def loop_objective(config:dict,storage_name:str,strategy,study_name)->None:
+def loop_objective(config:dict,storage_name:str,strategy:trading_strategy,study_name:str)->None:
     """_summary_
 
     Args:
         config (dict): _description_
         storage_name (str): _description_
-        strategy (_type_): _description_
-        study_name (_type_): _description_
+        strategy (trading_strategy): _description_
+        study_name (str): _description_
     """
+    
     PATH = absolute_path + rf"/data/{config['exchange']}-{config['crypto_currency']}-{config['time']}.pkl"
     df = open_dataframe(PATH)
             
     study = optuna.create_study(storage_name, study_name=study_name,direction="maximize",load_if_exists="True")
     study.optimize(lambda trial: objective(trial=trial,strategy=strategy), n_trials=200)
 
-def optimiser_multiple_currency(config,strategy,list_crypto_currency=["BTCUSDT","ETHUSDT","ADAUSDT","BNBUSDT"],list_time=["1h","4h","1d"]):
+def optimiser_multiple_currency(config:dict,strategy:trading_strategy,list_crypto_currency:str=["BTCUSDT","ETHUSDT","ADAUSDT","BNBUSDT"],list_time:str=["1h","4h","1d"]):
     """_summary_
 
     Args:
-        config (_type_): _description_
-        strategy (_type_): _description_
-        list_crypto_currency (list, optional): _description_. Defaults to ["BTCUSDT","ETHUSDT","ADAUSDT","BNBUSDT"].
-        list_time (list, optional): _description_. Defaults to ["1h","4h","1d"].
+        config (dict): _description_
+        strategy (trading_strategy): _description_
+        list_crypto_currency (str, optional): _description_. Defaults to ["BTCUSDT","ETHUSDT","ADAUSDT","BNBUSDT"].
+        list_time (str, optional): _description_. Defaults to ["1h","4h","1d"].
     """
     for crypto_currency in list_crypto_currency:
          for time in list_time:
@@ -68,6 +78,7 @@ if __name__=="__main__":
             "time":"4h",
             "exchange":"binance",
             "strategy":{
+            "name":"momentum_strategy",
             "x":12,
             "y":90,
             "ratio_method":"ema_ratio",
