@@ -39,7 +39,7 @@ def create_save_experiences(config:dict)->str:
     time_eccefp = exchange_ccefp +f"/{config['time']}"
     os.makedirs(time_eccefp,exist_ok=True)
 
-    time_eccefpsn = time_eccefp +f"/{config["strategy"]["name"]}"
+    time_eccefpsn = time_eccefp +f"/{config['strategy']['name']}"
     os.makedirs(time_eccefpsn,exist_ok=True)
 
     return time_eccefpsn

@@ -22,19 +22,8 @@ class trading_strategy:
         self.strategy_folder_path = None
         self.time_eccefpsn = create_save_experiences(self.config)
         self.evolution_df = None
+        self.signature_strategy = create_signature(self.config["strategy"])
 
-
-    def compute_needed_features(self)->None:
-        """Compute needed features, when you have a dataframe with OHLC 
-        you need to compute needed features such as RSI or EMA for your trading strategies
-        """
-        self.child_df = self.parent_df.copy(deep=True)
-        self.child_df['buy_and_hold'] = self.child_df['open'] / self.child_df['open'].iloc[0] * self.config["initial_capital"]
-    
-    def strategy_rules(self):
-        """Compute rules for the trading strategy
-        """
-        raise "To be implemented"
     
     def loop_simulation(self)->None:
         """
@@ -92,24 +81,37 @@ class trading_strategy:
         "Position":list_position})
         self.strategy_folder_path = create_save_one_experience(self.config,self.time_eccefpsn)
         save("No strategy",self.strategy_folder_path,self.evolution_df) if self.title_image is None else save(self.title_image,self.strategy_folder_path,self.evolution_df)
-        
-    def renderer(self)->None:
+    
+    def renderer(self) -> None:
         """renderer is the function for plotting, visualizing
         """
-        raise "To be implemented"
-    
-    def change_config(self,config:dict):
-        """change_config allows to the user to change the configuration but it is needed to reinitialize the object
+        renderer(self.evolution_df,verbose=True)
 
-        Args:
-            config (dict): configuration containing the main important elements for the trading strategy
+    
+    
+
+    def compute_simulation(self)->pd.DataFrame:
+        self.compute_needed_features()
+        self.strategy_rules()
+        self.loop_simulation()
+        return self.evolution_df
+    
+    def compute_needed_features(self)->None:
+        """Compute needed features, when you have a dataframe with OHLC 
+        you need to compute needed features such as RSI or EMA for your trading strategies
+        """
+        self.child_df = self.parent_df.copy(deep=True)
+        self.child_df['buy_and_hold'] = self.child_df['open'] / self.child_df['open'].iloc[0] * self.config["initial_capital"]
+    
+    def strategy_rules(self):
+        """Compute rules for the trading strategy
         """
         raise "To be implemented"
     
 class momentum_strategy(trading_strategy):
     def __init__(self,config) -> None:
         super().__init__(config)
-        self.signature_strategy = create_signature(self.config["strategy"])
+        
 
     def compute_needed_features(self):
         super().compute_needed_features()
@@ -124,32 +126,33 @@ class momentum_strategy(trading_strategy):
         self.child_df['sell_signal'] = (self.child_df[self.strategy_name] < 1) & (self.child_df[self.strategy_name].shift(1) >= 1)
         self.df_filtered = self.child_df[self.child_df['buy_signal'] | self.child_df['sell_signal']].reset_index(drop=True)
 
-    def compute_simulation(self)->pd.DataFrame:
-        self.compute_needed_features()
-        self.strategy_rules()
-        self.loop_simulation()
-        return self.evolution_df
-
-    def renderer(self) -> None:
-        renderer(self.evolution_df,verbose=True)
-
     def change_config(self,config):
+        """change_config allows to the user to change the configuration but it is needed to reinitialize the object
+
+        Args:
+            config (dict): configuration containing the main important elements for the trading strategy
+        """
         if self.PATH == absolute_path + rf"/data/{config['exchange']}-{config['crypto_currency']}-{config['time']}.pkl":
             if self.signature_strategy != create_signature(self.config["strategy"]):
                 self.child_df = None 
         else:
             super(momentum_strategy, self).__init__(config)
 
+    
+
+
 class donchian_strategy(trading_strategy):
     def __init__(self,config) -> None:
         super().__init__(config)
-        self.signature_strategy = create_signature(self.config["strategy"])
 
     def compute_needed_features(self):
         super().compute_needed_features()
         self.strategy_name = f'{self.config["strategy"]["window"]}'
         self.title_image = f"{self.config['exchange']}-{self.config['crypto_currency']}-{self.config['time']}_portfolio_vs_buy_hold_{self.strategy_name}_{self.config['initial_capital']}$"
-        self.child_df[[f"dcu_{self.strategy_name}",f"dcm_{self.strategy_name}",f"dcl_{self.strategy_name}"]] = indicator_momentum.donchian(self.child_df, self.config["strategy"]["window"])
+        donchian = indicator_momentum.donchian(self.child_df, self.config["strategy"]["window"])
+        self.child_df[f"dcu_{self.strategy_name}"] = donchian[0]
+        self.child_df[f"dcm_{self.strategy_name}"] = donchian[1]
+        self.child_df[f"dcl_{self.strategy_name}"] = donchian[2]
         self.child_df = self.child_df.dropna().reset_index(drop=True)
     
     def strategy_rules(self):
@@ -158,22 +161,16 @@ class donchian_strategy(trading_strategy):
         self.child_df['sell_signal'] = self.child_df[f"dcl_{self.strategy_name}"]<=self.child_df["low"]
         self.df_filtered = self.child_df[self.child_df['buy_signal'] | self.child_df['sell_signal']].reset_index(drop=True)
 
-    def compute_simulation(self)->pd.DataFrame:
-        self.compute_needed_features()
-        self.strategy_rules()
-        self.loop_simulation()
-        return self.evolution_df
-
-    def renderer(self) -> None:
-        renderer(self.evolution_df,verbose=True)
-
     def change_config(self,config):
+        """change_config allows to the user to change the configuration but it is needed to reinitialize the object
+
+        Args:
+            config (dict): configuration containing the main important elements for the trading strategy
+        """
         if self.PATH == absolute_path + rf"/data/{config['exchange']}-{config['crypto_currency']}-{config['time']}.pkl":
             if self.signature_strategy != create_signature(self.config["strategy"]):
                 self.child_df = None 
         else:
-            super(momentum_strategy, self).__init__(config)
-
-    
+            super(donchian_strategy, self).__init__(config)
         
     
