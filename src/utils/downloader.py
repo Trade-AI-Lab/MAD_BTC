@@ -134,8 +134,8 @@ async def main(time_frame:str="5m"):
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main(time_frame="1d"))
-    #loop.run_until_complete(main(time_frame="4h"))
-    #loop.run_until_complete(main(time_frame="1h"))
-    #loop.run_until_complete(main(time_frame="5m"))
+    loop.run_until_complete(main(time_frame="4h"))
+    loop.run_until_complete(main(time_frame="1h"))
+    loop.run_until_complete(main(time_frame="5m"))
     # asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     # asyncio.run(main())
