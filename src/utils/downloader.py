@@ -108,7 +108,7 @@ def download(*args, **kwargs):
     )
 
 # Main function do modify
-async def main():
+async def main(time_frame:str="5m"):
     absolute_path = os.path.abspath(__file__)[:os.path.abspath(__file__).find("MAD_BTC")+len("MAD_BTC")]
     # check if data folder exists
     dir = absolute_path + "/data"
@@ -125,7 +125,7 @@ async def main():
     await _download(
         ["binance"], # select your exchange
         symbols=["ADAUSDT","ETHUSDT","BNBUSDT","BTCUSDT"], # select your currencies
-        timeframe="5m", # the time frame you can change
+        timeframe=time_frame, # the time frame you can change
         dir=dir, # directory
         since=datetime.datetime(year=2018, month=4, day=1), # starting date
     )
@@ -133,6 +133,9 @@ async def main():
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
+    loop.run_until_complete(main(time_frame="1d"))
+    #loop.run_until_complete(main(time_frame="4h"))
+    #loop.run_until_complete(main(time_frame="1h"))
+    #loop.run_until_complete(main(time_frame="5m"))
     # asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     # asyncio.run(main())
