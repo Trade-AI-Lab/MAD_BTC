@@ -94,20 +94,20 @@ class optimiser_momentum_strategy(trading_optimisation):
             
 if __name__=="__main__":
     absolute_path = os.path.abspath(__file__)[:os.path.abspath(__file__).find("MAD_BTC")+len("MAD_BTC")]
-    #config = {
-    #       "crypto_currency":"BTCUSDT",
-    #        "time":"4h",
-    #        "exchange":"binance",
-    #        "strategy":{
-    #        "name":"momentum_strategy",
-    #        "x":12,
-    #        "y":90,
-    #        "ratio_method":"ema_ratio",
-    #        },
-    #        "initial_capital":1000
+    config = {
+           "crypto_currency":"BTCUSDT",
+            "time":"4h",
+            "exchange":"binance",
+            "strategy":{
+            "name":"momentum_strategy",
+            "x":12,
+            "y":90,
+            "ratio_method":"ema_ratio",
+            },
+            "initial_capital":1000
             
-    #    }
-    #optimiser_momentum_strategy(config).optimiser_multiple_currency()
+        }
+    optimiser_momentum_strategy(config).optimiser_multiple_currency()
 
     #config = {
     #        "crypto_currency":"BTCUSDT",
