@@ -1,5 +1,5 @@
 import matplotlib.pyplot as  plt
-
+import pandas as pd
 def core_img(evolution_df:dict):
     plt.figure(figsize=(10, 6))
     plt.plot(evolution_df["Time"], evolution_df['Portfolio'], label='Portfolio', marker='o')
@@ -23,6 +23,35 @@ def renderer(evolution_df:dict,verbose:bool=False):
         plt.pause(20)
     plt.close()
 
+def monthly_return(df_evolution:pd.DataFrame):
+    import plotly.graph_objects as go
+    df_evolution.set_index('Time', inplace=True)
+    df_monthly = df_evolution.resample('M')
+    df_monthly = df_monthly.ffill()
+    df_monthly['MonthlyPctChange'] = df_monthly['Portfolio'].pct_change() * 100
+    # Create a new column for color based on monthly percentage change
+    df_monthly['Color'] = ['green' if x > 0 else 'red' for x in df_monthly['MonthlyPctChange']]
+    # Plotting with Plotly
+    fig = go.Figure()
+
+    # Add bar trace
+    fig.add_trace(go.Bar(
+        x=df_monthly.index,
+        y=df_monthly['MonthlyPctChange'],
+        marker_color=df_monthly['Color'],
+    ))
+
+    # Customize layout
+    fig.update_layout(
+        title='Monthly Percentage Change of Portfolio',
+        xaxis_title='Time',
+        yaxis_title='Monthly Percentage Change (%)',
+        showlegend=False,
+    )
+
+    # Show the plot
+    fig.show()
+
 if __name__=="__main__":
     config = {
                     "crypto_currency":"ETHUSDT",
@@ -34,3 +63,6 @@ if __name__=="__main__":
                     "initial_capital":1000
                     
     }
+    a = pd.read_csv(r"C:\Users\alexw\Documents\Git\MAD_BTC\experience\BTCUSDT\binance\1d\momentum_strategy\1a5a3cdad501941507dbdbbf6b9cc6aaf22482e21a2c7f08f95e35b129ff1cf7\output_file.csv")
+    a["Time"] =  pd.to_datetime(a["Time"])
+    monthly_return(a)
