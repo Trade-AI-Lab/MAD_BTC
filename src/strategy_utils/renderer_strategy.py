@@ -23,34 +23,51 @@ def renderer(evolution_df:dict,verbose:bool=False):
         plt.pause(20)
     plt.close()
 
-def monthly_return(df_evolution:pd.DataFrame):
+def monthly_return(df_evolution:pd.DataFrame,verbose=False,saving=False,path="./"):
     import plotly.graph_objects as go
+    import plotly.subplots as sp
     df_evolution.set_index('Time', inplace=True)
-    df_monthly = df_evolution.resample('M')
+    df_monthly = df_evolution.resample('w')
     df_monthly = df_monthly.ffill()
-    df_monthly['MonthlyPctChange'] = df_monthly['Portfolio'].pct_change() * 100
+    df_monthly['MonthlyPctChange'] = df_monthly['Portfolio'].pct_change() * 100 # (df_monthly['Portfolio'].pct_change() * 100 - df_monthly['Buy_and_Hold'].pct_change() * 100) if df_monthly['Buy_and_Hold'].pct_change() * 100>0 else   
     # Create a new column for color based on monthly percentage change
     df_monthly['Color'] = ['green' if x > 0 else 'red' for x in df_monthly['MonthlyPctChange']]
     # Plotting with Plotly
-    fig = go.Figure()
+    fig = sp.make_subplots(rows=1, cols=2, column_widths=[0.7, 0.3], shared_yaxes=True)
 
-    # Add bar trace
+    # Add bar trace to the first subplot
     fig.add_trace(go.Bar(
         x=df_monthly.index,
         y=df_monthly['MonthlyPctChange'],
         marker_color=df_monthly['Color'],
-    ))
+        text=df_monthly['MonthlyPctChange'],
+        textposition='outside',  # Display text outside the bar
+        textfont=dict(size=10),  # Adjust text font size
+    ), row=1, col=1)
+    
+    # Add histogram trace to the second subplot
+    fig.add_trace(go.Box(
+        y=df_monthly['MonthlyPctChange'],
+        marker_color='blue',
+        boxpoints='all',  # Display all data points
+        jitter=0.3,  # Add jitter for better visualization
+        pointpos=-1.8,  # Adjust the position of the data points
+    ), row=1, col=2)
 
     # Customize layout
     fig.update_layout(
-        title='Monthly Percentage Change of Portfolio',
+        title='Monthly Percentage Change and Distribution of Portfolio',
         xaxis_title='Time',
         yaxis_title='Monthly Percentage Change (%)',
         showlegend=False,
     )
 
+
     # Show the plot
-    fig.show()
+    if verbose:
+        fig.show()
+    if saving:
+        fig.write_image(path+".png")
 
 if __name__=="__main__":
     config = {
@@ -63,6 +80,7 @@ if __name__=="__main__":
                     "initial_capital":1000
                     
     }
-    a = pd.read_csv(r"C:\Users\alexw\Documents\Git\MAD_BTC\experience\BTCUSDT\binance\1d\momentum_strategy\1a5a3cdad501941507dbdbbf6b9cc6aaf22482e21a2c7f08f95e35b129ff1cf7\output_file.csv")
+    PATH = r"C:\Users\alexw\Documents\Git\MAD_BTC\experience\BNBUSDT\binance\4h\momentum_strategy\2a90a504e84d572a958dff33f59f8f26ba7cdb598f4c23d476439ecbd7fa1522\output_file.csv"
+    a = pd.read_csv(PATH)
     a["Time"] =  pd.to_datetime(a["Time"])
-    monthly_return(a)
+    monthly_return(a,verbose=True)
