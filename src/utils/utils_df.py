@@ -1,6 +1,18 @@
 import pandas as pd
 from typing import Optional 
 def open_dataframe(PATH:str,light:bool=False)->pd.DataFrame:
+    """
+    open_dataframe _summary_
+
+    _extended_summary_
+
+    :param PATH: _description_
+    :type PATH: str
+    :param light: _description_, defaults to False
+    :type light: bool, optional
+    :return: _description_
+    :rtype: pd.DataFrame
+    """
     extension = PATH.split(".")[-1]
     if extension == "zip" or extension == "csv":
         df = pd.read_csv(PATH)
@@ -19,19 +31,36 @@ def open_dataframe(PATH:str,light:bool=False)->pd.DataFrame:
     return df
 
 def y_build(df:pd.DataFrame,column:str)->pd.DataFrame:
+    """
+    y_build _summary_
+
+    _extended_summary_
+
+    :param df: _description_
+    :type df: pd.DataFrame
+    :param column: _description_
+    :type column: str
+    :return: _description_
+    :rtype: pd.DataFrame
+    """
     assert column in df.columns
     df[f"{column}_label"]=(df[column].diff(1)>0).astype(int)
     return df
 
 def filter_dataframe_by_date_range(dataframe:pd.DataFrame,begin_date:Optional[str]=None,end_date:Optional[str]=None):
     """
-    Args:
-        dataframe (pd.Dataframe): the dataframe to be filtered
-        begin_date (str or None): the starting date, or None if not specified
-        end_date (str or None): the ending date, or None if not specified
+    filter_dataframe_by_date_range _summary_
 
-    Returns:
+    _extended_summary_
 
+    :param dataframe: _description_
+    :type dataframe: pd.DataFrame
+    :param begin_date: _description_, defaults to None
+    :type begin_date: Optional[str], optional
+    :param end_date: _description_, defaults to None
+    :type end_date: Optional[str], optional
+    :return: _description_
+    :rtype: _type_
     """
     if begin_date is not None and end_date is not None:
         df = dataframe[(dataframe['open_date'] >= begin_date) & (dataframe['open_date'] <= end_date)]

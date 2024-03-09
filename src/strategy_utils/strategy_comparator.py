@@ -6,7 +6,17 @@ sys.path.append(absolute_path)
 from src.utils.utils_df import open_dataframe
 import matplotlib.pyplot as plt
 
-def merge_strategies(list_strategies):
+def merge_strategies(list_strategies:list[pd.DataFrame]):
+    """
+    Merge Strategies
+
+    This function merges multiple strategies by concatenating their DataFrames, sorting by date, and filling missing values.
+
+    :param list_strategies: List of DataFrames representing different strategies.
+    :type list_strategies: list[pd.DataFrame]
+    :return: Merged DataFrame of strategies.
+    :rtype: pd.DataFrame
+    """
 
     # Concatenate the dataframes along the rows
     df_concat = pd.concat(list_strategies, ignore_index=True)
@@ -17,11 +27,22 @@ def merge_strategies(list_strategies):
     # Fill the missing values with the previous ones
     return df_sorted.ffill().fillna(0).drop_duplicates(subset=['Time'])
 
-def evalutation(df,column_A,column_B):
+def evalutation(df:pd.DataFrame,column_A:str,column_B:pd.DataFrame):
     """
-    Merge two strategies and then calculate the ratio between 
-    them and then does the RSI if RSI >50 means strat_a > strat_b overall
+    Evaluation of Columns
+
+    This function performs evaluation on two columns of a DataFrame, creating new columns for their ratio and RSI.
+
+    :param df: DataFrame containing the columns for evaluation.
+    :type df: pd.DataFrame
+    :param column_A: Name of the numerator column.
+    :type column_A: str
+    :param column_B: DataFrame containing the denominator column.
+    :type column_B: pd.DataFrame
+    :return: DataFrame with additional columns for the ratio and RSI.
+    :rtype: pd.DataFrame
     """
+    
     df[f"{column_A}/{column_B}"] = df[column_A]/df[column_B]
     df[f"RSI_{column_A}/{column_B}"] = RSIIndicator(df[f"{column_A}/{column_B}"]).rsi()
     return df

@@ -1,6 +1,17 @@
 import matplotlib.pyplot as  plt
 import pandas as pd
+import plotly.graph_objects as go
+import plotly.subplots as sp
+
 def core_img(evolution_df:dict):
+    """
+    Core Image Plotting Function
+
+    This function generates a core image plot comparing the portfolio value and Buy and Hold strategy over time.
+
+    :param evolution_df: A dictionary containing time and portfolio values.
+    :type evolution_df: dict
+    """
     plt.figure(figsize=(10, 6))
     plt.plot(evolution_df["Time"], evolution_df['Portfolio'], label='Portfolio', marker='o')
     plt.plot(evolution_df["Time"], evolution_df['Buy_and_Hold'], label='Buy and Hold', marker='x')
@@ -11,12 +22,34 @@ def core_img(evolution_df:dict):
     plt.grid(True)
 
 def save(title_image:str,strategy_folder_path:str,evolution_df:dict):
+    """
+    Save Core Image Plot and DataFrame to Files
+
+    This function saves the core image plot and the DataFrame to CSV and PNG files.
+
+    :param title_image: Title for the saved image file.
+    :type title_image: str
+    :param strategy_folder_path: Path to the folder where files will be saved.
+    :type strategy_folder_path: str
+    :param evolution_df: A dictionary containing time and portfolio values.
+    :type evolution_df: dict
+    """
     core_img(evolution_df)
     evolution_df.to_csv(strategy_folder_path+"/"+'output_file.csv', index=False) # Can  cause an error
     plt.savefig(strategy_folder_path+"/"+title_image+".png")
     plt.close()
 
 def renderer(evolution_df:dict,verbose:bool=False):
+    """
+    Render Core Image Plot
+
+    This function renders the core image plot, optionally displaying it for a brief period.
+
+    :param evolution_df: A dictionary containing time and portfolio values.
+    :type evolution_df: dict
+    :param verbose: If True, display the plot and pause for 20 seconds. Defaults to False.
+    :type verbose: bool, optional
+    """
     core_img(evolution_df)
     if verbose:
         plt.show()
@@ -24,8 +57,20 @@ def renderer(evolution_df:dict,verbose:bool=False):
     plt.close()
 
 def monthly_return(df_evolution:pd.DataFrame,verbose=False,saving=False,path="./"):
-    import plotly.graph_objects as go
-    import plotly.subplots as sp
+    """
+    Generate Monthly Return Plot
+
+    This function generates a plot showing the monthly percentage change in the portfolio and its distribution.
+
+    :param df_evolution: DataFrame containing time-indexed portfolio values.
+    :type df_evolution: pd.DataFrame
+    :param verbose: If True, display the plot. Defaults to False.
+    :type verbose: bool, optional
+    :param saving: If True, save the plot as a PNG file. Defaults to False.
+    :type saving: bool, optional
+    :param path: Path to save the PNG file. Defaults to "./".
+    :type path: str, optional
+    """
     df_evolution.set_index('Time', inplace=True)
     df_monthly = df_evolution.resample('w')
     df_monthly = df_monthly.ffill()

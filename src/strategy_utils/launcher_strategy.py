@@ -10,10 +10,20 @@ from src.strategy_utils.save_experiences_strategy import create_save_one_experie
 from src.utils.utils_signature import create_signature
 
 class trading_strategy:
-    """trading strategy is the core object to create trading strategies
-
     """
-    def __init__(self,config) -> None:
+    Trading Strategy
+
+    This class represents a generic trading strategy.
+    """
+    def __init__(self,config:dict) -> None:
+        """
+        Initialize Trading Strategy
+
+        This method initializes the trading strategy.
+
+        :param config: Configuration parameters for the strategy.
+        :type config: dict
+        """
         self.config = config
         self.PATH = absolute_path + rf"/data/{config['exchange']}-{config['crypto_currency']}-{config['time']}.pkl"
         self.parent_df = open_dataframe(self.PATH)
@@ -27,7 +37,8 @@ class trading_strategy:
     
     def loop_simulation(self)->None:
         """
-        loop_simulation represents a trading strategy implementation that simulates buying and selling of a cryptocurrency.
+        loop_simulation loop_simulation represents a trading strategy implementation that simulates buying and selling of a cryptocurrency.
+
         It initializes a portfolio with a specified initial capital, defines a fee percentage for transactions,
         and sets initial values for cryptocurrency holdings and position.
         The strategy iterates through a filtered DataFrame of market data, executing buy and sell signals based on certain conditions.
@@ -83,7 +94,13 @@ class trading_strategy:
         save("No strategy",self.strategy_folder_path,self.evolution_df) if self.title_image is None else save(self.title_image,self.strategy_folder_path,self.evolution_df)
     
     def renderer(self) -> None:
-        """renderer is the function for plotting, visualizing
+        """
+        Renderer
+
+        This method renders the evolution of the strategy.
+
+        :return: None
+        :rtype: None
         """
         renderer(self.evolution_df,verbose=True)
 
@@ -91,29 +108,64 @@ class trading_strategy:
     
 
     def compute_simulation(self)->pd.DataFrame:
+        """
+        compute_simulation _summary_
+
+        _extended_summary_
+
+        :return: _description_
+        :rtype: pd.DataFrame
+        """
         self.compute_needed_features()
         self.strategy_rules()
         self.loop_simulation()
         return self.evolution_df
     
     def compute_needed_features(self)->None:
-        """Compute needed features, when you have a dataframe with OHLC 
-        you need to compute needed features such as RSI or EMA for your trading strategies
+        """
+        Compute Needed Features for Trading Strategy.
+
+        This method calculates the necessary features for the Trading Strategy...
+
         """
         self.child_df = self.parent_df.copy(deep=True)
         self.child_df['buy_and_hold'] = self.child_df['open'] / self.child_df['open'].iloc[0] * self.config["initial_capital"]
     
     def strategy_rules(self):
-        """Compute rules for the trading strategy
+        """
+        Define Strategy Rules.
+
+        This method defines the rules for the momentum strategy, including buy and sell signals.
+
         """
         raise "To be implemented"
     
 class momentum_strategy(trading_strategy):
+    """
+    Momentum Trading Strategy
+
+    This class represents a momentum trading strategy based on the Moving Average Distance (MAD) concept.
+
+    :param trading_strategy: The base class for trading strategies.
+    :type trading_strategy: trading_strategy
+    """
     def __init__(self,config) -> None:
+        """
+        Initialize the Momentum Trading Strategy.
+
+        :param config: Configuration parameters for the strategy.
+        :type config: dict
+        """
         super().__init__(config)
         
 
     def compute_needed_features(self):
+        """
+        Compute Needed Features for Momentum Strategy.
+
+        This method calculates the necessary features for the momentum strategy, including the MAD ratio.
+
+        """
         super().compute_needed_features()
         self.strategy_name = f'{self.config["strategy"]["ratio_method"]}_{self.config["strategy"]["x"]}_{self.config["strategy"]["y"]}'
         self.title_image = f"{self.config['exchange']}-{self.config['crypto_currency']}-{self.config['time']}_portfolio_vs_buy_hold_{self.strategy_name}_{self.config['initial_capital']}$"
@@ -121,16 +173,25 @@ class momentum_strategy(trading_strategy):
         self.child_df = self.child_df.dropna().reset_index(drop=True)
     
     def strategy_rules(self):
+        """
+        Define Strategy Rules.
+
+        This method defines the rules for the momentum strategy, including buy and sell signals.
+
+        """
         self.compute_needed_features() if self.child_df is None else None
         self.child_df['buy_signal'] = (self.child_df[self.strategy_name] > 1) & (self.child_df[self.strategy_name].shift(1) <= 1)
         self.child_df['sell_signal'] = (self.child_df[self.strategy_name] < 1) & (self.child_df[self.strategy_name].shift(1) >= 1)
         self.df_filtered = self.child_df[self.child_df['buy_signal'] | self.child_df['sell_signal']].reset_index(drop=True)
 
     def change_config(self,config):
-        """change_config allows to the user to change the configuration but it is needed to reinitialize the object
+        """
+        Change Configuration.
 
-        Args:
-            config (dict): configuration containing the main important elements for the trading strategy
+        This method allows the user to change the configuration, but the object needs to be reinitialized.
+
+        :param config: New configuration for the strategy.
+        :type config: dict
         """
         if self.PATH == absolute_path + rf"/data/{config['exchange']}-{config['crypto_currency']}-{config['time']}.pkl":
             if self.signature_strategy != create_signature(self.config["strategy"]):
@@ -142,10 +203,30 @@ class momentum_strategy(trading_strategy):
 
 
 class donchian_strategy(trading_strategy):
+    """
+    Donchian Trading Strategy
+
+    This class represents a trading strategy based on the Donchian channel.
+
+    :param trading_strategy: The base class for trading strategies.
+    :type trading_strategy: trading_strategy
+    """
     def __init__(self,config) -> None:
+        """
+        Initialize the Donchian Trading Strategy.
+
+        :param config: Configuration parameters for the strategy.
+        :type config: dict
+        """
         super().__init__(config)
 
     def compute_needed_features(self):
+        """
+        Compute Needed Features for Donchian Strategy.
+
+        This method calculates the necessary features for the Donchian strategy, including the Donchian channel values.
+
+        """
         super().compute_needed_features()
         self.strategy_name = f'{self.config["strategy"]["window"]}'
         self.title_image = f"{self.config['exchange']}-{self.config['crypto_currency']}-{self.config['time']}_portfolio_vs_buy_hold_{self.strategy_name}_{self.config['initial_capital']}$"
@@ -156,16 +237,25 @@ class donchian_strategy(trading_strategy):
         self.child_df = self.child_df.dropna().reset_index(drop=True)
     
     def strategy_rules(self):
+        """
+        Define Strategy Rules.
+
+        This method defines the rules for the momentum strategy, including buy and sell signals.
+
+        """
         self.compute_needed_features() if self.child_df is None else None
         self.child_df['buy_signal'] = self.child_df[f"dcu_{self.strategy_name}"]>=self.child_df["high"]
         self.child_df['sell_signal'] = self.child_df[f"dcl_{self.strategy_name}"]<=self.child_df["low"]
         self.df_filtered = self.child_df[self.child_df['buy_signal'] | self.child_df['sell_signal']].reset_index(drop=True)
 
-    def change_config(self,config):
-        """change_config allows to the user to change the configuration but it is needed to reinitialize the object
+    def change_config(self,config:dict):
+        """
+        Change Configuration.
 
-        Args:
-            config (dict): configuration containing the main important elements for the trading strategy
+        This method allows the user to change the configuration, but the object needs to be reinitialized.
+
+        :param config: New configuration for the strategy.
+        :type config: dict
         """
         if self.PATH == absolute_path + rf"/data/{config['exchange']}-{config['crypto_currency']}-{config['time']}.pkl":
             if self.signature_strategy != create_signature(self.config["strategy"]):

@@ -8,10 +8,16 @@ from typing import Tuple
 
 def create_save_one_experience(config:dict,time_eccefpsn:str)->str:
     """
-    Create folder to store only one experience
-    Return:
-        strategy_folder_path (str): refers to the path where the strategy will be saved
+    Create and Save One Experience
 
+    This function creates and saves an experience based on the provided configuration.
+
+    :param config: Configuration parameters for the experience.
+    :type config: dict
+    :param time_eccefpsn: Time information for creating the experience folder.
+    :type time_eccefpsn: str
+    :return: Path to the created strategy folder.
+    :rtype: str
     """
     signature_config = create_signature(config)
     strategy_folder_path = time_eccefpsn+f"/{signature_config}"
@@ -21,11 +27,14 @@ def create_save_one_experience(config:dict,time_eccefpsn:str)->str:
 
 def create_save_experiences(config:dict)->str:
     """
-    Create any necessary folder to store experiences
-        config(dict) : configuration dictionnary which stores essential information
-    Return:
-        time_eccefpsn(str): refers to the path where all experiences will be saved
+    Create and Save Experiences
 
+    This function creates and saves experiences based on the provided configuration.
+
+    :param config: Configuration parameters for the experiences.
+    :type config: dict
+    :return: Path to the created experience folder.
+    :rtype: str
     """
     experience_folder_path = absolute_path + "/experience"
     os.makedirs(experience_folder_path,exist_ok=True)
