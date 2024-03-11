@@ -72,3 +72,9 @@ CROSS-VALIDATION IN BACKTESTING
 COMPUTE THE SHARP RATIO 
 COMPUTE THE MAX DRAWDOWN
 BETTER PLOT
+## Clustering is it robust ?
+## Example 1 :
+<img src="img\clustering_ADAUSDT_binance_4h.png" width="1024"/>
+
+## Example 2 :
+<img src="img\clustering_BNBUSDT_binance_1h.png" width="1024"/>
