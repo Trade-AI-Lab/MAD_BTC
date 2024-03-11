@@ -62,8 +62,8 @@ class trading_optimisation:
         self.config["crypto_currency"],self.config["time"],self.config["broker"] = crypto_currency, time, broker  # because we are looped on them
         study_name = "study"+f"_{self.config['strategy']['name']}_{self.config['crypto_currency']}_{self.config['exchange']}_{self.config['time']}" # the study_name depending on the strategy name, crypto,exchange and time
         storage_name = f"sqlite:///{os.path.join(absolute_path, 'study', study_name)}.db" # storage name 
-        study = optuna.create_study(storage_name, sampler=optuna.samplers.RandomSampler(),study_name=study_name,direction="maximize",load_if_exists="True") # study created else we reload the past strategy
-        study.optimize(lambda trial: self.objective(trial=trial), n_trials=50) # we call optuna to optimize it
+        study = optuna.create_study(storage_name,study_name=study_name,direction="maximize",load_if_exists="True") # study created else we reload the past strategy
+        study.optimize(lambda trial: self.objective(trial=trial), n_trials=200) # we call optuna to optimize it
 
     
     
