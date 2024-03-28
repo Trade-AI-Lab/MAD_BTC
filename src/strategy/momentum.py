@@ -1,5 +1,4 @@
 from ta.trend import SMAIndicator, EMAIndicator
-from ta.volatility import DonchianChannel
 import pandas as pd
 
 class indicator_momentum:
@@ -43,20 +42,4 @@ class indicator_momentum:
         ema_y = EMAIndicator(data['open'], window=y).ema_indicator()
         return (ema_x / ema_y)
     
-    @staticmethod
-    def donchian(data:pd.DataFrame,window:int)->tuple[pd.Series, pd.Series, pd.Series]:
-        """
-        Donchian Channel
-
-        This method calculates the high, middle, and low bands of the Donchian Channel.
-
-        :param data: DataFrame containing 'high', 'low', and 'close' prices.
-        :type data: pd.DataFrame
-        :param window: Window size for the Donchian Channel.
-        :type window: int
-        :return: Tuple containing the high, middle, and low bands of the Donchian Channel.
-        :rtype: tuple[pd.Series, pd.Series, pd.Series]
-        """
-        donchian_object = DonchianChannel(data["high"],data["low"],data["close"],window=window)
-        return donchian_object.donchian_channel_hband(),donchian_object.donchian_channel_mband(),donchian_object.donchian_channel_lband()
 
