@@ -80,8 +80,12 @@ class trading_strategy:
             elif crypto == 0 and portfolio == 0:
                 break 
         
-        list_portfolio.append(list_portfolio[-1])
-        list_position.append(list_position[-1])
+        if crypto > 0:
+            # Calculate the final portfolio value based on remaining position in crypto
+            final_portfolio_value = crypto * self.child_df.iloc[-1]['open'] * (1 - fee_percentage)
+            list_portfolio.append(final_portfolio_value)
+            list_position.append(position)  # Assuming you maintain the same position
+
         list_buy_hold.append(self.child_df['buy_and_hold'].iloc[-1])
         list_time.append(self.child_df["open_date"].iloc[-1])
         

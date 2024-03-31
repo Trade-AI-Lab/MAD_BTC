@@ -1,7 +1,7 @@
 import pandas as pd
 from src.utils.utils_df import open_dataframe
 from itertools import product
-from src.strategy_utils.launcher_strategy import trading_strategy,momentum_strategy,donchian_strategy
+from src.strategy_utils.launcher_strategy import momentum_strategy,donchian_strategy
 from src.strategy_utils.strategy_comparator import evalutation
 import os
 import optuna
@@ -62,7 +62,7 @@ class trading_optimisation:
         self.config["crypto_currency"],self.config["time"],self.config["broker"] = crypto_currency, time, broker  # because we are looped on them
         study_name = "study"+f"_{self.config['strategy']['name']}_{self.config['crypto_currency']}_{self.config['exchange']}_{self.config['time']}" # the study_name depending on the strategy name, crypto,exchange and time
         storage_name = f"sqlite:///{os.path.join(absolute_path, 'study', study_name)}.db" # storage name 
-        study = optuna.create_study(storage_name,study_name=study_name,direction="maximize",load_if_exists="True") # study created else we reload the past strategy
+        study = optuna.create_study(storage_name, sampler=optuna.samplers.TPESampler(),study_name=study_name,direction="maximize",load_if_exists="True") # study created else we reload the past strategy
         study.optimize(lambda trial: self.objective(trial=trial), n_trials=200) # we call optuna to optimize it
 
     
@@ -168,9 +168,25 @@ class optimiser_momentum_strategy(trading_optimisation):
             
 if __name__=="__main__":
     absolute_path = os.path.abspath(__file__)[:os.path.abspath(__file__).find("MAD_BTC")+len("MAD_BTC")]
+    df = momentum_strategy({
+  "crypto_currency": "ETHUSDT",
+  "time": "4h",
+  "exchange": "binance",
+  "strategy": {
+    "name": "momentum_strategy",
+    "x": 22,
+    "y": 116,
+    "ratio_method": "ema_ratio"
+  },
+  "initial_capital": 1000,
+  "broker": "binance"
+}).compute_simulation()
+    print(df.tail())
+    
+    """
     config = {
-           "crypto_currency":"BTCUSDT",
-            "time":"4h",
+           "crypto_currency":"OCEANUSDT",
+            "time":"1d",
             "exchange":"binance",
             "strategy":{
             "name":"momentum_strategy",
@@ -181,8 +197,8 @@ if __name__=="__main__":
             "initial_capital":1000
             
         }
-    optimiser_momentum_strategy(config).optimiser_multiple_currency()
-
+    optimiser_momentum_strategy(config).optimiser_multiple_currency(list_crypto_currency=["OCEANUSDT"])
+    """
     #config = {
     #        "crypto_currency":"BTCUSDT",
     #        "time":"4h",

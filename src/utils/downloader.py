@@ -24,7 +24,7 @@ EXCHANGE_LIMIT_RATES = {
     },
     "binance": {
         "limit": 1_000,
-        "pause_every": 10,
+        "pause_every": 1,
         "pause": 1,  # seconds
     },
     "kucoin":
@@ -124,7 +124,8 @@ async def main(time_frame:str="5m"):
 
     await _download(
         ["binance"], # select your exchange
-        symbols=["ADAUSDT","ETHUSDT","BNBUSDT","BTCUSDT"], # select your currencies
+        #symbols=["ADAUSDT","ETHUSDT","BNBUSDT","BTCUSDT"], # select your currencies
+        symbols=["BNBUSDT"],
         timeframe=time_frame, # the time frame you can change
         dir=dir, # directory
         since=datetime.datetime(year=2018, month=4, day=1), # starting date
@@ -134,8 +135,9 @@ async def main(time_frame:str="5m"):
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main(time_frame="1d"))
-    loop.run_until_complete(main(time_frame="4h"))
-    loop.run_until_complete(main(time_frame="1h"))
+    print("Done 1h")
+    #loop.run_until_complete(main(time_frame="4h"))
+    #loop.run_until_complete(main(time_frame="1h"))
     #loop.run_until_complete(main(time_frame="5m"))
     # asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     # asyncio.run(main())
