@@ -5,6 +5,7 @@ absolute_path = os.path.abspath(__file__)[:os.path.abspath(__file__).find("MAD_B
 sys.path.append(absolute_path)
 from src.utils.utils_df import open_dataframe
 from src.strategy.momentum import indicator_momentum
+from src.strategy.envelop import indicator_envelop
 from src.strategy_utils.renderer_strategy import renderer,save
 from src.strategy_utils.save_experiences_strategy import create_save_one_experience,create_save_experiences
 from src.utils.utils_signature import create_signature
@@ -204,40 +205,36 @@ class momentum_strategy(trading_strategy):
             super(momentum_strategy, self).__init__(config)
 
     
-
-
-class donchian_strategy(trading_strategy):
+class envelop_strategy(trading_strategy):
     """
-    Donchian Trading Strategy
+    Envelop Trading Strategy
 
-    This class represents a trading strategy based on the Donchian channel.
+    This class represents a envelop trading strategy.
 
     :param trading_strategy: The base class for trading strategies.
     :type trading_strategy: trading_strategy
     """
     def __init__(self,config) -> None:
         """
-        Initialize the Donchian Trading Strategy.
+        Initialize the Momentum Trading Strategy.
 
         :param config: Configuration parameters for the strategy.
         :type config: dict
         """
         super().__init__(config)
+        
 
     def compute_needed_features(self):
         """
-        Compute Needed Features for Donchian Strategy.
+        Compute Needed Features for Momentum Strategy.
 
-        This method calculates the necessary features for the Donchian strategy, including the Donchian channel values.
+        This method calculates the necessary features for the momentum strategy, including the MAD ratio.
 
         """
         super().compute_needed_features()
-        self.strategy_name = f'{self.config["strategy"]["window"]}'
+        self.strategy_name = f'{self.config["strategy"]["method"]}_{self.envelope_from_list_to_str(self.config["strategy"]["envelop"])}'
         self.title_image = f"{self.config['exchange']}-{self.config['crypto_currency']}-{self.config['time']}_portfolio_vs_buy_hold_{self.strategy_name}_{self.config['initial_capital']}$"
-        donchian = indicator_momentum.donchian(self.child_df, self.config["strategy"]["window"])
-        self.child_df[f"dcu_{self.strategy_name}"] = donchian[0]
-        self.child_df[f"dcm_{self.strategy_name}"] = donchian[1]
-        self.child_df[f"dcl_{self.strategy_name}"] = donchian[2]
+        self.child_df[self.strategy_name] = getattr(indicator_envelop,self.config["strategy"]["method"])(self.child_df, self.config["strategy"]["x"])
         self.child_df = self.child_df.dropna().reset_index(drop=True)
     
     def strategy_rules(self):
@@ -248,11 +245,11 @@ class donchian_strategy(trading_strategy):
 
         """
         self.compute_needed_features() if self.child_df is None else None
-        self.child_df['buy_signal'] = self.child_df[f"dcu_{self.strategy_name}"]>=self.child_df["high"]
-        self.child_df['sell_signal'] = self.child_df[f"dcl_{self.strategy_name}"]<=self.child_df["low"]
+        self.child_df['buy_signal'] = (self.child_df[self.strategy_name] > 1) & (self.child_df[self.strategy_name].shift(1) <= 1)
+        self.child_df['sell_signal'] = (self.child_df[self.strategy_name] < 1) & (self.child_df[self.strategy_name].shift(1) >= 1)
         self.df_filtered = self.child_df[self.child_df['buy_signal'] | self.child_df['sell_signal']].reset_index(drop=True)
 
-    def change_config(self,config:dict):
+    def change_config(self,config):
         """
         Change Configuration.
 
@@ -265,6 +262,12 @@ class donchian_strategy(trading_strategy):
             if self.signature_strategy != create_signature(self.config["strategy"]):
                 self.child_df = None 
         else:
-            super(donchian_strategy, self).__init__(config)
+            super(momentum_strategy, self).__init__(config)
+
+    def envelope_from_list_to_str(liste:list[int]):
+        return "_layer_".join(map(str, liste)) + "_layer"
+
+
+
         
     
