@@ -234,8 +234,12 @@ class envelop_strategy(trading_strategy):
         super().compute_needed_features()
         self.strategy_name = f'{self.config["strategy"]["method"]}_{self.envelope_from_list_to_str(self.config["strategy"]["envelop"])}'
         self.title_image = f"{self.config['exchange']}-{self.config['crypto_currency']}-{self.config['time']}_portfolio_vs_buy_hold_{self.strategy_name}_{self.config['initial_capital']}$"
-        self.child_df[self.strategy_name] = getattr(indicator_envelop,self.config["strategy"]["method"])(self.child_df, self.config["strategy"]["x"])
+        self.child_df[self.strategy_name] = getattr(indicator_envelop,self.config["strategy"]["method"])(self.child_df, self.config["strategy"]["x"]) # refers to the MA or EMA
         self.child_df = self.child_df.dropna().reset_index(drop=True)
+        for percent in self.config["strategy"]["envelop"]:
+            self.child_df[f"envelop_up_{percent}%"] = self.child_df[self.strategy_name](1+percent) # E and/or MA(1+x%)
+            self.child_df[f"envelop_down_{percent}%"] = self.child_df[self.strategy_name](1-percent) # E and/or MA(1-x%)
+        
     
     def strategy_rules(self):
         """
@@ -245,6 +249,7 @@ class envelop_strategy(trading_strategy):
 
         """
         self.compute_needed_features() if self.child_df is None else None
+        self.child_df["buy_signal"] = self.child_df["close"]>
         self.child_df['buy_signal'] = (self.child_df[self.strategy_name] > 1) & (self.child_df[self.strategy_name].shift(1) <= 1)
         self.child_df['sell_signal'] = (self.child_df[self.strategy_name] < 1) & (self.child_df[self.strategy_name].shift(1) >= 1)
         self.df_filtered = self.child_df[self.child_df['buy_signal'] | self.child_df['sell_signal']].reset_index(drop=True)
@@ -266,6 +271,69 @@ class envelop_strategy(trading_strategy):
 
     def envelope_from_list_to_str(liste:list[int]):
         return "_layer_".join(map(str, liste)) + "_layer"
+    
+    def loop_simulation(self)->None:
+        """
+        loop_simulation loop_simulation represents a trading strategy implementation that simulates buying and selling of a cryptocurrency.
+
+        It initializes a portfolio with a specified initial capital, defines a fee percentage for transactions,
+        and sets initial values for cryptocurrency holdings and position.
+        The strategy iterates through a filtered DataFrame of market data, executing buy and sell signals based on certain conditions.
+        It maintains track of the portfolio, position, and other relevant information over time.
+        The resulting evolution of the portfolio and associated metrics are stored in a Pandas DataFrame.
+        The code also creates a folder to save the strategy's results and visualizations.
+        The final results are saved, and the code appears to be part of a larger trading strategy analysis or backtesting framework.
+        """
+
+        portfolio = self.config["initial_capital"]
+        fee_percentage = 0.1 / 100  # 0.1%
+        crypto,position = 0,0
+        list_portfolio,list_buy_hold,list_time,list_position = [],[],[],[]
+
+        for i in range(len(self.df_filtered)):
+
+            if self.df_filtered.iloc[i]['buy_signal'] and position != 1 and portfolio > 0:
+                position = 1
+                list_portfolio.append(portfolio)
+                list_position.append(position)
+                crypto = portfolio / (self.df_filtered.iloc[i]['open']*(1 + fee_percentage))
+                portfolio = 0
+
+                
+                list_buy_hold.append(self.df_filtered['buy_and_hold'].iloc[i])
+                list_time.append(self.df_filtered["open_date"].iloc[i])
+
+            elif self.df_filtered.iloc[i]['sell_signal'] and position != -1 and crypto > 0:
+                position = -1
+                portfolio = crypto * self.df_filtered.iloc[i]['open'] * (1-fee_percentage)
+                crypto = 0
+
+                
+                list_portfolio.append(portfolio)
+                list_position.append(position)
+                list_buy_hold.append(self.df_filtered['buy_and_hold'].iloc[i])
+                list_time.append(self.df_filtered["open_date"].iloc[i])
+
+            elif crypto == 0 and portfolio == 0:
+                break 
+        
+        if crypto > 0:
+            # Calculate the final portfolio value based on remaining position in crypto
+            final_portfolio_value = crypto * self.child_df.iloc[-1]['open'] * (1 - fee_percentage)
+            list_portfolio.append(final_portfolio_value)
+            list_position.append(position)  # Assuming you maintain the same position
+
+        list_buy_hold.append(self.child_df['buy_and_hold'].iloc[-1])
+        list_time.append(self.child_df["open_date"].iloc[-1])
+        
+        self.evolution_df = pd.DataFrame({
+        "Time":list_time,
+        'Portfolio': list_portfolio,
+        'Buy_and_Hold': list_buy_hold,
+        "Position":list_position})
+        self.strategy_folder_path = create_save_one_experience(self.config,self.time_eccefpsn)
+        save("No strategy",self.strategy_folder_path,self.evolution_df) if self.title_image is None else save(self.title_image,self.strategy_folder_path,self.evolution_df)
+
 
 
 
