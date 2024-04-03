@@ -240,8 +240,9 @@ class envelop_strategy(trading_strategy):
         self.list_col_buy_signal = []
         self.list_col_sell_signal = []
 
-        for percent_envelop, percent_portfolio in zip(self.config["strategy"]["envelop"],self.config["strategy"]["percent_portfolio"]):
-
+        for percent_envelop in self.config["strategy"]["envelop"]:
+            
+            percent_portfolio = self.config["strategy"]["envelop"][percent_envelop]
             # Buy
             self.child_df[f"envelop_up_{percent_envelop}%"] = self.child_df[self.strategy_name](1+percent_envelop) # E and/or MA(1+x%)
             buy_signal = f"buy_signal_{percent_envelop}%"
@@ -316,12 +317,13 @@ class envelop_strategy(trading_strategy):
             if index <= jumping_time:
                 pass
 
-            if row['buy_signal'] and position != 1 and portfolio > 0:
+            elif row['buy_signal'] and position != 1 and portfolio > 0:
                 # Begin the trade
                 position = 1
 
-                for percent_envelop, percent_portfolio in zip(self.config["strategy"]["envelop"],self.config["strategy"]["percent_portfolio"]):
-                    crypto +=   portfolio*percent_portfolio / (row[f"envelop_up_{percent_envelop}%"]* (1 + fee_percentage) )
+                for percent_envelop in self.config["strategy"]["envelop"]:
+                    percent_portfolio = self.config["strategy"]["envelop"][percent_envelop]
+                    crypto -=   portfolio*percent_portfolio / (row[f"envelop_down_{percent_envelop}%"]* (1 - fee_percentage) )
                     portfolio-=portfolio*percent_portfolio
 
                 list_portfolio.append(portfolio)
@@ -347,7 +349,8 @@ class envelop_strategy(trading_strategy):
                 # Begin the trade
                 position = -1
 
-                for percent_envelop, percent_portfolio in zip(self.config["strategy"]["envelop"],self.config["strategy"]["percent_portfolio"]):
+                for percent_envelop in self.config["strategy"]["envelop"]:
+                    percent_portfolio = self.config["strategy"]["envelop"][percent_envelop]
                     crypto -=   portfolio*percent_portfolio / (row[f"envelop_down_{percent_envelop}%"]* (1 - fee_percentage) )
                     portfolio-=portfolio*percent_portfolio
 

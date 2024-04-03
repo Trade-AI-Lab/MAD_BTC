@@ -183,6 +183,26 @@ if __name__=="__main__":
   "broker": "binance"
 }).compute_simulation()
     print(df.tail())
+
+    df = envelop_strategy({
+  "crypto_currency": "ETHUSDT",
+  "time": "4h",
+  "exchange": "binance",
+  "strategy": {
+    "name": "envelop_strategy",
+    "x": 22,
+    "method": "ema_ratio",
+    "envelop":{
+        "0.003":0.3,
+        "0.005":0.3,
+        "0.007":0.4
+
+    }
+  },
+  "initial_capital": 1000,
+  "broker": "binance"
+}).compute_simulation()
+    print(df.tail())
     
     """
     config = {
