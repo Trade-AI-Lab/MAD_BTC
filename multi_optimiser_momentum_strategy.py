@@ -1,7 +1,7 @@
 import pandas as pd
 from src.utils.utils_df import open_dataframe
 from itertools import product
-from src.strategy_utils.launcher_strategy import momentum_strategy,donchian_strategy
+from src.strategy_utils.launcher_strategy import momentum_strategy, envelop_strategy
 from src.strategy_utils.strategy_comparator import evalutation
 import os
 import optuna
@@ -78,47 +78,6 @@ class trading_optimisation:
         """
         raise "To be implemented"
 
-    
-class optimiser_donchian_strategy(trading_optimisation):
-    """
-    Optimizer for Donchian Strategy
-
-    This class specializes in optimizing the Donchian strategy.
-
-    """
-
-    def __init__(self, config:dict) -> None:
-        """
-        Initialize Optimizer for Donchian Strategy
-
-        This method initializes the optimizer for the Donchian strategy.
-
-        :param config: Configuration parameters for optimization.
-        :type config: dict
-        """
-        super().__init__(config)
-        self.strategy = donchian_strategy(config) # initialize the donchian strategy
-
-    def objective(self,trial:optuna.trial)->None:
-        """
-        Objective for Donchian Strategy Optimization
-
-        This method defines the objective function for optimizing the Donchian strategy.
-
-        :param trial: Optuna trial object.
-        :type trial: optuna.trial
-        :return: None
-        :rtype: None
-        """
-        self.config["strategy"]["window"] = trial.suggest_int('window', 1, 50) # hyperparameters
-
-        self.strategy.change_config(self.config) #  when condif is file is modified you have to use change_config in order to reinitialize the object
-        simulation_df = self.strategy.compute_simulation() # compute the simulation
-        
-        col_1,col_2 = "Portfolio","Buy_and_Hold" # element for computing the reward
-        simulation_df = evalutation(simulation_df,col_1,col_2) # evaluate the simulation
-        result = simulation_df["Portfolio"].iloc[-1]*(simulation_df[f"RSI_{col_1}/{col_2}"]/100).mean() # calculate a result
-        return result
 
 class optimiser_momentum_strategy(trading_optimisation):
     """
@@ -163,7 +122,49 @@ class optimiser_momentum_strategy(trading_optimisation):
         simulation_df = evalutation(simulation_df,col_1,col_2) # evaluate the simulation
         result = simulation_df["Portfolio"].iloc[-1]*(simulation_df[f"RSI_{col_1}/{col_2}"]/100).mean() # calculate a result
         return result
-    
+
+class optimiser_momentum_strategy(trading_optimisation):
+    """
+    Optimizer for Momentum Strategy
+
+    This class specializes in optimizing the Momentum strategy.
+
+    """
+
+    def __init__(self, config:dict) -> None:
+        """
+        Initialize Optimizer for Momentum Strategy
+
+        This method initializes the optimizer for the Momentum strategy.
+
+        :param config: Configuration parameters for optimization.
+        :type config: dict
+        """
+        super().__init__(config)
+        self.strategy = envelop_strategy(config) # initialize the momentum strategy
+
+    def objective(self,trial:optuna.trial)->None:
+        """
+        Objective for Momentum Strategy Optimization
+
+        This method defines the objective function for optimizing the Momentum strategy.
+
+        :param trial: Optuna trial object.
+        :type trial: optuna.trial
+        :return: None
+        :rtype: None
+        """
+        
+        self.config["strategy"]["x"] = trial.suggest_int('x', 1, 34) # hyperparameters
+        self.config["strategy"]["method"] = trial.suggest_categorical('ratio_method',["ma","ema"]) # hyperparameters
+
+        self.strategy.change_config(self.config) # essential change config wil reinitialize the object
+        simulation_df = self.strategy.compute_simulation() # compute the simulation
+        
+        col_1,col_2 = "Portfolio","Buy_and_Hold" # element for computing the reward
+        simulation_df = evalutation(simulation_df,col_1,col_2) # evaluate the simulation
+        result = simulation_df["Portfolio"].iloc[-1]*(simulation_df[f"RSI_{col_1}/{col_2}"]/100).mean() # calculate a result
+        return result
 
             
 if __name__=="__main__":

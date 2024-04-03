@@ -1,4 +1,4 @@
-from .launcher_strategy import trading_strategy,momentum_strategy,donchian_strategy
+from .launcher_strategy import trading_strategy,momentum_strategy
 from .renderer_strategy import core_img,save,renderer,monthly_return
 from .save_experiences_strategy import create_save_one_experience, create_signature, save_dict_to_json, create_save_experiences
 from .strategy_comparator import merge_strategies,evalutation

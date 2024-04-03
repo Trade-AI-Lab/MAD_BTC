@@ -54,29 +54,30 @@ class trading_strategy:
         crypto,position = 0,0
         list_portfolio,list_buy_hold,list_time,list_position = [],[],[],[]
 
-        for i in range(len(self.df_filtered)):
 
-            if self.df_filtered.iloc[i]['buy_signal'] and position != 1 and portfolio > 0:
+        self.df_filtered.set_index('open_date', inplace=True)
+
+        for index, row in self.df_filtered.iterrows():
+            row = self.df_filtered.loc[index]
+            if row['buy_signal'] and position != 1 and portfolio > 0:
                 position = 1
                 list_portfolio.append(portfolio)
                 list_position.append(position)
-                crypto = portfolio / (self.df_filtered.iloc[i]['open']*(1 + fee_percentage))
+                crypto = portfolio / (row['open'] * (1 + fee_percentage))
                 portfolio = 0
 
-                
-                list_buy_hold.append(self.df_filtered['buy_and_hold'].iloc[i])
-                list_time.append(self.df_filtered["open_date"].iloc[i])
+                list_buy_hold.append(row['buy_and_hold'])
+                list_time.append(index)
 
-            elif self.df_filtered.iloc[i]['sell_signal'] and position != -1 and crypto > 0:
+            elif row['sell_signal'] and position != -1 and crypto > 0:
                 position = -1
-                portfolio = crypto * self.df_filtered.iloc[i]['open'] * (1-fee_percentage)
+                portfolio = crypto * row['open'] * (1 - fee_percentage)
                 crypto = 0
 
-                
                 list_portfolio.append(portfolio)
                 list_position.append(position)
-                list_buy_hold.append(self.df_filtered['buy_and_hold'].iloc[i])
-                list_time.append(self.df_filtered["open_date"].iloc[i])
+                list_buy_hold.append(row['buy_and_hold'])
+                list_time.append(index)
 
             elif crypto == 0 and portfolio == 0:
                 break 
@@ -236,9 +237,25 @@ class envelop_strategy(trading_strategy):
         self.title_image = f"{self.config['exchange']}-{self.config['crypto_currency']}-{self.config['time']}_portfolio_vs_buy_hold_{self.strategy_name}_{self.config['initial_capital']}$"
         self.child_df[self.strategy_name] = getattr(indicator_envelop,self.config["strategy"]["method"])(self.child_df, self.config["strategy"]["x"]) # refers to the MA or EMA
         self.child_df = self.child_df.dropna().reset_index(drop=True)
-        for percent in self.config["strategy"]["envelop"]:
-            self.child_df[f"envelop_up_{percent}%"] = self.child_df[self.strategy_name](1+percent) # E and/or MA(1+x%)
-            self.child_df[f"envelop_down_{percent}%"] = self.child_df[self.strategy_name](1-percent) # E and/or MA(1-x%)
+        self.list_col_buy_signal = []
+        self.list_col_sell_signal = []
+
+        for percent_envelop, percent_portfolio in zip(self.config["strategy"]["envelop"],self.config["strategy"]["percent_portfolio"]):
+
+            # Buy
+            self.child_df[f"envelop_up_{percent_envelop}%"] = self.child_df[self.strategy_name](1+percent_envelop) # E and/or MA(1+x%)
+            buy_signal = f"buy_signal_{percent_envelop}%"
+            self.child_df[buy_signal] = (self.child_df[f"envelop_up_{percent_envelop}%"]>=self.child_df["high"]).astype(int)*percent_portfolio
+            self.list_col_sell_signal.append(buy_signal)
+
+            # Sell
+            self.child_df[f"envelop_down_{percent_envelop}%"] = self.child_df[self.strategy_name](1-percent_envelop) # E and/or MA(1-x%)
+            sell_signal = f"sell_signal_{percent_envelop}%"
+            self.child_df[sell_signal] = (self.child_df[f"envelop_down_{percent_envelop}%"]<=self.child_df["low"]).astype(int)*percent_portfolio
+            self.list_col_sell_signal.append(sell_signal)
+
+        
+        
         
     
     def strategy_rules(self):
@@ -249,9 +266,8 @@ class envelop_strategy(trading_strategy):
 
         """
         self.compute_needed_features() if self.child_df is None else None
-        self.child_df["buy_signal"] = self.child_df["close"]>
-        self.child_df['buy_signal'] = (self.child_df[self.strategy_name] > 1) & (self.child_df[self.strategy_name].shift(1) <= 1)
-        self.child_df['sell_signal'] = (self.child_df[self.strategy_name] < 1) & (self.child_df[self.strategy_name].shift(1) >= 1)
+        self.child_df["buy_signal"] =  self.child_df[self.list_col_buy_signal].sum(axis=1)
+        self.child_df['sell_signal'] = self.child_df[self.list_col_sell_signal].sum(axis=1)
         self.df_filtered = self.child_df[self.child_df['buy_signal'] | self.child_df['sell_signal']].reset_index(drop=True)
 
     def change_config(self,config):
@@ -272,6 +288,7 @@ class envelop_strategy(trading_strategy):
     def envelope_from_list_to_str(liste:list[int]):
         return "_layer_".join(map(str, liste)) + "_layer"
     
+
     def loop_simulation(self)->None:
         """
         loop_simulation loop_simulation represents a trading strategy implementation that simulates buying and selling of a cryptocurrency.
@@ -287,32 +304,69 @@ class envelop_strategy(trading_strategy):
 
         portfolio = self.config["initial_capital"]
         fee_percentage = 0.1 / 100  # 0.1%
+        fee_maker = 0.2/100
         crypto,position = 0,0
         list_portfolio,list_buy_hold,list_time,list_position = [],[],[],[]
+        self.delta_t = self.df_filtered["open_date"].diff(1).iloc[-1]
+        self.df_filtered.set_index('open_date', inplace=True)
+        self.child_df.set_index('open_date',inplace=True)
+        jumping_time = 0
+        for index, row in self.df_filtered.iterrows():
+            row = self.df_filtered.loc[index]
+            if index <= jumping_time:
+                pass
 
-        for i in range(len(self.df_filtered)):
-
-            if self.df_filtered.iloc[i]['buy_signal'] and position != 1 and portfolio > 0:
+            if row['buy_signal'] and position != 1 and portfolio > 0:
+                # Begin the trade
                 position = 1
+
+                for percent_envelop, percent_portfolio in zip(self.config["strategy"]["envelop"],self.config["strategy"]["percent_portfolio"]):
+                    crypto +=   portfolio*percent_portfolio / (row[f"envelop_up_{percent_envelop}%"]* (1 + fee_percentage) )
+                    portfolio-=portfolio*percent_portfolio
+
                 list_portfolio.append(portfolio)
                 list_position.append(position)
-                crypto = portfolio / (self.df_filtered.iloc[i]['open']*(1 + fee_percentage))
-                portfolio = 0
-
+                list_buy_hold.append(row['buy_and_hold'])
+                list_time.append(index)
+                k = 1
+                while self.child_df[self.strategy_name].loc[self.delta_t*k + index]<self.child_df[["low"]].loc[self.delta_t*k + index]:
+                    k+=1
+                # Trade ended
                 
-                list_buy_hold.append(self.df_filtered['buy_and_hold'].iloc[i])
-                list_time.append(self.df_filtered["open_date"].iloc[i])
-
-            elif self.df_filtered.iloc[i]['sell_signal'] and position != -1 and crypto > 0:
-                position = -1
-                portfolio = crypto * self.df_filtered.iloc[i]['open'] * (1-fee_percentage)
+                portfolio += crypto*self.child_df[self.strategy_name].loc[self.delta_t*k + index]*(1-fee_maker)
+                jumping_time = self.delta_t*k + index
                 crypto = 0
-
-                
+                position = 0
                 list_portfolio.append(portfolio)
                 list_position.append(position)
-                list_buy_hold.append(self.df_filtered['buy_and_hold'].iloc[i])
-                list_time.append(self.df_filtered["open_date"].iloc[i])
+                list_buy_hold.append(self.child_df[self.strategy_name].loc["buy_and_hold"])
+                list_time.append(self.delta_t*k + index)
+                    
+
+            elif row['sell_signal'] and position != 1 and portfolio > 0:
+                # Begin the trade
+                position = -1
+
+                for percent_envelop, percent_portfolio in zip(self.config["strategy"]["envelop"],self.config["strategy"]["percent_portfolio"]):
+                    crypto -=   portfolio*percent_portfolio / (row[f"envelop_down_{percent_envelop}%"]* (1 - fee_percentage) )
+                    portfolio-=portfolio*percent_portfolio
+
+                list_portfolio.append(portfolio)
+                list_position.append(position)
+                list_buy_hold.append(row['buy_and_hold'])
+                list_time.append(index)
+                k = 1
+                while self.child_df[self.strategy_name].loc[self.delta_t*k + index]<self.child_df[["low"]].loc[self.delta_t*k + index]:
+                    k+=1
+                # Trade ended
+                rebuy_price_crypto = portfolio*percent_portfolio/(self.child_df[self.strategy_name].loc[self.delta_t*k + index]* (1 + fee_maker)) 
+                portfolio += rebuy_price_crypto-crypto
+                crypto = 0
+                position = 0
+                list_portfolio.append(portfolio)
+                list_position.append(position)
+                list_buy_hold.append(self.child_df[self.strategy_name].loc["buy_and_hold"])
+                list_time.append(self.delta_t*k + index)
 
             elif crypto == 0 and portfolio == 0:
                 break 
