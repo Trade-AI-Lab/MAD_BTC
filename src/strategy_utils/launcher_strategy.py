@@ -195,7 +195,7 @@ class momentum_strategy(trading_strategy):
         self.compute_needed_features() if self.child_df is None else None
         self.child_df['buy_signal'] = (self.child_df[self.strategy_name] > 1) & (self.child_df[self.strategy_name].shift(1) <= 1)
         self.child_df['sell_signal'] = (self.child_df[self.strategy_name] < 1) & (self.child_df[self.strategy_name].shift(1) >= 1)
-        self.df_filtered = self.child_df[self.child_df['buy_signal'] | self.child_df['sell_signal']].reset_index(drop=True)
+        self.df_filtered = self.child_df[(self.child_df['buy_signal']>0) | (self.child_df['sell_signal']>0)].reset_index(drop=True)
 
     def change_config(self,config):
         """
@@ -278,7 +278,6 @@ class envelop_strategy(trading_strategy):
         self.compute_needed_features() if self.child_df is None else None
         self.child_df["buy_signal"] =  self.child_df[self.list_col_buy_signal].sum(axis=1)
         self.child_df['sell_signal'] = self.child_df[self.list_col_sell_signal].sum(axis=1)
-
         self.df_filtered = self.child_df[(self.child_df['buy_signal']>0) | (self.child_df['sell_signal']>0)].reset_index(drop=True)
 
     def change_config(self,config):

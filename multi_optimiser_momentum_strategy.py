@@ -189,50 +189,22 @@ if __name__=="__main__":
   "initial_capital": 1000,
   "broker": "binance"
 }).compute_simulation()
-exit()
+
 df = momentum_strategy({
   "crypto_currency": "ETHUSDT",
-  "time": "4h",
+  "time": "1h",
   "exchange": "binance",
   "strategy": {
     "name": "momentum_strategy",
-    "x": 22,
-    "y": 116,
-    "ratio_method": "ema_ratio"
+    "x": 5,
+    "y": 57,
+    "ratio_method": "ma_ratio"
   },
   "initial_capital": 1000,
   "broker": "binance"
 }).compute_simulation()
-print(df.tail())
-"""
-config = {
-        "crypto_currency":"OCEANUSDT",
-        "time":"1d",
-        "exchange":"binance",
-        "strategy":{
-        "name":"momentum_strategy",
-        "x":12,
-        "y":90,
-        "ratio_method":"ema_ratio",
-        },
-        "initial_capital":1000
-        
-    }
-optimiser_momentum_strategy(config).optimiser_multiple_currency(list_crypto_currency=["OCEANUSDT"])
-"""
-    #config = {
-    #        "crypto_currency":"BTCUSDT",
-    #        "time":"4h",
-    #        "exchange":"binance",
-    #        "strategy":{
-    #        "name":"donchian_strategy",
-    #        "window":1
-    #        },
-    #        "initial_capital":1000
-            
-    #    }
-    #optimiser_donchian_strategy(config).optimiser_multiple_currency()
-    
+
+
 
     
         
