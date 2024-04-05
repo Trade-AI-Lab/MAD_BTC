@@ -169,7 +169,28 @@ class optimiser_momentum_strategy(trading_optimisation):
             
 if __name__=="__main__":
     absolute_path = os.path.abspath(__file__)[:os.path.abspath(__file__).find("MAD_BTC")+len("MAD_BTC")]
-    df = momentum_strategy({
+    df = envelop_strategy({
+  "crypto_currency": "ETHUSDT",
+  "time": "4h",
+  "exchange": "binance",
+  "begin_date":"2020-03-21 00:00:00",
+  "end_date":"2023-03-21 00:00:00",
+  "strategy": {
+    "name": "envelop_strategy",
+    "x": 22,
+    "method": "ema",
+    "envelop":{
+        "0.0007":0.3,
+        "0.001":0.3,
+        "0.0015":0.4
+
+    }
+  },
+  "initial_capital": 1000,
+  "broker": "binance"
+}).compute_simulation()
+exit()
+df = momentum_strategy({
   "crypto_currency": "ETHUSDT",
   "time": "4h",
   "exchange": "binance",
@@ -182,44 +203,23 @@ if __name__=="__main__":
   "initial_capital": 1000,
   "broker": "binance"
 }).compute_simulation()
-    print(df.tail())
-
-    df = envelop_strategy({
-  "crypto_currency": "ETHUSDT",
-  "time": "4h",
-  "exchange": "binance",
-  "strategy": {
-    "name": "envelop_strategy",
-    "x": 22,
-    "method": "ema_ratio",
-    "envelop":{
-        "0.003":0.3,
-        "0.005":0.3,
-        "0.007":0.4
-
+print(df.tail())
+"""
+config = {
+        "crypto_currency":"OCEANUSDT",
+        "time":"1d",
+        "exchange":"binance",
+        "strategy":{
+        "name":"momentum_strategy",
+        "x":12,
+        "y":90,
+        "ratio_method":"ema_ratio",
+        },
+        "initial_capital":1000
+        
     }
-  },
-  "initial_capital": 1000,
-  "broker": "binance"
-}).compute_simulation()
-    print(df.tail())
-    
-    """
-    config = {
-           "crypto_currency":"OCEANUSDT",
-            "time":"1d",
-            "exchange":"binance",
-            "strategy":{
-            "name":"momentum_strategy",
-            "x":12,
-            "y":90,
-            "ratio_method":"ema_ratio",
-            },
-            "initial_capital":1000
-            
-        }
-    optimiser_momentum_strategy(config).optimiser_multiple_currency(list_crypto_currency=["OCEANUSDT"])
-    """
+optimiser_momentum_strategy(config).optimiser_multiple_currency(list_crypto_currency=["OCEANUSDT"])
+"""
     #config = {
     #        "crypto_currency":"BTCUSDT",
     #        "time":"4h",

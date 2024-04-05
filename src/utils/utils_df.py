@@ -28,6 +28,23 @@ def open_dataframe(PATH:str,light:bool=False)->pd.DataFrame:
                 df["close"] = df["open_price"].shift(-1)
             else:
                 raise "impossible to find an open price to create close price"
+            
+    if 'open_date' not in df.columns:
+        raise ValueError("The DataFrame does not contain a column named 'open_date'.")
+
+    df['open_date'] = pd.to_datetime(df['open_date'])
+
+    # Calculate time differences
+    time_diffs = df["open_date"].diff(1)
+    time_delta = df["open_date"].diff(1).iloc[-1]
+    # Check if time differences are consistent
+    is_continuous = (time_diffs[time_diffs!=time_delta]).index
+
+    if len(is_continuous):
+        print("Time is not continuous based on the 'open_date' column.")
+        print(df["open_date"].iloc[is_continuous])
+    else:
+        print("Time is  continuous based on the 'open_date' column.")
     return df
 
 def y_build(df:pd.DataFrame,column:str)->pd.DataFrame:
