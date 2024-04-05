@@ -78,3 +78,6 @@ BETTER PLOT
 
 ## Example 2 :
 <img src="img\clustering_BNBUSDT_binance_1h.png" width="1024"/>
+
+# New feature added 
+We recently added envelop strategy
