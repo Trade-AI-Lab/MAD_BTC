@@ -178,7 +178,7 @@ if __name__=="__main__":
   "strategy": {
     "name": "envelop_strategy",
     "x": 22,
-    "method": "ema",
+    "method": "ma",
     "envelop":{
         "0.0007":0.3,
         "0.001":0.3,
