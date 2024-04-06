@@ -123,9 +123,9 @@ class optimiser_momentum_strategy(trading_optimisation):
         result = simulation_df["Portfolio"].iloc[-1]*(simulation_df[f"RSI_{col_1}/{col_2}"]/100).mean() # calculate a result
         return result
 
-class optimiser_momentum_strategy(trading_optimisation):
+class optimiser_envelop_strategy(trading_optimisation):
     """
-    Optimizer for Momentum Strategy
+    Optimizer for Envelop Strategy
 
     This class specializes in optimizing the Momentum strategy.
 
@@ -171,10 +171,10 @@ if __name__=="__main__":
     absolute_path = os.path.abspath(__file__)[:os.path.abspath(__file__).find("MAD_BTC")+len("MAD_BTC")]
     df = envelop_strategy({
   "crypto_currency": "ETHUSDT",
-  "time": "4h",
+  "time": "1h",
   "exchange": "binance",
-  "begin_date":"2020-03-21 00:00:00",
-  "end_date":"2023-01-21 04:00:00",
+  "begin_date":"2021-10-05 00:00:00",
+  "end_date":"2023-02-21 00:00:00",
   "strategy": {
     "name": "envelop_strategy",
     "x": 22,

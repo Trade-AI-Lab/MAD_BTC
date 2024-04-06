@@ -323,15 +323,16 @@ class envelop_strategy(trading_strategy):
         fee_maker = 0.2/100 # 0.2%
         crypto,position = 0,0
         list_portfolio,list_buy_hold,list_time,list_position = [],[],[],[]
+        last_time = self.child_df["open_date"].iloc[-1]
         self.delta_t = self.df_filtered["open_date"].diff(1).iloc[-1]
         jumping_time = self.df_filtered["open_date"].iloc[0]
-        self.df_filtered = self.df_filtered.iloc[:-4] # we delete the 4 last elements for avoiding border effect
         self.df_filtered.set_index('open_date', inplace=True)
         self.child_df.set_index('open_date',inplace=True)
-
+        end_simulation = False
+        print(last_time)
         for index, row in self.df_filtered.iterrows():
             row = self.df_filtered.loc[index]
-            if index>jumping_time: # if the jumping trade is higher than index you can trade
+            if index>jumping_time and end_simulation!=True: # if the jumping trade is higher than index you can trade
                 k = 0
                 if row['buy_signal'] and portfolio > 0:
                     # Begin the trade
@@ -342,14 +343,21 @@ class envelop_strategy(trading_strategy):
                         crypto +=   portfolio*percent_portfolio / (row[f"envelop_up_{percent_envelop}%"]* (1 + fee_percentage)) # (1+fee_maker)>1 row[f"envelop_up_{percent_envelop}%"]*(1+fee_maker)>row[f"envelop_up_{percent_envelop}%"] means price higher implies crypto more expensive
                         portfolio-=portfolio*percent_portfolio
 
-                    while self.child_df[self.strategy_name].loc[self.delta_t*k + index]<self.child_df["low"].loc[self.delta_t*k + index]:
+                    while self.child_df[self.strategy_name].loc[self.delta_t*k + index]<self.child_df["low"].loc[self.delta_t*k + index] and end_simulation!=True:
                         k+=1
+                        if self.delta_t*k + index == last_time:
+                            end_simulation = True
+
                     # Trade ended
-                    
-                    portfolio += crypto*self.child_df[self.strategy_name].loc[self.delta_t*k + index]*(1-fee_maker)
-                    jumping_time = self.delta_t*k + index
-                    
-                    
+                    if end_simulation:
+                        portfolio += crypto*self.child_df["open"].loc[last_time]*(1-fee_maker)
+                        jumping_time = self.delta_t*k + index
+
+                    else:
+                        portfolio += crypto*self.child_df[self.strategy_name].loc[self.delta_t*k + index]*(1-fee_maker)
+                        jumping_time = self.delta_t*k + index
+                        
+                        
                     list_portfolio.append(portfolio)
                     list_position.append(position)
                     list_buy_hold.append(self.child_df["buy_and_hold"].loc[self.delta_t*k + index])
@@ -366,12 +374,22 @@ class envelop_strategy(trading_strategy):
                         portfolio-=portfolio*percent_portfolio
 
                     
-                    while self.child_df[self.strategy_name].loc[self.delta_t*k + index]<self.child_df["low"].loc[self.delta_t*k + index]:
+                    while self.child_df[self.strategy_name].loc[self.delta_t*k + index]<self.child_df["low"].loc[self.delta_t*k + index] and end_simulation!=True:
                         k+=1
-                    # Trade ended
-                    rebuy_price_crypto = portfolio*percent_portfolio/(self.child_df[self.strategy_name].loc[self.delta_t*k + index]* (1 + fee_maker)) 
-                    portfolio += rebuy_price_crypto-crypto
-                    jumping_time = self.delta_t*k + index
+                        if self.delta_t*k + index == last_time:
+                            end_simulation = True
+
+                    
+                    if end_simulation:
+                        rebuy_price_crypto = portfolio*percent_portfolio/(self.child_df[self.strategy_name].loc[self.delta_t*k + index]* (1 + fee_maker)) 
+                        portfolio += rebuy_price_crypto-crypto
+                        jumping_time = self.delta_t*k + index
+
+                    else:
+                        # Trade ended
+                        rebuy_price_crypto = portfolio*percent_portfolio/(self.child_df[self.strategy_name].loc[self.delta_t*k + index]* (1 + fee_maker)) 
+                        portfolio += rebuy_price_crypto-crypto
+                        jumping_time = self.delta_t*k + index
                     
                     list_portfolio.append(portfolio)
                     list_position.append(position)
