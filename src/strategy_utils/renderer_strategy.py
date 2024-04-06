@@ -13,7 +13,8 @@ def core_img(evolution_df:dict):
     :type evolution_df: dict
     """
     plt.figure(figsize=(10, 6))
-    plt.plot(evolution_df["Time"], evolution_df['Portfolio'], label='Portfolio', marker='o')
+    
+    plt.plot(evolution_df['Time'], evolution_df['Portfolio'], label='Portfolio', marker='o')
     plt.plot(evolution_df["Time"], evolution_df['Buy_and_Hold'], label='Buy and Hold', marker='x')
     plt.xlabel('Timesteps')
     plt.ylabel('Value')

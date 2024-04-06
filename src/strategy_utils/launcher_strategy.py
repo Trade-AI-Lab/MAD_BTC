@@ -57,6 +57,7 @@ class trading_strategy:
         list_portfolio,list_buy_hold,list_time,list_position = [],[],[],[]
 
 
+        self.child_df.set_index('open_date', inplace=True)
         self.df_filtered.set_index('open_date', inplace=True)
 
         for index, row in self.df_filtered.iterrows():
@@ -84,22 +85,25 @@ class trading_strategy:
             elif crypto == 0 and portfolio == 0:
                 break 
         
+
+
         if crypto > 0:
             # Calculate the final portfolio value based on remaining position in crypto
             final_portfolio_value = crypto * self.child_df.iloc[-1]['open'] * (1 - fee_percentage)
             list_portfolio.append(final_portfolio_value)
             list_position.append(position)  # Assuming you maintain the same position
             list_buy_hold.append(self.child_df['buy_and_hold'].iloc[-1])
-            list_time.append(self.child_df.iloc[-1])
+            list_time.append(self.child_df.index[-1])
 
         elif crypto == 0:
             list_portfolio.append(list_portfolio[-1])
             list_position.append(list_position[-1])  # Assuming you maintain the same position
             list_buy_hold.append(self.child_df['buy_and_hold'].iloc[-1])
-            list_time.append(self.child_df.iloc[-1])
+            list_time.append(self.child_df.index[-1])
 
+        
         self.evolution_df = pd.DataFrame({
-        "Time":range(len(list_time)),
+        "Time":list_time,
         'Portfolio': list_portfolio,
         'Buy_and_Hold': list_buy_hold,
         "Position":list_position})
@@ -321,6 +325,7 @@ class envelop_strategy(trading_strategy):
         list_portfolio,list_buy_hold,list_time,list_position = [],[],[],[]
         self.delta_t = self.df_filtered["open_date"].diff(1).iloc[-1]
         jumping_time = self.df_filtered["open_date"].iloc[0]
+        self.df_filtered = self.df_filtered.iloc[:-4] # we delete the 4 last elements for avoiding border effect
         self.df_filtered.set_index('open_date', inplace=True)
         self.child_df.set_index('open_date',inplace=True)
 
@@ -336,8 +341,6 @@ class envelop_strategy(trading_strategy):
                         percent_portfolio = self.config["strategy"]["envelop"][percent_envelop]
                         crypto +=   portfolio*percent_portfolio / (row[f"envelop_up_{percent_envelop}%"]* (1 + fee_percentage)) # (1+fee_maker)>1 row[f"envelop_up_{percent_envelop}%"]*(1+fee_maker)>row[f"envelop_up_{percent_envelop}%"] means price higher implies crypto more expensive
                         portfolio-=portfolio*percent_portfolio
-
-                    
 
                     while self.child_df[self.strategy_name].loc[self.delta_t*k + index]<self.child_df["low"].loc[self.delta_t*k + index]:
                         k+=1
@@ -390,16 +393,16 @@ class envelop_strategy(trading_strategy):
             list_portfolio.append(final_portfolio_value)
             list_position.append(position)  # Assuming you maintain the same position
             list_buy_hold.append(self.child_df['buy_and_hold'].iloc[-1])
-            list_time.append(self.child_df.iloc[-1])
+            list_time.append(self.child_df.index[-1])
 
         elif crypto == 0:
             list_portfolio.append(list_portfolio[-1])
             list_position.append(list_position[-1])  # Assuming you maintain the same position
             list_buy_hold.append(self.child_df['buy_and_hold'].iloc[-1])
-            list_time.append(self.child_df.iloc[-1])
-
+            list_time.append(self.child_df.index[-1])
+        
         self.evolution_df = pd.DataFrame({
-        "Time":range(len(list_time)),
+        "Time":list_time,
         'Portfolio': list_portfolio,
         'Buy_and_Hold': list_buy_hold,
         "Position":list_position})

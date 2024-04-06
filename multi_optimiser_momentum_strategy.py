@@ -174,7 +174,7 @@ if __name__=="__main__":
   "time": "4h",
   "exchange": "binance",
   "begin_date":"2020-03-21 00:00:00",
-  "end_date":"2023-03-21 00:00:00",
+  "end_date":"2023-01-21 04:00:00",
   "strategy": {
     "name": "envelop_strategy",
     "x": 22,
@@ -192,8 +192,10 @@ if __name__=="__main__":
 
 df = momentum_strategy({
   "crypto_currency": "ETHUSDT",
-  "time": "1h",
+  "time": "4h",
   "exchange": "binance",
+  "begin_date":None,
+  "end_date":None,
   "strategy": {
     "name": "momentum_strategy",
     "x": 5,
