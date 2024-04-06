@@ -3,7 +3,7 @@ import optuna
 import plotly.express as px
 absolute_path = os.path.abspath(__file__)[:os.path.abspath(__file__).find("MAD_BTC")+len("MAD_BTC")]
 if __name__=='__main__':
-    study_name = "study_momentum_strategy_OCEANUSDT_binance_1d"
+    study_name = "study_momentum_strategy_BTCUSDT_binance_4h"
     PATH = os.path.join(absolute_path ,"study/",study_name)
     storage_name = f"sqlite:///{PATH}.db"
     study = optuna.study.load_study(study_name=study_name, storage=storage_name)

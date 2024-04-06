@@ -122,8 +122,6 @@ class trading_strategy:
         renderer(self.evolution_df,verbose=True)
 
     
-    
-
     def compute_simulation(self)->pd.DataFrame:
         """
         compute_simulation _summary_
