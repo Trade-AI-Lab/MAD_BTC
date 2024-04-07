@@ -171,25 +171,25 @@ if __name__=="__main__":
     absolute_path = os.path.abspath(__file__)[:os.path.abspath(__file__).find("MAD_BTC")+len("MAD_BTC")]
     df = envelop_strategy({
   "crypto_currency": "ETHUSDT",
-  "time": "1h",
+  "time": "4h",
   "exchange": "binance",
-  "begin_date":"2021-10-05 00:00:00",
-  "end_date":"2023-02-21 00:00:00",
+  "begin_date":None,
+  "end_date":None,
   "strategy": {
     "name": "envelop_strategy",
-    "x": 22,
+    "x": 12,
     "method": "ma",
     "envelop":{
-        "0.0007":0.3,
-        "0.001":0.3,
-        "0.0015":0.4
+        "0.0007":0.4,
+        "0.001":0.4,
+        "0.0015":0.
 
     }
   },
   "initial_capital": 1000,
   "broker": "binance"
 }).compute_simulation()
-
+exit()
 df = momentum_strategy({
   "crypto_currency": "ETHUSDT",
   "time": "4h",

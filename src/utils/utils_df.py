@@ -42,7 +42,6 @@ def open_dataframe(PATH:str,light:bool=False)->pd.DataFrame:
 
     if len(is_continuous):
         print("Time is not continuous based on the 'open_date' column.")
-        print(df["open_date"].iloc[is_continuous])
     else:
         print("Time is  continuous based on the 'open_date' column.")
     return df
