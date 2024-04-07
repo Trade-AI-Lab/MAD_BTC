@@ -328,7 +328,7 @@ class envelop_strategy(trading_strategy):
         crypto,position = 0,0
         list_portfolio,list_buy_hold,list_time,list_position = [],[],[],[]
         last_time = self.child_df["open_date"].iloc[-1]
-        self.delta_t = self.df_filtered["open_date"].diff(1).iloc[-1]
+        self.delta_t = self.child_df["open_date"].diff(1).iloc[-1]
         jumping_time = self.df_filtered["open_date"].iloc[0]
         self.df_filtered.set_index('open_date', inplace=True)
         self.child_df.set_index('open_date',inplace=True)
@@ -407,6 +407,8 @@ class envelop_strategy(trading_strategy):
 
                 crypto = 0
                 position = 0
+            elif len(list_portfolio)>0 and list_portfolio[-1]<=1:
+                break
 
     
     

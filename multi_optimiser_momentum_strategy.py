@@ -170,7 +170,7 @@ class optimiser_envelop_strategy(trading_optimisation):
                 list_envelope.append(trial.suggest_int(f"envelope_{i}",1,10)*0.0001)
             else:
                 list_envelope.append(trial.suggest_int(f"envelope_{i}",1,10)*0.0001+list_envelope[-1])
-            list_porportion.append(trial.suggest_int(f"proportion_envelope_{i}",0,100)*0.01)
+            list_porportion.append(trial.suggest_int(f"proportion_envelope_{i}",0,100))
 
         envelope_array = np.array(list_envelope)
         porportion_array = np.array(list_porportion)
