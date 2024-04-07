@@ -6,7 +6,7 @@ from src.strategy_utils.strategy_comparator import evalutation
 import os
 import optuna
 absolute_path = os.path.abspath(__file__)[:os.path.abspath(__file__).find("MAD_BTC")+len("MAD_BTC")]
-
+import numpy as np
 class trading_optimisation:
     """
     Trading Optimization
@@ -62,7 +62,12 @@ class trading_optimisation:
         self.config["crypto_currency"],self.config["time"],self.config["broker"] = crypto_currency, time, broker  # because we are looped on them
         study_name = "study"+f"_{self.config['strategy']['name']}_{self.config['crypto_currency']}_{self.config['exchange']}_{self.config['time']}" # the study_name depending on the strategy name, crypto,exchange and time
         storage_name = f"sqlite:///{os.path.join(absolute_path, 'study', study_name)}.db" # storage name 
-        study = optuna.create_study(storage_name, sampler=optuna.samplers.TPESampler(),study_name=study_name,direction="maximize",load_if_exists="True") # study created else we reload the past strategy
+        study = optuna.create_study(storage_name, sampler=optuna.samplers.TPESampler(
+            multivariate = True,
+            group = True,
+        constant_liar= True,
+        n_startup_trials=400
+        ),study_name=study_name,direction="maximize",load_if_exists="True") # study created else we reload the past strategy
         study.optimize(lambda trial: self.objective(trial=trial), n_trials=200) # we call optuna to optimize it
 
     
@@ -157,7 +162,22 @@ class optimiser_envelop_strategy(trading_optimisation):
         
         self.config["strategy"]["x"] = trial.suggest_int('x', 1, 34) # hyperparameters
         self.config["strategy"]["method"] = trial.suggest_categorical('ratio_method',["ma","ema"]) # hyperparameters
+        nb_envelope = trial.suggest_int(f"nb_enveloppe",1,5)
+        list_envelope = []
+        list_porportion = []
+        for i in range(nb_envelope):
+            if i ==0:
+                list_envelope.append(trial.suggest_int(f"envelope_{i}",1,10)*0.0001)
+            else:
+                list_envelope.append(trial.suggest_int(f"envelope_{i}",1,10)*0.0001+list_envelope[-1])
+            list_porportion.append(trial.suggest_int(f"proportion_envelope_{i}",0,100)*0.01)
 
+        envelope_array = np.array(list_envelope)
+        porportion_array = np.array(list_porportion)
+        porportion_array = porportion_array/np.sum(porportion_array)
+            
+        self.config["strategy"]["envelop"] = dict(zip(envelope_array.astype(str), porportion_array))
+        print(self.config)
         self.strategy.change_config(self.config) # essential change config wil reinitialize the object
         simulation_df = self.strategy.compute_simulation() # compute the simulation
         
@@ -169,27 +189,28 @@ class optimiser_envelop_strategy(trading_optimisation):
             
 if __name__=="__main__":
     absolute_path = os.path.abspath(__file__)[:os.path.abspath(__file__).find("MAD_BTC")+len("MAD_BTC")]
-    df = envelop_strategy({
-  "crypto_currency": "ETHUSDT",
-  "time": "4h",
-  "exchange": "binance",
-  "begin_date":None,
-  "end_date":None,
-  "strategy": {
-    "name": "envelop_strategy",
-    "x": 12,
-    "method": "ma",
-    "envelop":{
-        "0.0007":0.4,
-        "0.001":0.4,
-        "0.0015":0.
+    config = {  "crypto_currency": "ETHUSDT",
+                "time": "4h",
+                "exchange": "binance",
+                "begin_date":None,
+                "end_date":None,
+                "strategy": {
+                "name": "envelop_strategy",
+                "x": 12,
+                "method": "ma",
+                "envelop":{
+                    "0.0007":0.4,
+                    "0.001":0.4,
+                    "0.0015":0.2,
 
-    }
-  },
-  "initial_capital": 1000,
-  "broker": "binance"
-}).compute_simulation()
-exit()
+                }
+                },
+                "initial_capital": 100,
+                "broker": "binance"
+                }
+    object = optimiser_envelop_strategy(config)
+    object.optimiser_multiple_currency()
+"""
 df = momentum_strategy({
   "crypto_currency": "ETHUSDT",
   "time": "4h",
@@ -205,8 +226,5 @@ df = momentum_strategy({
   "initial_capital": 1000,
   "broker": "binance"
 }).compute_simulation()
-
-
-
-    
+"""   
         

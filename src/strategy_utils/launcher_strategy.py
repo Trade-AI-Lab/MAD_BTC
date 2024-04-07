@@ -113,8 +113,6 @@ class trading_strategy:
     def compute_alpha_dates(self, df):
         df["time_diffs"] = df["open_date"].diff(-1)
         time_delta = df["open_date"].diff(1).iloc[-1]
-        print(df.loc[df["time_diffs"] != -time_delta, "open_date"])
-        print(df.index[df["time_diffs"] != -time_delta].tolist())
         return (df["time_diffs"] == -time_delta)
 
     
@@ -303,7 +301,7 @@ class envelop_strategy(trading_strategy):
             if self.signature_strategy != create_signature(self.config["strategy"]):
                 self.child_df = None 
         else:
-            super(momentum_strategy, self).__init__(config)
+            super(envelop_strategy, self).__init__(config)
 
     @staticmethod
     def envelope_from_list_to_str(dictionnary:dict):
@@ -341,11 +339,9 @@ class envelop_strategy(trading_strategy):
             if index>jumping_time and end_simulation!=True: # if the jumping trade is higher than index you can trade
                 k = 0
                 time = self.delta_t*k + index
-                if row['buy_signal'] and portfolio > 0:
+                if row['buy_signal']:
                     # Begin the trade
-                    
                     position = 1
-
                     for percent_envelop in self.config["strategy"]["envelop"]:
                         percent_portfolio = self.config["strategy"]["envelop"][percent_envelop]
                         crypto +=   portfolio*percent_portfolio / (row[f"envelop_up_{percent_envelop}%"]* (1 + fee_percentage)) # (1+fee_maker)>1 row[f"envelop_up_{percent_envelop}%"]*(1+fee_maker)>row[f"envelop_up_{percent_envelop}%"] means price higher implies crypto more expensive
@@ -371,15 +367,7 @@ class envelop_strategy(trading_strategy):
                         portfolio += crypto*self.child_df[self.strategy_name].loc[time]*(1-fee_maker)
                         jumping_time = time
                         
-                        
-                    list_portfolio.append(portfolio)
-                    list_position.append(position)
-                    list_buy_hold.append(self.child_df["buy_and_hold"].loc[time])
-                    list_time.append(time)
-                    position = 0
-                    crypto = 0
-
-                elif row['sell_signal'] and portfolio > 0:
+                elif row['sell_signal']:
                     # Begin the trade
                     position = -1
                     for percent_envelop in self.config["strategy"]["envelop"]:
@@ -412,18 +400,15 @@ class envelop_strategy(trading_strategy):
                         portfolio += rebuy_price_crypto-crypto
                         jumping_time = time
                     
-                    list_portfolio.append(portfolio)
-                    list_position.append(position)
-                    list_buy_hold.append(self.child_df["buy_and_hold"].loc[time])
-                    list_time.append(time)
+                list_portfolio.append(portfolio)
+                list_position.append(position)
+                list_buy_hold.append(self.child_df["buy_and_hold"].loc[time])
+                list_time.append(time)
 
-                    crypto = 0
-                    position = 0
+                crypto = 0
+                position = 0
 
-                elif crypto == 0 and portfolio == 0:
-                    break 
-                else:
-                    raise "Error in the code" 
+    
     
         
         self.evolution_df = pd.DataFrame({

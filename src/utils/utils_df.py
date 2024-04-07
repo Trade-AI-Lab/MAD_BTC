@@ -40,9 +40,9 @@ def open_dataframe(PATH:str,light:bool=False)->pd.DataFrame:
     # Check if time differences are consistent
     is_continuous = (time_diffs[time_diffs!=time_delta]).index
 
-    if len(is_continuous):
+    if len(is_continuous) and light:
         print("Time is not continuous based on the 'open_date' column.")
-    else:
+    elif light:
         print("Time is  continuous based on the 'open_date' column.")
     return df
 
