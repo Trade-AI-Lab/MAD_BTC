@@ -177,7 +177,6 @@ class optimiser_envelop_strategy(trading_optimisation):
         porportion_array = porportion_array/np.sum(porportion_array)
             
         self.config["strategy"]["envelop"] = dict(zip(envelope_array.astype(str), porportion_array))
-        print(self.config)
         self.strategy.change_config(self.config) # essential change config wil reinitialize the object
         simulation_df = self.strategy.compute_simulation() # compute the simulation
         
@@ -196,20 +195,21 @@ if __name__=="__main__":
                 "end_date":None,
                 "strategy": {
                 "name": "envelop_strategy",
-                "x": 12,
+                "x": 3,
                 "method": "ma",
                 "envelop":{
-                    "0.0007":0.4,
                     "0.001":0.4,
-                    "0.0015":0.2,
+                    "0.0015":0.6,
 
                 }
                 },
                 "initial_capital": 100,
                 "broker": "binance"
                 }
-    object = optimiser_envelop_strategy(config)
-    object.optimiser_multiple_currency()
+    envelop_strategy(config).compute_simulation()
+
+    #object = optimiser_envelop_strategy(config)
+    #object.optimiser_multiple_currency()
 """
 df = momentum_strategy({
   "crypto_currency": "ETHUSDT",
