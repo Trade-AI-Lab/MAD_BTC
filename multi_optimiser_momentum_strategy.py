@@ -66,9 +66,9 @@ class trading_optimisation:
             multivariate = True,
             group = True,
         constant_liar= True,
-        n_startup_trials=400
+        n_startup_trials=150
         ),study_name=study_name,direction="maximize",load_if_exists="True") # study created else we reload the past strategy
-        study.optimize(lambda trial: self.objective(trial=trial), n_trials=200) # we call optuna to optimize it
+        study.optimize(lambda trial: self.objective(trial=trial), n_trials=300) # we call optuna to optimize it
 
     
     
@@ -174,7 +174,8 @@ class optimiser_envelop_strategy(trading_optimisation):
 
         envelope_array = np.array(list_envelope)
         porportion_array = np.array(list_porportion)
-        porportion_array = porportion_array/np.sum(porportion_array)
+        porportion_array = np.round(porportion_array/np.sum(porportion_array),2)
+        1-np.sum(porportion_array[:-1])
             
         self.config["strategy"]["envelop"] = dict(zip(envelope_array.astype(str), porportion_array))
         self.strategy.change_config(self.config) # essential change config wil reinitialize the object
@@ -190,7 +191,7 @@ if __name__=="__main__":
     absolute_path = os.path.abspath(__file__)[:os.path.abspath(__file__).find("MAD_BTC")+len("MAD_BTC")]
     config = {
         "crypto_currency": "ETHUSDT",
-        "time": "4h",
+        "time": "1h",
         "exchange": "binance",
         "begin_date": None,
         "end_date": None,
@@ -210,7 +211,7 @@ if __name__=="__main__":
     envelop_strategy(config).compute_simulation()
 
     object = optimiser_envelop_strategy(config)
-    object.optimiser_multiple_currency()
+    object.optimiser_multiple_currency(["ETHUSDT"])
 """
 df = momentum_strategy({
   "crypto_currency": "ETHUSDT",
