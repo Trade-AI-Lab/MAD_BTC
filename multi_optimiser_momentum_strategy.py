@@ -66,7 +66,7 @@ class trading_optimisation:
             multivariate = True,
             group = True,
         constant_liar= True,
-        n_startup_trials=150
+        n_startup_trials=100
         ),study_name=study_name,direction="maximize",load_if_exists="True") # study created else we reload the past strategy
         study.optimize(lambda trial: self.objective(trial=trial), n_trials=300) # we call optuna to optimize it
 
@@ -160,19 +160,19 @@ class optimiser_envelop_strategy(trading_optimisation):
         :rtype: None
         """
         
-        self.config["strategy"]["x"] = trial.suggest_int('x', 1, 34) # hyperparameters
+        self.config["strategy"]["x"] = trial.suggest_int('x', 1, 3) # hyperparameters
         self.config["strategy"]["method"] = trial.suggest_categorical('ratio_method',["ma","ema"]) # hyperparameters
         nb_envelope = trial.suggest_int(f"nb_enveloppe",1,5)
         list_envelope = []
         list_porportion = []
         for i in range(nb_envelope):
             if i ==0:
-                list_envelope.append(trial.suggest_int(f"envelope_{i}",1,10)*0.0001)
+                list_envelope.append(trial.suggest_int(f"envelope_{i}",1,10)*0.01)
             else:
-                list_envelope.append(trial.suggest_int(f"envelope_{i}",1,10)*0.0001+list_envelope[-1])
+                list_envelope.append(trial.suggest_int(f"envelope_{i}",1,10)*0.01+list_envelope[-1])
             list_porportion.append(trial.suggest_int(f"proportion_envelope_{i}",0,100))
 
-        envelope_array = np.array(list_envelope)
+        envelope_array = np.round(np.array(list_envelope),3)
         porportion_array = np.array(list_porportion)
         porportion_array = np.round(porportion_array/np.sum(porportion_array),2)
         1-np.sum(porportion_array[:-1])
@@ -184,35 +184,78 @@ class optimiser_envelop_strategy(trading_optimisation):
         col_1,col_2 = "Portfolio","Buy_and_Hold" # element for computing the reward
         simulation_df = evalutation(simulation_df,col_1,col_2) # evaluate the simulation
         result = simulation_df["Portfolio"].iloc[-1]*(simulation_df[f"RSI_{col_1}/{col_2}"]/100).mean() # calculate a result
-        return result
+        return simulation_df["Portfolio"].iloc[-1]
 
             
 if __name__=="__main__":
     absolute_path = os.path.abspath(__file__)[:os.path.abspath(__file__).find("MAD_BTC")+len("MAD_BTC")]
     config = {
         "crypto_currency": "ETHUSDT",
-        "time": "1h",
+        "time": "1d",
         "exchange": "binance",
         "begin_date": None,
         "end_date": None,
         "strategy": {
-        "name": "envelop_strategy",
-        "x": 7,
-        "method": "ma",
-        "envelop": {
-            "0.0007":0.3,
-            "0.001": 0.3,
-            "0.0015": 0.4
-        }
+            "name": "envelop_strategy",
+            "x": 1,
+            "method": "ma",
+            "envelop": {
+            "0.002": 0.3,
+            "0.0025": 0.3,
+            "0.003": 0.2,
+            "0.0035": 0.2
+            }
         },
         "initial_capital": 100,
         "broker": "binance"
         }
-    envelop_strategy(config).compute_simulation()
-
     object = optimiser_envelop_strategy(config)
     object.optimiser_multiple_currency(["ETHUSDT"])
 """
+    envelop_strat = envelop_strategy(config)
+    evolution_df = envelop_strat.compute_simulation()
+    child_df = envelop_strat.get_computed_df()
+    child_df = child_df.set_index(pd.to_datetime(child_df.index))
+    print(evolution_df.columns)
+    # Merging evolution_df and child_df based on the closest key
+    df = pd.merge_asof(evolution_df, child_df, left_on='Time', right_index=True)
+
+    # Resetting index to bring 'Time' back as a column
+    df.reset_index(inplace=True)
+    # Print the merged DataFrame
+    import plotly.graph_objects as go
+    portfolio_trace = go.Scatter(x=df['Time'], y=df['Portfolio'], mode='lines', name='Portfolio Improvement')
+
+    # Assuming df is your DataFrame containing the necessary columns
+    candlestick = go.Candlestick(x=df['Time'],
+                                open=df['open'],
+                                high=df['high'],
+                                low=df['low'],
+                                close=df['close'],
+                                name='Candlestick')
+
+    # Create traces for each envelop signal
+    envelop_signals = []
+    envelop_columns = ['ma_0.002_layer_0.0025_layer_0.0030_layer_0.0035_layer']
+
+    for column in envelop_columns:
+        trace = go.Scatter(x=df['Time'], y=df[column], mode='lines', name=column[-8:])
+        envelop_signals.append(trace)
+
+    # Create the figure
+    fig = go.Figure(data=[candlestick] + envelop_signals + [portfolio_trace])
+
+    # Update layout with titles and axis labels
+    fig.update_layout(title='Candlestick Chart with Envelop Signals',
+                    xaxis_title='Time',
+                    yaxis_title='Price')
+
+    # Show the plot
+    fig.show()
+
+    
+    
+
 df = momentum_strategy({
   "crypto_currency": "ETHUSDT",
   "time": "4h",

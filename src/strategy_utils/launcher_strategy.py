@@ -37,6 +37,8 @@ class trading_strategy:
         self.begin_date = self.config["begin_date"] if "begin_date" in self.config.keys() else None
         self.end_date = self.config["end_date"] if "end_date" in self.config.keys() else None
 
+    def get_computed_df(self)->pd.DataFrame:
+        return self.child_df
     
     def loop_simulation(self)->None:
         """
@@ -327,8 +329,8 @@ class envelop_strategy(trading_strategy):
         """
 
         portfolio = self.config["initial_capital"]
-        fee_percentage = 0.1 / 100  # 0.1%
-        fee_maker = 0.2/100 # 0.2%
+        fee_percentage = 0.06 / 100  # 0.1%
+        fee_maker = 0.06/100 # 0.1%
         crypto,position = 0,0
         list_portfolio,list_buy_hold,list_time,list_position = [],[],[],[]
         self.last_time = self.child_df["open_date"].iloc[-1]
@@ -372,7 +374,7 @@ class envelop_strategy(trading_strategy):
                             self.check_validate_date(time)
                         # Trade ended
                         if self.end_simulation:
-                            print("Simulation ended")
+
                             portfolio += crypto*self.child_df[self.strategy_name].loc[time]*(1-fee_maker)
                             self.jumping_time = time
                             portfolio = list_portfolio[-1]
@@ -402,7 +404,6 @@ class envelop_strategy(trading_strategy):
                                 self.check_validate_date(time)
                                 
                         if self.end_simulation:
-                            print("Simulation ended")
 
                             rebuy_price_crypto = (old_portfolio-portfolio)/(self.child_df[self.strategy_name].loc[time]* (1 + fee_maker)) 
                             portfolio += rebuy_price_crypto+crypto
