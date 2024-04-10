@@ -175,7 +175,6 @@ class optimiser_envelop_strategy(trading_optimisation):
         envelope_array = np.round(np.array(list_envelope),3)
         porportion_array = np.array(list_porportion)
         porportion_array = np.round(porportion_array/np.sum(porportion_array),2)
-        1-np.sum(porportion_array[:-1])
             
         self.config["strategy"]["envelop"] = dict(zip(envelope_array.astype(str), porportion_array))
         self.strategy.change_config(self.config) # essential change config wil reinitialize the object
