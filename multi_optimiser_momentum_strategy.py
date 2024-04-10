@@ -160,9 +160,9 @@ class optimiser_envelop_strategy(trading_optimisation):
         :rtype: None
         """
         
-        self.config["strategy"]["x"] = trial.suggest_int('x', 1, 3) # hyperparameters
+        self.config["strategy"]["x"] = trial.suggest_int('x', 1, 10) # hyperparameters
         self.config["strategy"]["method"] = trial.suggest_categorical('ratio_method',["ma","ema"]) # hyperparameters
-        nb_envelope = trial.suggest_int(f"nb_enveloppe",1,5)
+        nb_envelope = trial.suggest_int(f"nb_enveloppe",1,10)
         list_envelope = []
         list_porportion = []
         for i in range(nb_envelope):
