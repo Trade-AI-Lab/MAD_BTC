@@ -167,9 +167,9 @@ class optimiser_envelop_strategy(trading_optimisation):
         list_porportion = []
         for i in range(nb_envelope):
             if i ==0:
-                list_envelope.append(trial.suggest_int(f"envelope_{i}",1,10)*0.01)
+                list_envelope.append(trial.suggest_int(f"envelope_{i}",1,100)*0.001)
             else:
-                list_envelope.append(trial.suggest_int(f"envelope_{i}",1,10)*0.01+list_envelope[-1])
+                list_envelope.append(trial.suggest_int(f"envelope_{i}",1,100)*0.001+list_envelope[-1])
             list_porportion.append(trial.suggest_int(f"proportion_envelope_{i}",0,100))
 
         envelope_array = np.round(np.array(list_envelope),3)
@@ -206,12 +206,32 @@ if __name__=="__main__":
             "0.0035": 0.2
             }
         },
-        "initial_capital": 100,
+        "initial_capital": 1,
         "broker": "binance"
         }
     object = optimiser_envelop_strategy(config)
     object.optimiser_multiple_currency(["ETHUSDT"])
 """
+    config = {
+        "crypto_currency": "ETHUSDT",
+        "time": "1d",
+        "exchange": "binance",
+        "begin_date": None,
+        "end_date": None,
+        "strategy": {
+            "name": "envelop_strategy",
+            "x": 1,
+            "method": "ma",
+            "envelop": {
+            "0.002": 0.3,
+            "0.0025": 0.3,
+            "0.003": 0.2,
+            "0.0035": 0.2
+            }
+        },
+        "initial_capital": 1,
+        "broker": "binance"
+        }
     envelop_strat = envelop_strategy(config)
     evolution_df = envelop_strat.compute_simulation()
     child_df = envelop_strat.get_computed_df()
