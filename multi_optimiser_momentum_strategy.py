@@ -66,9 +66,9 @@ class trading_optimisation:
             multivariate = True,
             group = True,
         constant_liar= True,
-        n_startup_trials=100
+        n_startup_trials=150
         ),study_name=study_name,direction="maximize",load_if_exists="True") # study created else we reload the past strategy
-        study.optimize(lambda trial: self.objective(trial=trial), n_trials=300) # we call optuna to optimize it
+        study.optimize(lambda trial: self.objective(trial=trial), n_trials=400) # we call optuna to optimize it
 
     
     
@@ -160,19 +160,19 @@ class optimiser_envelop_strategy(trading_optimisation):
         :rtype: None
         """
         
-        self.config["strategy"]["x"] = trial.suggest_int('x', 1, 10) # hyperparameters
+        self.config["strategy"]["x"] = trial.suggest_int('x', 1, 100) # hyperparameters
         self.config["strategy"]["method"] = trial.suggest_categorical('ratio_method',["ma","ema"]) # hyperparameters
-        nb_envelope = trial.suggest_int(f"nb_enveloppe",1,10)
+        nb_envelope = trial.suggest_int(f"nb_enveloppe",1,5)
         list_envelope = []
         list_porportion = []
         for i in range(nb_envelope):
             if i ==0:
-                list_envelope.append(trial.suggest_int(f"envelope_{i}",1,100)*0.001)
+                list_envelope.append(trial.suggest_int(f"envelope_{i}",1,1000)*0.0001)
             else:
-                list_envelope.append(trial.suggest_int(f"envelope_{i}",1,100)*0.001+list_envelope[-1])
+                list_envelope.append(trial.suggest_int(f"envelope_{i}",1,1000)*0.0001+list_envelope[-1])
             list_porportion.append(trial.suggest_int(f"proportion_envelope_{i}",0,100))
 
-        envelope_array = np.round(np.array(list_envelope),3)
+        envelope_array = np.round(np.array(list_envelope),4)
         porportion_array = np.array(list_porportion)
         porportion_array = np.round(porportion_array/np.sum(porportion_array),2)
             
@@ -189,48 +189,29 @@ class optimiser_envelop_strategy(trading_optimisation):
 if __name__=="__main__":
     absolute_path = os.path.abspath(__file__)[:os.path.abspath(__file__).find("MAD_BTC")+len("MAD_BTC")]
     config = {
-        "crypto_currency": "ETHUSDT",
-        "time": "1d",
-        "exchange": "binance",
-        "begin_date": None,
-        "end_date": None,
-        "strategy": {
-            "name": "envelop_strategy",
-            "x": 1,
-            "method": "ma",
-            "envelop": {
-            "0.002": 0.3,
-            "0.0025": 0.3,
-            "0.003": 0.2,
-            "0.0035": 0.2
-            }
-        },
-        "initial_capital": 1,
-        "broker": "binance"
-        }
+  "crypto_currency": "ETHUSDT",
+  "time": "4h",
+  "exchange": "binance",
+  "begin_date": None,
+  "end_date": None,
+  "strategy": {
+    "name": "envelop_strategy",
+    "x": 99,
+    "method": "ma",
+    "envelop": {
+      "0.0274": 0.34,
+      "0.0944": 0.12,
+      "0.1513": 0.11,
+      "0.195": 0.31,
+      "0.1972": 0.12
+    }
+  },
+  "initial_capital": 100,
+  "broker": "binance"
+}
     object = optimiser_envelop_strategy(config)
     object.optimiser_multiple_currency(["ETHUSDT"])
 """
-    config = {
-        "crypto_currency": "ETHUSDT",
-        "time": "1d",
-        "exchange": "binance",
-        "begin_date": None,
-        "end_date": None,
-        "strategy": {
-            "name": "envelop_strategy",
-            "x": 1,
-            "method": "ma",
-            "envelop": {
-            "0.002": 0.3,
-            "0.0025": 0.3,
-            "0.003": 0.2,
-            "0.0035": 0.2
-            }
-        },
-        "initial_capital": 1,
-        "broker": "binance"
-        }
     envelop_strat = envelop_strategy(config)
     evolution_df = envelop_strat.compute_simulation()
     child_df = envelop_strat.get_computed_df()
@@ -290,5 +271,28 @@ df = momentum_strategy({
   "initial_capital": 1000,
   "broker": "binance"
 }).compute_simulation()
+
+
+I have a serious problem when he wants to short 
+{
+  "crypto_currency": "ETHUSDT",
+  "time": "4h",
+  "exchange": "binance",
+  "begin_date": null,
+  "end_date": null,
+  "strategy": {
+    "name": "envelop_strategy",
+    "x": 85,
+    "method": "ema",
+    "envelop": {
+      "0.0117": 0.27,
+      "0.0384": 0.2,
+      "0.1072": 0.28,
+      "0.1916": 0.26
+    }
+  },
+  "initial_capital": 100,
+  "broker": "binance"
+}
 """   
         
