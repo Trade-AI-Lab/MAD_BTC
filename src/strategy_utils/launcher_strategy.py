@@ -362,33 +362,39 @@ class envelop_strategy(trading_strategy):
                         break
                     elif row['buy_signal'] or row["sell_signal"]: # t is index 
                         # Begin the trade
+                        percent_portfolio =0
                         position = 1 if row['buy_signal'] else -1
                         for percent_envelop in self.config["strategy"]["envelop"]:
                             percent_portfolio = self.config["strategy"]["envelop"][percent_envelop]
-                            envelop_price = row[f"envelop_down_{percent_envelop}%"] if row["buy_signal"] else row[f"envelop_up_{percent_envelop}%"]
-                            crypto +=   portfolio*percent_portfolio / (envelop_price* (1 + fee_percentage)) 
-                            portfolio-=portfolio*percent_portfolio
+                            if position ==1:
+                                envelop_price = row[f"envelop_down_{percent_envelop}%"] if row[f"buy_signal_{percent_envelop}"] else 0
+                            else:
+                                envelop_price = row[f"envelop_up_{percent_envelop}%"] if row[f"sell_signal_{percent_envelop}"] else 0
+                            crypto_amount = portfolio*percent_portfolio / (envelop_price* (1 + fee_percentage)) 
+                            crypto +=  crypto_amount if row['buy_signal'] else -crypto_amount # crypto is postivie for the buy but negative for the sell
+                            portfolio -= portfolio*percent_portfolio if (envelop_price and row['buy_signal']) else 0
+                            percent_portfolio +=  percent_portfolio if envelop_price else 0 # only needed for the sells
+
+
                         col_condition = "low" if row["buy_signal"] else "high"
 
                         while self.child_df[self.strategy_name].loc[time]<self.child_df[col_condition].loc[time] and self.end_simulation!=True and self.jumping_simulation!=True:
                             k+=1
                             time = self.delta_t*k + index # time= t +\delta_{t}
-                            self.check_validate_date(time)    
+                            self.check_validate_date(time)
+                        current_price = self.child_df[self.strategy_name].loc[time]
+                        current_crypto_amount = portfolio/(current_price*(1+fee_maker)) # only for the sell
+                        portfolio += crypto*current_price(1-fee_maker) if row["buy_signal"] else (current_crypto_amount-crypto)*current_price
+
                         # Trade ended
                         if self.end_simulation:
-
-                            portfolio += crypto*self.child_df[self.strategy_name].loc[time]*(1-fee_maker)
                             self.jumping_time = time
-                            portfolio = list_portfolio[-1]
 
                         elif self.jumping_simulation:
-                            portfolio += crypto*self.child_df[self.strategy_name].loc[time]*(1-fee_maker)
                             self.jumping_time = time - self.child_df["time_diffs"].loc[time]
                             self.jumping_simulation = False
-                            portfolio = list_portfolio[-1]
 
                         else:
-                            portfolio += crypto*self.child_df[self.strategy_name].loc[time]*(1-fee_maker)
                             self.jumping_time = time
 
                     list_portfolio.append(portfolio)
