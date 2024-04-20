@@ -66,7 +66,7 @@ class trading_optimisation:
             multivariate = True,
             group = True,
         constant_liar= True,
-        n_startup_trials=150
+        n_startup_trials=200
         ),study_name=study_name,direction="maximize",load_if_exists="True") # study created else we reload the past strategy
         study.optimize(lambda trial: self.objective(trial=trial), n_trials=400) # we call optuna to optimize it
 
@@ -160,9 +160,9 @@ class optimiser_envelop_strategy(trading_optimisation):
         :rtype: None
         """
         
-        self.config["strategy"]["x"] = trial.suggest_int('x', 1, 100) # hyperparameters
+        self.config["strategy"]["x"] = trial.suggest_int('x', 1, 30) # hyperparameters
         self.config["strategy"]["method"] = trial.suggest_categorical('ratio_method',["ma","ema"]) # hyperparameters
-        nb_envelope = trial.suggest_int(f"nb_enveloppe",1,5)
+        nb_envelope = trial.suggest_int(f"nb_enveloppe",2,5)
         list_envelope = []
         list_porportion = []
         for i in range(nb_envelope):
@@ -172,7 +172,7 @@ class optimiser_envelop_strategy(trading_optimisation):
                 list_envelope.append(trial.suggest_int(f"envelope_{i}",1,1000)*0.0001+list_envelope[-1])
             list_porportion.append(trial.suggest_int(f"proportion_envelope_{i}",0,100))
 
-        envelope_array = np.round(np.array(list_envelope),4)
+        envelope_array = np.round(np.array(list_envelope),3)
         porportion_array = np.array(list_porportion)
         porportion_array = np.round(porportion_array/np.sum(porportion_array),2)
             
@@ -182,7 +182,7 @@ class optimiser_envelop_strategy(trading_optimisation):
         
         col_1,col_2 = "Portfolio","Buy_and_Hold" # element for computing the reward
         simulation_df = evalutation(simulation_df,col_1,col_2) # evaluate the simulation
-        result = simulation_df["Portfolio"].iloc[-1]*(simulation_df[f"RSI_{col_1}/{col_2}"]/100).mean() # calculate a result
+        # result = simulation_df["Portfolio"].iloc[-1]*(simulation_df[f"RSI_{col_1}/{col_2}"]/100).mean() # calculate a result
         return simulation_df["Portfolio"].iloc[-1]
 
             
