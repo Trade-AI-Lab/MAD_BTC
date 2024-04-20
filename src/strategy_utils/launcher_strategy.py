@@ -263,15 +263,15 @@ class envelop_strategy(trading_strategy):
             percent_portfolio = self.config["strategy"]["envelop"][percent_envelop]
             percent_envelop = float(percent_envelop)
             # Buy
-            self.child_df[f"envelop_up_{percent_envelop}%"] = self.child_df[self.strategy_name]*(1+percent_envelop) # E and/or MA(1+x%)
-            buy_signal = f"buy_signal_{percent_envelop}%"
-            self.child_df[buy_signal] = (self.child_df["high"]>=self.child_df[f"envelop_up_{percent_envelop}%"]).astype(int)*percent_portfolio
+            self.child_df[f"envelop_up_{percent_envelop}"] = self.child_df[self.strategy_name]*(1+percent_envelop) # E and/or MA(1+x%)
+            buy_signal = f"buy_signal_{percent_envelop}"
+            self.child_df[buy_signal] = (self.child_df["high"]>self.child_df[f"envelop_up_{percent_envelop}"]).astype(int)*percent_portfolio
             self.list_col_buy_signal.append(buy_signal)
 
             # Sell
-            self.child_df[f"envelop_down_{percent_envelop}%"] = self.child_df[self.strategy_name]*(1-percent_envelop) # E and/or MA(1-x%)
-            sell_signal = f"sell_signal_{percent_envelop}%"
-            self.child_df[sell_signal] = (self.child_df[f"envelop_down_{percent_envelop}%"]<=self.child_df["low"]).astype(int)*percent_portfolio
+            self.child_df[f"envelop_down_{percent_envelop}"] = self.child_df[self.strategy_name]*(1-percent_envelop) # E and/or MA(1-x%)
+            sell_signal = f"sell_signal_{percent_envelop}"
+            self.child_df[sell_signal] = (self.child_df[f"envelop_down_{percent_envelop}"]>self.child_df["low"]).astype(int)*percent_portfolio
             self.list_col_sell_signal.append(sell_signal)
 
         
@@ -331,7 +331,10 @@ class envelop_strategy(trading_strategy):
         portfolio = self.config["initial_capital"]
         fee_percentage = 0.06 / 100  # 0.1%
         fee_maker = 0.06/100 # 0.1%
-        crypto,position = 0,0
+        crypto = 0
+        position = 0
+        crypto_amount = 0
+        percent_portfolio = 0
         list_portfolio,list_buy_hold,list_time,list_position = [],[],[],[]
         self.last_time = self.child_df["open_date"].iloc[-1]
         self.delta_t = self.child_df["open_date"].diff(1).iloc[-1]
@@ -340,7 +343,6 @@ class envelop_strategy(trading_strategy):
         self.child_df.set_index('open_date',inplace=True)
         self.end_simulation = False
         self.jumping_simulation = False
-
 
         if self.jumping_time is None:
             list_portfolio,list_buy_hold,list_time,list_position = [0.1],[0.1],[0.1],[0.1]
@@ -351,7 +353,7 @@ class envelop_strategy(trading_strategy):
                 if self.jumping_simulation==True:
                     self.jumping_time = time - self.child_df["time_diffs"].loc[index]
                     self.jumping_simulation = False
-                elif index>=self.jumping_time: # if the jumping trade is higher than index you can trade
+                elif index>self.jumping_time: # if the jumping trade is higher than index you can trade
                     k = 1
                     time = self.delta_t*k + index # t+delta_t
                     self.check_validate_date(time)
@@ -366,12 +368,12 @@ class envelop_strategy(trading_strategy):
                         position = 1 if row['buy_signal'] else -1
                         for percent_envelop in self.config["strategy"]["envelop"]:
                             percent_portfolio = self.config["strategy"]["envelop"][percent_envelop]
-                            if position ==1:
-                                envelop_price = row[f"envelop_down_{percent_envelop}%"] if row[f"buy_signal_{percent_envelop}"] else 0
-                            else:
-                                envelop_price = row[f"envelop_up_{percent_envelop}%"] if row[f"sell_signal_{percent_envelop}"] else 0
+
+                            envelop_price = row[f"envelop_down_{percent_envelop}"] if row['buy_signal'] else row[f"envelop_down_{percent_envelop}"]
                             crypto_amount = portfolio*percent_portfolio / (envelop_price* (1 + fee_percentage)) 
                             crypto +=  crypto_amount if row['buy_signal'] else -crypto_amount # crypto is postivie for the buy but negative for the sell
+                            if crypto == float('-inf'):
+                                raise ValueError("Float value is -inf")
                             portfolio -= portfolio*percent_portfolio if (envelop_price and row['buy_signal']) else 0
                             percent_portfolio +=  percent_portfolio if envelop_price else 0 # only needed for the sells
 
@@ -384,7 +386,7 @@ class envelop_strategy(trading_strategy):
                             self.check_validate_date(time)
                         current_price = self.child_df[self.strategy_name].loc[time]
                         current_crypto_amount = portfolio/(current_price*(1+fee_maker)) # only for the sell
-                        portfolio += crypto*current_price(1-fee_maker) if row["buy_signal"] else (current_crypto_amount-crypto)*current_price
+                        portfolio += crypto*current_price*(1-fee_maker) if row["buy_signal"] else (current_crypto_amount-crypto)*current_price
 
                         # Trade ended
                         if self.end_simulation:
@@ -404,6 +406,9 @@ class envelop_strategy(trading_strategy):
 
                     crypto = 0
                     position = 0
+                    crypto_amount = 0
+                    percent_portfolio = 0
+                    current_crypto_amount = 0
                 
             
     
