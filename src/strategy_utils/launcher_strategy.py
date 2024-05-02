@@ -86,8 +86,6 @@ class trading_strategy:
 
             elif crypto == 0 and portfolio == 0:
                 break 
-        
-
 
         if crypto > 0:
             # Calculate the final portfolio value based on remaining position in crypto
@@ -103,14 +101,15 @@ class trading_strategy:
             list_buy_hold.append(self.child_df['buy_and_hold'].iloc[-1])
             list_time.append(self.child_df.index[-1])
 
-        
         self.evolution_df = pd.DataFrame({
-        "Time":list_time,
-        'Portfolio': list_portfolio,
-        'Buy_and_Hold': list_buy_hold,
-        "Position":list_position})
-        self.strategy_folder_path = create_save_one_experience(self.config,self.time_eccefpsn)
-        save("No strategy",self.strategy_folder_path,self.evolution_df) if self.title_image is None else save(self.title_image,self.strategy_folder_path,self.evolution_df)
+            "Time":list_time,
+            'Portfolio': list_portfolio,
+            'Buy_and_Hold': list_buy_hold,
+            "Position":list_position})
+        
+        if list_portfolio[-1]>list_buy_hold[-1]:
+            self.strategy_folder_path = create_save_one_experience(self.config,self.time_eccefpsn)
+            save("No strategy",self.strategy_folder_path,self.evolution_df) if self.title_image is None else save(self.title_image,self.strategy_folder_path,self.evolution_df)
     
     def compute_alpha_dates(self, df):
         df["time_diffs"] = df["open_date"].diff(-1)

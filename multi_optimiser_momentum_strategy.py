@@ -3,6 +3,7 @@ from src.utils.utils_df import open_dataframe
 from itertools import product
 from src.strategy_utils.launcher_strategy import momentum_strategy, envelop_strategy
 from src.strategy_utils.strategy_comparator import evalutation
+from src.utils.utils_signature import create_signature
 import os
 import optuna
 absolute_path = os.path.abspath(__file__)[:os.path.abspath(__file__).find("MAD_BTC")+len("MAD_BTC")]
@@ -26,6 +27,7 @@ class trading_optimisation:
         self.strategy = None
         self.config = config
         os.makedirs(absolute_path+"/study",exist_ok=True) # create the file study
+        self.liste = []
 
     
     def optimiser_multiple_currency(self,list_crypto_currency:str=["BTCUSDT","ETHUSDT","ADAUSDT","BNBUSDT"],list_time:str=["1h","4h","1d"],list_brokers=["binance"]):
@@ -69,6 +71,8 @@ class trading_optimisation:
         n_startup_trials=200
         ),study_name=study_name,direction="maximize",load_if_exists="True") # study created else we reload the past strategy
         study.optimize(lambda trial: self.objective(trial=trial), n_trials=400) # we call optuna to optimize it
+        pd.DataFrame(self.liste,columns=["config","result","signature"]).to_csv(self.strategy.time_eccefpsn+".csv",index=False)
+
 
     
     
@@ -119,13 +123,13 @@ class optimiser_momentum_strategy(trading_optimisation):
         self.config["strategy"]["x"] = trial.suggest_int('x', 1, 34) # hyperparameters
         self.config["strategy"]["y"] = trial.suggest_int('y', 35 ,120) # hyperparameters
         self.config["strategy"]["ratio_method"] = trial.suggest_categorical('ratio_method',["ma_ratio","ema_ratio"]) # hyperparameters
-
         self.strategy.change_config(self.config) # essential change config wil reinitialize the object
         simulation_df = self.strategy.compute_simulation() # compute the simulation
         
         col_1,col_2 = "Portfolio","Buy_and_Hold" # element for computing the reward
         simulation_df = evalutation(simulation_df,col_1,col_2) # evaluate the simulation
         result = simulation_df["Portfolio"].iloc[-1]*(simulation_df[f"RSI_{col_1}/{col_2}"]/100).mean() # calculate a result
+        self.liste.append([self.config,result,create_signature(self.config)])
         return result
 
 class optimiser_envelop_strategy(trading_optimisation):
@@ -147,6 +151,7 @@ class optimiser_envelop_strategy(trading_optimisation):
         """
         super().__init__(config)
         self.strategy = envelop_strategy(config) # initialize the momentum strategy
+
 
     def objective(self,trial:optuna.trial)->None:
         """
@@ -188,6 +193,25 @@ class optimiser_envelop_strategy(trading_optimisation):
             
 if __name__=="__main__":
     absolute_path = os.path.abspath(__file__)[:os.path.abspath(__file__).find("MAD_BTC")+len("MAD_BTC")]
+
+    df = optimiser_momentum_strategy({
+    "crypto_currency": "OCEANUSDT",
+    "time": "4h",
+    "exchange": "binance",
+    "begin_date":None,
+    "end_date":None,
+    "strategy": {
+      "name": "momentum_strategy",
+      "x": 5,
+      "y": 57,
+      "ratio_method": "ma_ratio"
+    },
+    "initial_capital": 1000,
+    "broker": "binance"
+  }).optimiser_multiple_currency(list_crypto_currency=["OCEANUSDT","BNBUSDT","ADAUSDT"])
+
+
+"""
     config = {
   "crypto_currency": "ETHUSDT",
   "time": "4h",
@@ -211,7 +235,7 @@ if __name__=="__main__":
 }
     object = optimiser_envelop_strategy(config)
     object.optimiser_multiple_currency(["ETHUSDT"])
-"""
+
     envelop_strat = envelop_strategy(config)
     evolution_df = envelop_strat.compute_simulation()
     child_df = envelop_strat.get_computed_df()
