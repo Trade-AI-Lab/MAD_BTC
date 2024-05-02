@@ -71,7 +71,10 @@ class trading_optimisation:
         n_startup_trials=200
         ),study_name=study_name,direction="maximize",load_if_exists="True") # study created else we reload the past strategy
         study.optimize(lambda trial: self.objective(trial=trial), n_trials=400) # we call optuna to optimize it
-        pd.DataFrame(self.liste,columns=["config","result","signature"]).to_csv(self.strategy.time_eccefpsn+".csv",index=False)
+        df = pd.DataFrame(self.liste,columns=["config","result","signature"])
+        df = df.drop_duplicates(subset=['result'])
+        df = df.drop_duplicates(subset=['signature'])
+        df.to_csv(self.strategy.time_eccefpsn+".csv",index=False)
 
 
     
