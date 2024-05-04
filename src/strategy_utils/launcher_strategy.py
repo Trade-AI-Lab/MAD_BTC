@@ -6,10 +6,11 @@ sys.path.append(absolute_path)
 from src.utils.utils_df import open_dataframe, filter_dataframe_by_date_range
 from src.strategy.momentum import indicator_momentum
 from src.strategy.envelop import indicator_envelop
-from src.strategy_utils.renderer_strategy import renderer,save
+from src.strategy_utils.strategy_comparator import evalutation
+from src.strategy_utils.renderer_strategy import renderer,save, monthly_return
 from src.strategy_utils.save_experiences_strategy import create_save_one_experience,create_save_experiences
 from src.utils.utils_signature import create_signature
-
+from ta.momentum import RSIIndicator
 class trading_strategy:
     """
     Trading Strategy
@@ -106,10 +107,25 @@ class trading_strategy:
             'Portfolio': list_portfolio,
             'Buy_and_Hold': list_buy_hold,
             "Position":list_position})
+        self.save_data()
         
-        if list_portfolio[-1]>list_buy_hold[-1]:
-            self.strategy_folder_path = create_save_one_experience(self.config,self.time_eccefpsn)
-            save("No strategy",self.strategy_folder_path,self.evolution_df) if self.title_image is None else save(self.title_image,self.strategy_folder_path,self.evolution_df)
+    def save_data(self):
+        if self.evolution_df is not None:
+            self.evolution_df["Relative_Portfolio_VS_Relative_Buy&Hold"] = self.evolution_df['Portfolio'].pct_change()-self.evolution_df['Buy_and_Hold'].pct_change()
+            self.evolution_df[f"Portfolio/Buy_and_Hold"] = self.evolution_df["Portfolio"]/self.evolution_df["Buy_and_Hold"]
+            self.evolution_df[f"RSI_Portfolio/Buy_and_Hold"] = RSIIndicator(self.evolution_df[f"Portfolio/Buy_and_Hold"]).rsi()/100
+
+            if self.evolution_df["Portfolio"].iloc[-1]>self.evolution_df["Buy_and_Hold"].iloc[-1]:
+                self.strategy_folder_path = create_save_one_experience(self.config,self.time_eccefpsn)
+                if self.title_image is None:
+                    save("No strategy",self.strategy_folder_path,self.evolution_df) 
+                else: 
+                    save(self.title_image,self.strategy_folder_path,self.evolution_df)
+                    # can cause error not quite important monthly_return(df_evolution = self.evolution_df,saving=True, path=self.strategy_folder_path,title_image=self.title_image+"monthly_return")
+    
+    def renderer_strat(self):
+        self.loop_simulation()
+        renderer(self.evolution_df,verbose=True)
     
     def compute_alpha_dates(self, df):
         df["time_diffs"] = df["open_date"].diff(-1)

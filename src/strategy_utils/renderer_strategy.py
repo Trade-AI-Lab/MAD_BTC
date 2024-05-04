@@ -12,15 +12,51 @@ def core_img(evolution_df:dict):
     :param evolution_df: A dictionary containing time and portfolio values.
     :type evolution_df: dict
     """
-    plt.figure(figsize=(10, 6))
-    
-    plt.plot(evolution_df['Time'], evolution_df['Portfolio'], label='Portfolio', marker='o')
-    plt.plot(evolution_df["Time"], evolution_df['Buy_and_Hold'], label='Buy and Hold', marker='x')
-    plt.xlabel('Timesteps')
-    plt.ylabel('Value')
-    plt.title('Portfolio vs Buy and Hold Comparison')
-    plt.legend()
-    plt.grid(True)
+    rsi = evolution_df[f"RSI_Portfolio/Buy_and_Hold"]
+    RSI_Portfolio_Buy_and_Hold = round(rsi.mean(),3)
+    fig, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(30, 6))
+    time = evolution_df['Time']
+    portfolio_value = evolution_df['Portfolio']
+    buy_and_hold_value = evolution_df['Buy_and_Hold']
+    relative_portfolio_value = portfolio_value.pct_change()
+    relative_buy_and_hold_value = buy_and_hold_value.pct_change()
+    # Plot absolute values on the left subplot
+    ax1.plot(time, portfolio_value, label='Portfolio', marker='o', color='b')
+    ax1.plot(time, buy_and_hold_value, label='Buy and Hold', marker='x', color='g')
+    ax1.set_xlabel('Timesteps')
+    ax1.set_ylabel('Value')
+    ax1.set_title('Portfolio vs Buy and Hold Comparison (Absolute Values)')
+    ax1.legend()
+    ax1.grid(True)
+
+    # Plot percentage change values on the right subplot
+    diff = relative_portfolio_value - relative_buy_and_hold_value
+    value = round((diff).mean()*100,4)
+    ax2.plot(time, relative_portfolio_value, label='Portfolio % Change', marker='o', color='r')
+    ax2.plot(time, relative_buy_and_hold_value, label='Buy and Hold % Change', marker='x', color='m')
+    ax2.set_xlabel('Timesteps')
+    ax2.set_ylabel('Percentage Change')
+    ax2.set_title(f'Portfolio vs Buy and Hold Comparison (% Change) {value}')
+    ax2.legend()
+    ax2.grid(True)
+
+    # Plot percentage change values on the right subplot
+    ax3.plot(time, diff, label='Difference', marker='o', color='r')
+    ax3.set_xlabel('Timesteps')
+    ax3.set_ylabel('Difference')
+    ax3.set_title(f'Porfolio minus Hold Comparison')
+    ax3.legend()
+    ax3.grid(True)
+
+    ax4.plot(time, rsi, label='RSI Portfolio vs Buy and Hold', marker='o', color='purple')
+    ax4.set_xlabel('Timesteps')
+    ax4.set_ylabel('RSI value')
+    ax4.set_title(f'RSI: {RSI_Portfolio_Buy_and_Hold}')
+    ax4.legend()
+    ax4.grid(True)
+
+    # Adjust layout
+    plt.tight_layout()
 
 def save(title_image:str,strategy_folder_path:str,evolution_df:dict):
     """
@@ -54,10 +90,9 @@ def renderer(evolution_df:dict,verbose:bool=False):
     core_img(evolution_df)
     if verbose:
         plt.show()
-        plt.pause(20)
     plt.close()
 
-def monthly_return(df_evolution:pd.DataFrame,verbose=False,saving=False,path="./"):
+def monthly_return(df_evolution:pd.DataFrame,verbose=False,saving=False,path="./",title_image="blank"):
     """
     Generate Monthly Return Plot
 
@@ -73,7 +108,7 @@ def monthly_return(df_evolution:pd.DataFrame,verbose=False,saving=False,path="./
     :type path: str, optional
     """
     df_evolution.set_index('Time', inplace=True)
-    df_monthly = df_evolution.resample('w')
+    df_monthly = df_evolution.resample('W')
     df_monthly = df_monthly.ffill()
     df_monthly['MonthlyPctChange'] = df_monthly['Portfolio'].pct_change() * 100 # (df_monthly['Portfolio'].pct_change() * 100 - df_monthly['Buy_and_Hold'].pct_change() * 100) if df_monthly['Buy_and_Hold'].pct_change() * 100>0 else   
     # Create a new column for color based on monthly percentage change
@@ -113,7 +148,7 @@ def monthly_return(df_evolution:pd.DataFrame,verbose=False,saving=False,path="./
     if verbose:
         fig.show()
     if saving:
-        fig.write_image(path+".png")
+        fig.write_image(path+"/"+title_image+".png")
 
 if __name__=="__main__":
     config = {
