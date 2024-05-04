@@ -6,6 +6,7 @@ from src.strategy_utils.strategy_comparator import evalutation
 from src.utils.utils_signature import create_signature
 import os
 import optuna
+import copy
 absolute_path = os.path.abspath(__file__)[:os.path.abspath(__file__).find("MAD_BTC")+len("MAD_BTC")]
 import numpy as np
 class trading_optimisation:
@@ -70,11 +71,18 @@ class trading_optimisation:
         constant_liar= True,
         n_startup_trials=200
         ),study_name=study_name,direction="maximize",load_if_exists="True") # study created else we reload the past strategy
-        study.optimize(lambda trial: self.objective(trial=trial), n_trials=400) # we call optuna to optimize it
-        df = pd.DataFrame(self.liste,columns=["config","result","signature"])
+        study.optimize(lambda trial: self.objective(trial=trial), n_trials=20) # we call optuna to optimize it
+        df = pd.DataFrame(self.liste,columns=["config","result","result_portfolio","signature"])
+        dataframe_path = self.strategy.time_eccefpsn + f"/{self.config['crypto_currency']}_{self.config['time']}_{self.config['strategy']['name']}.csv"
+        if os.path.exists(dataframe_path):
+            existing_df = pd.read_csv(dataframe_path)
+            df = pd.concat([df,existing_df],ignore_index=True)
+            del existing_df
         df = df.drop_duplicates(subset=['result'])
         df = df.drop_duplicates(subset=['signature'])
-        df.to_csv(self.strategy.time_eccefpsn+".csv",index=False)
+        print(dataframe_path)
+        df.to_csv(dataframe_path,index=False)
+        self.liste = []
 
 
     
@@ -131,8 +139,10 @@ class optimiser_momentum_strategy(trading_optimisation):
         
         col_1,col_2 = "Portfolio","Buy_and_Hold" # element for computing the reward
         simulation_df = evalutation(simulation_df,col_1,col_2) # evaluate the simulation
-        result = simulation_df["Portfolio"].iloc[-1]*(simulation_df[f"RSI_{col_1}/{col_2}"]/100).mean() # calculate a result
-        self.liste.append([self.config,result,create_signature(self.config)])
+        result_portfolio =  simulation_df["Portfolio"].iloc[-1]
+        result = result_portfolio*(simulation_df[f"RSI_{col_1}/{col_2}"]/100).mean() # calculate a result
+        config = copy.deepcopy(self.config)
+        self.liste.append([config,result,result_portfolio,create_signature(self.config)])
         return result
 
 class optimiser_envelop_strategy(trading_optimisation):
