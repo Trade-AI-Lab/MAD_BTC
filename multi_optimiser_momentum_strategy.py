@@ -9,6 +9,10 @@ import optuna
 import copy
 absolute_path = os.path.abspath(__file__)[:os.path.abspath(__file__).find("MAD_BTC")+len("MAD_BTC")]
 import numpy as np
+
+from IPython.display import display
+from PIL import Image
+import imageio
 class trading_optimisation:
     """
     Trading Optimization
@@ -71,8 +75,9 @@ class trading_optimisation:
         constant_liar= True,
         n_startup_trials=100
         ),study_name=study_name,direction="maximize",load_if_exists="True") # study created else we reload the past strategy
-        study.optimize(lambda trial: self.objective(trial=trial), n_trials=300) # we call optuna to optimize it
+        study.optimize(lambda trial: self.objective(trial=trial), n_trials=150) # we call optuna to optimize it
         self.save_df()
+        self.save_mp4()
   
     def save_df(self):
         """
@@ -81,6 +86,14 @@ class trading_optimisation:
         This method defines the save_df function for saving data into a dataframe.
         """
         raise "To be implemented"
+    def save_mp4(self):
+        """
+        save_mp4
+
+        This method defines the save_mp4 function for saving data into a mp4.
+        """
+        raise "To be implemented"
+
 
 
     
@@ -141,18 +154,48 @@ class optimiser_momentum_strategy(trading_optimisation):
         self.liste.append([config,result,result_portfolio,rsi,create_signature(self.config)])
 
         return result
+    
     def save_df(self):
         df = pd.DataFrame(self.liste,columns=["config","result","result_portfolio","rsi","signature"])
-        dataframe_path = self.strategy.time_eccefpsn + f"/{self.config['crypto_currency']}_{self.config['time']}_{self.config['strategy']['name']}.csv"
-        if os.path.exists(dataframe_path):
-            existing_df = pd.read_csv(dataframe_path)
+        self.dataframe_path = self.strategy.time_eccefpsn + f"/{self.config['crypto_currency']}_{self.config['time']}_{self.config['strategy']['name']}.csv"
+        if os.path.exists(self.dataframe_path):
+            existing_df = pd.read_csv(self.dataframe_path)
             df = pd.concat([df,existing_df],ignore_index=True)
             del existing_df
         df = df.drop_duplicates(subset=['result'])
-        df = df.drop_duplicates(subset=['signature'])
-        df.to_csv(dataframe_path,index=False)
+        self.df = df.drop_duplicates(subset=['signature'])
+        self.df.to_csv(self.dataframe_path,index=False)
         self.liste = []
 
+    def save_mp4(self):
+        mp4_file =  self.strategy.time_eccefpsn + f"_{self.config['crypto_currency']}_{self.config['time']}_output_video.mp4"
+
+        # Create writer object to write the video
+        writer = imageio.get_writer(mp4_file, fps=2)  # Adjust the fps as needed
+        # Loop through each directory in self.strategy.time_eccefpsn
+        for dir_name in os.listdir(self.strategy.time_eccefpsn):
+            if not dir_name.endswith('.csv'):
+                dir_path = os.path.join(self.strategy.time_eccefpsn, dir_name)
+                
+                # List files in the directory
+                files = os.listdir(dir_path)
+                
+                # Filter out PNG files
+                png_files = [file for file in files if file.endswith('.png')]
+                
+                # Loop through PNG files in the directory
+                for png_file in png_files:
+                    png_full_path = os.path.join(dir_path, png_file)
+                    
+                    # Read the PNG image
+                    image = imageio.imread(png_full_path)
+                    
+                    # Append the image to the video
+                    writer.append_data(image)
+
+        # Close the writer
+        writer.close()
+        print("MP4 Done")
 
 class optimiser_envelop_strategy(trading_optimisation):
     """
