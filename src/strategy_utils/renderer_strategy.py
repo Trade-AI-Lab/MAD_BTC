@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.subplots as sp
 
-def core_img(evolution_df:dict):
+def core_img(evolution_df:dict, Title:str):
     """
     Core Image Plotting Function
 
@@ -54,7 +54,7 @@ def core_img(evolution_df:dict):
     ax4.set_title(f'RSI: {RSI_Portfolio_Buy_and_Hold}')
     ax4.legend()
     ax4.grid(True)
-
+    fig.suptitle(Title)
     # Adjust layout
     plt.tight_layout()
 
@@ -71,7 +71,7 @@ def save(title_image:str,strategy_folder_path:str,evolution_df:dict):
     :param evolution_df: A dictionary containing time and portfolio values.
     :type evolution_df: dict
     """
-    core_img(evolution_df)
+    core_img(evolution_df,Title=title_image)
     evolution_df.to_csv(strategy_folder_path+"/"+'output_file.csv', index=False) # Can  cause an error
     plt.savefig(strategy_folder_path+"/"+title_image+".png")
     plt.close()
