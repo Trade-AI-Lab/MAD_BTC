@@ -7,12 +7,17 @@ from src.utils.utils_signature import create_signature
 import os
 import optuna
 import copy
-absolute_path = os.path.abspath(__file__)[:os.path.abspath(__file__).find("MAD_BTC")+len("MAD_BTC")]
+
+absolute_path = os.path.abspath(__file__)[
+    : os.path.abspath(__file__).find("MAD_BTC") + len("MAD_BTC")
+]
 import numpy as np
 
 from IPython.display import display
 from PIL import Image
 import imageio
+
+
 class trading_optimisation:
     """
     Trading Optimization
@@ -20,7 +25,8 @@ class trading_optimisation:
     This class provides a framework for optimizing trading strategies using Optuna.
 
     """
-    def __init__(self,config:dict) -> None:
+
+    def __init__(self, config: dict) -> None:
         """
         Initialize Trading Optimization
 
@@ -31,11 +37,15 @@ class trading_optimisation:
         """
         self.strategy = None
         self.config = config
-        os.makedirs(absolute_path+"/study",exist_ok=True) # create the file study
+        os.makedirs(absolute_path + "/study", exist_ok=True)  # create the file study
         self.liste = []
 
-    
-    def optimiser_multiple_currency(self,list_crypto_currency:str=["BTCUSDT","ETHUSDT","ADAUSDT","BNBUSDT"],list_time:str=["1h","4h","1d"],list_brokers=["binance"]):
+    def optimiser_multiple_currency(
+        self,
+        list_crypto_currency: str = ["BTCUSDT", "ETHUSDT", "ADAUSDT", "BNBUSDT"],
+        list_time: str = ["1h", "4h", "1d"],
+        list_brokers=["binance"],
+    ):
         """
         Optimize Multiple Currencies
 
@@ -50,10 +60,10 @@ class trading_optimisation:
         """
         nested_list = list(product(list_crypto_currency, list_time, list_brokers))
         for element in nested_list:
-            crypto_currency,time,broker = element
-            self.loop_optimiser_multiple_currency(crypto_currency,time,broker)
-                
-    def loop_optimiser_multiple_currency(self,crypto_currency,time,broker):
+            crypto_currency, time, broker = element
+            self.loop_optimiser_multiple_currency(crypto_currency, time, broker)
+
+    def loop_optimiser_multiple_currency(self, crypto_currency, time, broker):
         """
         Loop Optimize Multiple Currencies
 
@@ -66,19 +76,31 @@ class trading_optimisation:
         :param broker: Broker name.
         :type broker: str
         """
-        self.config["crypto_currency"],self.config["time"],self.config["broker"] = crypto_currency, time, broker  # because we are looped on them
-        study_name = "study"+f"_{self.config['strategy']['name']}_{self.config['crypto_currency']}_{self.config['exchange']}_{self.config['time']}" # the study_name depending on the strategy name, crypto,exchange and time
-        storage_name = f"sqlite:///{os.path.join(absolute_path, 'study', study_name)}.db" # storage name 
-        study = optuna.create_study(storage_name, sampler=optuna.samplers.TPESampler(
-            multivariate = True,
-            group = True,
-        constant_liar= True,
-        n_startup_trials=100
-        ),study_name=study_name,direction="maximize",load_if_exists="True") # study created else we reload the past strategy
-        study.optimize(lambda trial: self.objective(trial=trial), n_trials=150) # we call optuna to optimize it
+        self.config["crypto_currency"], self.config["time"], self.config["broker"] = (
+            crypto_currency,
+            time,
+            broker,
+        )  # because we are looped on them
+        study_name = (
+            "study"
+            + f"_{self.config['strategy']['name']}_{self.config['crypto_currency']}_{self.config['exchange']}_{self.config['time']}"
+        )  # the study_name depending on the strategy name, crypto,exchange and time
+        storage_name = f"sqlite:///{os.path.join(absolute_path, 'study', study_name)}.db"  # storage name
+        study = optuna.create_study(
+            storage_name,
+            sampler=optuna.samplers.TPESampler(
+                multivariate=True, group=True, constant_liar=True, n_startup_trials=100
+            ),
+            study_name=study_name,
+            direction="maximize",
+            load_if_exists="True",
+        )  # study created else we reload the past strategy
+        study.optimize(
+            lambda trial: self.objective(trial=trial), n_trials=150
+        )  # we call optuna to optimize it
         self.save_df()
         self.save_mp4()
-  
+
     def save_df(self):
         """
         save_df
@@ -86,6 +108,7 @@ class trading_optimisation:
         This method defines the save_df function for saving data into a dataframe.
         """
         raise "To be implemented"
+
     def save_mp4(self):
         """
         save_mp4
@@ -94,11 +117,7 @@ class trading_optimisation:
         """
         raise "To be implemented"
 
-
-
-    
-    
-    def objective(self,trial:optuna.trial):
+    def objective(self, trial: optuna.trial):
         """
         Objective
 
@@ -118,7 +137,7 @@ class optimiser_momentum_strategy(trading_optimisation):
 
     """
 
-    def __init__(self, config:dict) -> None:
+    def __init__(self, config: dict) -> None:
         """
         Initialize Optimizer for Momentum Strategy
 
@@ -128,9 +147,9 @@ class optimiser_momentum_strategy(trading_optimisation):
         :type config: dict
         """
         super().__init__(config)
-        self.strategy = momentum_strategy(config) # initialize the momentum strategy
+        self.strategy = momentum_strategy(config)  # initialize the momentum strategy
 
-    def objective(self,trial:optuna.trial)->None:
+    def objective(self, trial: optuna.trial) -> None:
         """
         Objective for Momentum Strategy Optimization
 
@@ -141,61 +160,79 @@ class optimiser_momentum_strategy(trading_optimisation):
         :return: None
         :rtype: None
         """
-        
-        self.config["strategy"]["x"] = trial.suggest_int('x', 1, 34) # hyperparameters 
-        self.config["strategy"]["y"] = trial.suggest_int('y', 35 ,120) # hyperparameters
-        self.config["strategy"]["ratio_method"] = trial.suggest_categorical('ratio_method',["ma_ratio","ema_ratio"]) # hyperparameters
-        self.strategy.change_config(self.config) # essential change config wil reinitialize the object
-        simulation_df = self.strategy.compute_simulation() # compute the simulation
-        result_portfolio =  simulation_df["Portfolio"].iloc[-1]
+
+        self.config["strategy"]["x"] = trial.suggest_int("x", 1, 34)  # hyperparameters
+        self.config["strategy"]["y"] = trial.suggest_int(
+            "y", 35, 120
+        )  # hyperparameters
+        self.config["strategy"]["ratio_method"] = trial.suggest_categorical(
+            "ratio_method", ["ma_ratio", "ema_ratio"]
+        )  # hyperparameters
+        self.strategy.change_config(
+            self.config
+        )  # essential change config wil reinitialize the object
+        simulation_df = self.strategy.compute_simulation()  # compute the simulation
+        result_portfolio = simulation_df["Portfolio"].iloc[-1]
         rsi = (simulation_df[f"RSI_Portfolio/Buy_and_Hold"]).mean()
-        result = result_portfolio*rsi # calculate a result
+        result = result_portfolio * rsi  # calculate a result
         config = copy.deepcopy(self.config)
-        self.liste.append([config,result,result_portfolio,rsi,create_signature(self.config)])
+        self.liste.append(
+            [config, result, result_portfolio, rsi, create_signature(self.config)]
+        )
 
         return result
-    
+
     def save_df(self):
-        df = pd.DataFrame(self.liste,columns=["config","result","result_portfolio","rsi","signature"])
-        self.dataframe_path = self.strategy.time_eccefpsn + f"/{self.config['crypto_currency']}_{self.config['time']}_{self.config['strategy']['name']}.csv"
+        df = pd.DataFrame(
+            self.liste,
+            columns=["config", "result", "result_portfolio", "rsi", "signature"],
+        )
+        self.dataframe_path = (
+            self.strategy.time_eccefpsn
+            + f"/{self.config['crypto_currency']}_{self.config['time']}_{self.config['strategy']['name']}.csv"
+        )
         if os.path.exists(self.dataframe_path):
             existing_df = pd.read_csv(self.dataframe_path)
-            df = pd.concat([df,existing_df],ignore_index=True)
+            df = pd.concat([df, existing_df], ignore_index=True)
             del existing_df
-        df = df.drop_duplicates(subset=['result'])
-        self.df = df.drop_duplicates(subset=['signature'])
-        self.df.to_csv(self.dataframe_path,index=False)
+        df = df.drop_duplicates(subset=["result"])
+        self.df = df.drop_duplicates(subset=["signature"])
+        self.df.to_csv(self.dataframe_path, index=False)
         self.liste = []
 
     def save_mp4(self):
-        mp4_file =  self.strategy.time_eccefpsn + f"_{self.config['crypto_currency']}_{self.config['time']}_output_video.mp4"
+        mp4_file = (
+            self.strategy.time_eccefpsn
+            + f"_{self.config['crypto_currency']}_{self.config['time']}_output_video.mp4"
+        )
 
         # Create writer object to write the video
         writer = imageio.get_writer(mp4_file, fps=2)  # Adjust the fps as needed
         # Loop through each directory in self.strategy.time_eccefpsn
         for dir_name in os.listdir(self.strategy.time_eccefpsn):
-            if not dir_name.endswith('.csv'):
+            if not dir_name.endswith(".csv"):
                 dir_path = os.path.join(self.strategy.time_eccefpsn, dir_name)
-                
+
                 # List files in the directory
                 files = os.listdir(dir_path)
-                
+
                 # Filter out PNG files
-                png_files = [file for file in files if file.endswith('.png')]
-                
+                png_files = [file for file in files if file.endswith(".png")]
+
                 # Loop through PNG files in the directory
                 for png_file in png_files:
                     png_full_path = os.path.join(dir_path, png_file)
-                    
+
                     # Read the PNG image
                     image = imageio.imread(png_full_path)
-                    
+
                     # Append the image to the video
                     writer.append_data(image)
 
         # Close the writer
         writer.close()
         print("MP4 Done")
+
 
 class optimiser_envelop_strategy(trading_optimisation):
     """
@@ -205,7 +242,7 @@ class optimiser_envelop_strategy(trading_optimisation):
 
     """
 
-    def __init__(self, config:dict) -> None:
+    def __init__(self, config: dict) -> None:
         """
         Initialize Optimizer for Momentum Strategy
 
@@ -215,10 +252,9 @@ class optimiser_envelop_strategy(trading_optimisation):
         :type config: dict
         """
         super().__init__(config)
-        self.strategy = envelop_strategy(config) # initialize the momentum strategy
+        self.strategy = envelop_strategy(config)  # initialize the momentum strategy
 
-
-    def objective(self,trial:optuna.trial)->None:
+    def objective(self, trial: optuna.trial) -> None:
         """
         Objective for Momentum Strategy Optimization
 
@@ -229,50 +265,67 @@ class optimiser_envelop_strategy(trading_optimisation):
         :return: None
         :rtype: None
         """
-        
-        self.config["strategy"]["x"] = trial.suggest_int('x', 1, 30) # hyperparameters
-        self.config["strategy"]["method"] = trial.suggest_categorical('ratio_method',["ma","ema"]) # hyperparameters
-        nb_envelope = trial.suggest_int(f"nb_enveloppe",2,5)
+
+        self.config["strategy"]["x"] = trial.suggest_int("x", 1, 30)  # hyperparameters
+        self.config["strategy"]["method"] = trial.suggest_categorical(
+            "ratio_method", ["ma", "ema"]
+        )  # hyperparameters
+        nb_envelope = trial.suggest_int(f"nb_enveloppe", 2, 5)
         list_envelope = []
         list_porportion = []
         for i in range(nb_envelope):
-            if i ==0:
-                list_envelope.append(trial.suggest_int(f"envelope_{i}",1,1000)*0.0001)
+            if i == 0:
+                list_envelope.append(
+                    trial.suggest_int(f"envelope_{i}", 1, 1000) * 0.0001
+                )
             else:
-                list_envelope.append(trial.suggest_int(f"envelope_{i}",1,1000)*0.0001+list_envelope[-1])
-            list_porportion.append(trial.suggest_int(f"proportion_envelope_{i}",0,100))
+                list_envelope.append(
+                    trial.suggest_int(f"envelope_{i}", 1, 1000) * 0.0001
+                    + list_envelope[-1]
+                )
+            list_porportion.append(
+                trial.suggest_int(f"proportion_envelope_{i}", 0, 100)
+            )
 
-        envelope_array = np.round(np.array(list_envelope),3)
+        envelope_array = np.round(np.array(list_envelope), 3)
         porportion_array = np.array(list_porportion)
-        porportion_array = np.round(porportion_array/np.sum(porportion_array),2)
-            
-        self.config["strategy"]["envelop"] = dict(zip(envelope_array.astype(str), porportion_array))
-        self.strategy.change_config(self.config) # essential change config wil reinitialize the object
-        simulation_df = self.strategy.compute_simulation() # compute the simulation
-        
-        col_1,col_2 = "Portfolio","Buy_and_Hold" # element for computing the reward
-        simulation_df = evalutation(simulation_df,col_1,col_2) # evaluate the simulation
+        porportion_array = np.round(porportion_array / np.sum(porportion_array), 2)
+
+        self.config["strategy"]["envelop"] = dict(
+            zip(envelope_array.astype(str), porportion_array)
+        )
+        self.strategy.change_config(
+            self.config
+        )  # essential change config wil reinitialize the object
+        simulation_df = self.strategy.compute_simulation()  # compute the simulation
+
+        col_1, col_2 = "Portfolio", "Buy_and_Hold"  # element for computing the reward
+        simulation_df = evalutation(
+            simulation_df, col_1, col_2
+        )  # evaluate the simulation
         # result = simulation_df["Portfolio"].iloc[-1]*(simulation_df[f"RSI_{col_1}/{col_2}"]/100).mean() # calculate a result
         return simulation_df["Portfolio"].iloc[-1]
 
-            
-if __name__=="__main__":
-    absolute_path = os.path.abspath(__file__)[:os.path.abspath(__file__).find("MAD_BTC")+len("MAD_BTC")]
 
-    df = optimiser_momentum_strategy({
-    "crypto_currency": "OCEANUSDT",
-    "time": "4h",
-    "exchange": "binance",
-    "begin_date":None,
-    "end_date":None,
-    "strategy": {
-      "name": "momentum_strategy",
-      "x": 5,
-      "y": 57,
-      "ratio_method": "ma_ratio"
-    },
-    "initial_capital": 1000,
-    "broker": "binance"
-  }).optimiser_multiple_currency()
+if __name__ == "__main__":
+    absolute_path = os.path.abspath(__file__)[
+        : os.path.abspath(__file__).find("MAD_BTC") + len("MAD_BTC")
+    ]
 
-        
+    df = optimiser_momentum_strategy(
+        {
+            "crypto_currency": "OCEANUSDT",
+            "time": "4h",
+            "exchange": "binance",
+            "begin_date": None,
+            "end_date": None,
+            "strategy": {
+                "name": "momentum_strategy",
+                "x": 5,
+                "y": 57,
+                "ratio_method": "ma_ratio",
+            },
+            "initial_capital": 1000,
+            "broker": "binance",
+        }
+    ).optimiser_multiple_currency()
