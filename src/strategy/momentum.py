@@ -52,3 +52,25 @@ class indicator_momentum:
         zlema_x = zlema(data["open"], period=x)
         zlema_y = zlema(data["open"], period=y)
         return zlema_x / zlema_y
+
+    @staticmethod
+    def dema_ratio(data: pd.DataFrame, x: int, y: int) -> pd.Series:
+        def dema(data, period):
+            ema_data = EMAIndicator(data, window=period).ema_indicator()
+            return 2 * ema_data - EMAIndicator(ema_data, window=period).ema_indicator()
+
+        dema_x = dema(data["open"], period=x)
+        dema_y = dema(data["open"], period=y)
+        return dema_x / dema_y
+
+    @staticmethod
+    def tema_ratio(data: pd.DataFrame, x: int, y: int) -> pd.Series:
+        def tema(data, period):
+            ema_data = EMAIndicator(data, window=period).ema_indicator()
+            ema_ema_data = EMAIndicator(ema_data, window=period).ema_indicator()
+            ema_ema_ema_data = EMAIndicator(ema_ema_data, window=period).ema_indicator()
+            return 3 * ema_ema_ema_data - 3 * ema_ema_data + ema_data
+
+        dema_x = tema(data["open"], period=x)
+        dema_y = tema(data["open"], period=y)
+        return dema_x / dema_y
