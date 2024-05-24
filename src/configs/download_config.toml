@@ -1,7 +1,7 @@
 #Specify the desired exchange here
 exchange = ["binance"]
 
-#list of strings
+#list of strings. Ex: ["ADAUSDT","ETHUSDT","BNBUSDT","BTCUSDT"]
 symbols = ["BNBUSDT"]
 
 time_frame = ["4h", "1d"]
