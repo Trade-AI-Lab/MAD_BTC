@@ -2,44 +2,14 @@ import asyncio
 import ccxt.async_support as ccxt
 import pandas as pd
 import datetime
-import os
 import nest_asyncio
+import toml
 
 import os
 nest_asyncio.apply()
 
-
-
-EXCHANGE_LIMIT_RATES = {
-    "bitget":
-        {
-            "limit":100,
-            "pause_every":1,
-            "pause":3
-        },
-    "bitfinex2": {
-        "limit": 10_000,
-        "pause_every": 1,
-        "pause": 3,  # seconds
-    },
-    "binance": {
-        "limit": 1_000,
-        "pause_every": 1,
-        "pause": 1,  # seconds
-    },
-    "kucoin":
-            {
-                "limit":1500,
-                "pause_every":1,
-                "pause":3
-        },
-    "huobi": {
-        "limit": 1_000,
-        "pause_every": 10,
-        "pause": 1,  # seconds
-    }
-}
-
+with open('src/configs/download_config.toml', 'r') as file:
+    CONFIG = toml.load(file)
 
 async def _ohlcv(exchange, symbol, timeframe, limit, step_since, timedelta):
     result = await exchange.fetch_ohlcv(symbol=symbol, timeframe=timeframe, limit=limit, since=step_since)
@@ -74,13 +44,14 @@ async def _download_symbol(exchange, symbol, timeframe='5m',
     return final_df
 
 
-async def _download_symbols(exchange_name, symbols, dir, timeframe, **kwargs):
+async def _download_symbols(exchange_name, symbols, dir, timeframes, **kwargs):
     exchange = getattr(ccxt, exchange_name)({'enableRateLimit': True})
     for symbol in symbols:
-        df = await _download_symbol(exchange=exchange, symbol=symbol, timeframe=timeframe, **kwargs)
-        save_file = f"{dir}/{exchange_name}-{symbol.replace('/', '')}-{timeframe}.pkl"
-        print(f"{symbol} downloaded from {exchange_name} and stored at {save_file}")
-        df.to_pickle(save_file)
+        for timeframe in timeframes:
+            df = await _download_symbol(exchange=exchange, symbol=symbol, timeframe=timeframe, **kwargs)
+            save_file = f"{dir}/{exchange_name}-{symbol.replace('/', '')}-{timeframe}.pkl"
+            print(f"{symbol} for {timeframe} downloaded from {exchange_name} and stored at {save_file}")
+            df.to_pickle(save_file)
     await exchange.close()
 
 
@@ -88,12 +59,12 @@ async def _download(exchange_names, symbols, timeframe, dir, since: datetime.dat
                     until: datetime.datetime = datetime.datetime.now()):
     tasks = []
     for exchange_name in exchange_names:
-        limit = EXCHANGE_LIMIT_RATES[exchange_name]["limit"]
-        pause_every = EXCHANGE_LIMIT_RATES[exchange_name]["pause_every"]
-        pause = EXCHANGE_LIMIT_RATES[exchange_name]["pause"]
+        limit = CONFIG[exchange_name]["limit"]
+        pause_every = CONFIG[exchange_name]["pause_every"]
+        pause = CONFIG[exchange_name]["pause"]
         tasks.append(
             _download_symbols(
-                exchange_name=exchange_name, symbols=symbols, timeframe=timeframe, dir=dir,
+                exchange_name=exchange_name, symbols=symbols, timeframes=timeframe, dir=dir,
                 limit=limit, pause_every=pause_every, pause=pause,
                 since=int(since.timestamp() * 1E3), until=int(until.timestamp() * 1E3)
             )
@@ -123,9 +94,11 @@ async def main(time_frame:str="5m"):
     print(f"The folder '{folder_name}' {created_or_exists}.")
 
     await _download(
-        ["binance"], # select your exchange
+        # TODO config files
+        CONFIG["exchange"], # select your exchange
         #symbols=["ADAUSDT","ETHUSDT","BNBUSDT","BTCUSDT"], # select your currencies
-        symbols=["BNBUSDT"],
+        # TODO put this as parameter in config file
+        symbols=CONFIG["symbols"],
         timeframe=time_frame, # the time frame you can change
         dir=dir, # directory
         since=datetime.datetime(year=2018, month=4, day=1), # starting date
@@ -134,8 +107,9 @@ async def main(time_frame:str="5m"):
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(main(time_frame="1d"))
-    print("Done 1h")
+    # TODO config file here 
+    loop.run_until_complete(main(time_frame=CONFIG["time_frame"]))
+    print("Done ")
     #loop.run_until_complete(main(time_frame="4h"))
     #loop.run_until_complete(main(time_frame="1h"))
     #loop.run_until_complete(main(time_frame="5m"))

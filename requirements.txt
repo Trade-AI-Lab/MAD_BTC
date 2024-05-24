@@ -1,0 +1,11 @@
+ipython
+pandas 
+optuna 
+optuna-dashboard 
+matplotlib 
+ccxt==4.2.58 
+nest_asyncio 
+ta 
+plotly
+imageio
+toml

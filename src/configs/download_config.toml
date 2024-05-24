@@ -1,0 +1,32 @@
+#Specify the desired exchange here
+exchange = ["binance"]
+
+#list of strings
+symbols = ["BNBUSDT"]
+
+time_frame = ["4h", "1d"]
+# EXCHANGE_LIMIT_RATES
+[bitget]
+limit = 100
+pause_every = 1
+pause = 3
+
+[bitfinex2]
+limit = 10000
+pause_every = 1
+pause = 3
+
+[binance]
+limit = 1000
+pause_every = 1
+pause = 1
+
+[kucoin]
+limit = 1500
+pause_every = 1
+pause = 3
+
+[huobi]
+limit = 1000
+pause_every = 10
+pause = 1
