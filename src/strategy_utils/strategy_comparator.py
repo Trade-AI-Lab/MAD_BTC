@@ -5,8 +5,8 @@ absolute_path = os.path.abspath(__file__)[:os.path.abspath(__file__).find("MAD_B
 sys.path.append(absolute_path)
 from src.utils.utils_df import open_dataframe
 import matplotlib.pyplot as plt
-
-def merge_strategies(list_strategies:list[pd.DataFrame]):
+from typing import List
+def merge_strategies(list_strategies:List[pd.DataFrame]):
     """
     Merge Strategies
 

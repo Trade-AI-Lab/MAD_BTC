@@ -42,6 +42,7 @@ class trading_optimisation:
 
     def optimiser_multiple_currency(
         self,
+        # TODO put this as config
         list_crypto_currency: str = ["BTCUSDT", "ETHUSDT", "ADAUSDT", "BNBUSDT"],
         list_time: str = ["1h", "4h", "1d"],
         list_brokers=["binance"],
@@ -311,7 +312,8 @@ if __name__ == "__main__":
     absolute_path = os.path.abspath(__file__)[
         : os.path.abspath(__file__).find("MAD_BTC") + len("MAD_BTC")
     ]
-
+    # TODO config file
+    # TODO test if file is already downloaded, otherwise download it
     df = optimiser_momentum_strategy(
         {
             "crypto_currency": "OCEANUSDT",
@@ -329,3 +331,52 @@ if __name__ == "__main__":
             "broker": "binance",
         }
     ).optimiser_multiple_currency()
+
+    # TODO add this somewhere and extend it with the possibility to download the data.
+    # further check if the start and end date are the same for each df
+    def check_data_availability_in_folder(folder, crypto_currencies, times, brokers):
+        # Convert lists to sets for faster lookup
+        set_crypto_currencies = set(crypto_currencies)
+        set_times = set(times)
+        set_brokers = set(brokers)
+
+        # Initialize sets to store found items
+        found_brokers = set()
+        found_crypto = set()
+        found_times = set()
+
+        # Process each file in the folder
+        for file_name in os.listdir(folder):
+            if file_name.endswith(".pkl"):
+                # Extract the parts from the filename
+                title_parts = os.path.splitext(file_name)[0].split("-")
+                if len(title_parts) == 3:
+                    brokers_in_file = set(title_parts[0].split("_"))
+                    crypto_in_file = set(title_parts[1].split("_"))
+                    times_in_file = set(title_parts[2].split("_"))
+
+                    # Update found sets with intersection of the file data and target sets
+                    found_brokers.update(brokers_in_file & set_brokers)
+                    found_crypto.update(crypto_in_file & set_crypto_currencies)
+                    found_times.update(times_in_file & set_times)
+
+        # Determine missing items
+        missing_brokers = set_brokers - found_brokers
+        missing_crypto = set_crypto_currencies - found_crypto
+        missing_times = set_times - found_times
+
+        # Print missing items
+        for broker in missing_brokers:
+            print(f"Broker {broker} is missing.")
+        for crypto in missing_crypto:
+            print(f"Cryptocurrency {crypto} is missing.")
+        for time in missing_times:
+            print(f"Time {time} is missing.")
+
+        # Print available data combinations
+        for broker in found_brokers:
+            for crypto in found_crypto:
+                for time in found_times:
+                    print(
+                        f"Data is available for broker {broker}, cryptocurrency {crypto}, and time {time}."
+                    )

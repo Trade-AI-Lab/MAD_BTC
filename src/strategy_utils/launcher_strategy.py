@@ -36,6 +36,7 @@ class trading_strategy:
         :type config: dict
         """
         self.config = config
+        # TODO this should be passed as parameter from somewhere in case the path changes at some point. We should also check somewhere if it exists
         self.PATH = (
             absolute_path
             + rf"/data/{config['exchange']}-{config['crypto_currency']}-{config['time']}.pkl"
@@ -71,6 +72,7 @@ class trading_strategy:
         """
 
         portfolio = self.config["initial_capital"]
+        # the fee should be specified as config parameter
         fee_percentage = 0.1 / 100  # 0.1%
         crypto, position = 0, 0
         list_portfolio, list_buy_hold, list_time, list_position = [], [], [], []
@@ -321,7 +323,10 @@ class envelop_strategy(trading_strategy):
         self.title_image = f"{self.config['exchange']}-{self.config['crypto_currency']}-{self.config['time']}_portfolio_vs_buy_hold_{self.strategy_name}_{self.config['initial_capital']}$"
         self.child_df[self.strategy_name] = getattr(
             indicator_envelop, self.config["strategy"]["method"]
-        )(self.child_df, self.config["strategy"]["x"])  # refers to the MA or EMA
+        )(
+            self.child_df, self.config["strategy"]["x"]
+        )  # refers to the MA or EMA
+        (self.child_df, self.config["strategy"]["x"])  # refers to the MA or EMA
         self.child_df = self.child_df.dropna().reset_index(drop=True)
         self.child_df["alpha_date"] = self.compute_alpha_dates(self.child_df)
         self.list_col_buy_signal = []
@@ -333,7 +338,9 @@ class envelop_strategy(trading_strategy):
             # Buy
             self.child_df[f"envelop_up_{percent_envelop}"] = self.child_df[
                 self.strategy_name
-            ] * (1 + percent_envelop)  # E and/or MA(1+x%)
+            ] * (
+                1 + percent_envelop
+            )  # E and/or MA(1+x%)
             buy_signal = f"buy_signal_{percent_envelop}"
             self.child_df[buy_signal] = (
                 self.child_df["high"] > self.child_df[f"envelop_up_{percent_envelop}"]
@@ -343,7 +350,9 @@ class envelop_strategy(trading_strategy):
             # Sell
             self.child_df[f"envelop_down_{percent_envelop}"] = self.child_df[
                 self.strategy_name
-            ] * (1 - percent_envelop)  # E and/or MA(1-x%)
+            ] * (
+                1 - percent_envelop
+            )  # E and/or MA(1-x%)
             sell_signal = f"sell_signal_{percent_envelop}"
             self.child_df[sell_signal] = (
                 self.child_df[f"envelop_down_{percent_envelop}"] > self.child_df["low"]
@@ -546,8 +555,8 @@ class envelop_strategy(trading_strategy):
         self.strategy_folder_path = create_save_one_experience(
             self.config, self.time_eccefpsn
         )
-        save(
-            "No strategy", self.strategy_folder_path, self.evolution_df
-        ) if self.title_image is None else save(
-            self.title_image, self.strategy_folder_path, self.evolution_df
+        (
+            save("No strategy", self.strategy_folder_path, self.evolution_df)
+            if self.title_image is None
+            else save(self.title_image, self.strategy_folder_path, self.evolution_df)
         )

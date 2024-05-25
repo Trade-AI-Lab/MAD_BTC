@@ -1,6 +1,8 @@
 import pandas as pd
-from typing import Optional 
-def open_dataframe(PATH:str,light:bool=False)->pd.DataFrame:
+from typing import Optional
+
+
+def open_dataframe(PATH: str, light: bool = False) -> pd.DataFrame:
     """
     open_dataframe _summary_
 
@@ -19,7 +21,7 @@ def open_dataframe(PATH:str,light:bool=False)->pd.DataFrame:
     elif extension == "pkl":
         df = pd.read_pickle(PATH)
     else:
-        raise  "Error: unknown file type : ." + extension
+        raise "Error: unknown file type : ." + extension
     # Normalize columns name
     if not light:
         df.columns = df.columns.str.lower()
@@ -28,17 +30,17 @@ def open_dataframe(PATH:str,light:bool=False)->pd.DataFrame:
                 df["close"] = df["open_price"].shift(-1)
             else:
                 raise "impossible to find an open price to create close price"
-            
-    if 'open_date' not in df.columns:
+
+    if "open_date" not in df.columns:
         raise ValueError("The DataFrame does not contain a column named 'open_date'.")
 
-    df['open_date'] = pd.to_datetime(df['open_date'])
+    df["open_date"] = pd.to_datetime(df["open_date"])
 
     # Calculate time differences
     time_diffs = df["open_date"].diff(1)
     time_delta = df["open_date"].diff(1).iloc[-1]
     # Check if time differences are consistent
-    is_continuous = (time_diffs[time_diffs!=time_delta]).index
+    is_continuous = (time_diffs[time_diffs != time_delta]).index
 
     if len(is_continuous) and light:
         print("Time is not continuous based on the 'open_date' column.")
@@ -46,7 +48,8 @@ def open_dataframe(PATH:str,light:bool=False)->pd.DataFrame:
         print("Time is  continuous based on the 'open_date' column.")
     return df
 
-def y_build(df:pd.DataFrame,column:str)->pd.DataFrame:
+
+def y_build(df: pd.DataFrame, column: str) -> pd.DataFrame:
     """
     y_build _summary_
 
@@ -60,10 +63,15 @@ def y_build(df:pd.DataFrame,column:str)->pd.DataFrame:
     :rtype: pd.DataFrame
     """
     assert column in df.columns
-    df[f"{column}_label"]=(df[column].diff(1)>0).astype(int)
+    df[f"{column}_label"] = (df[column].diff(1) > 0).astype(int)
     return df
 
-def filter_dataframe_by_date_range(dataframe:pd.DataFrame,begin_date:Optional[str]=None,end_date:Optional[str]=None):
+
+def filter_dataframe_by_date_range(
+    dataframe: pd.DataFrame,
+    begin_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+):
     """
     filter_dataframe_by_date_range _summary_
 
@@ -79,15 +87,24 @@ def filter_dataframe_by_date_range(dataframe:pd.DataFrame,begin_date:Optional[st
     :rtype: _type_
     """
     if begin_date is not None and end_date is not None:
-        df = dataframe[(dataframe['open_date'] >= begin_date) & (dataframe['open_date'] <= end_date)]
+        df = dataframe[
+            (dataframe["open_date"] >= begin_date)
+            & (dataframe["open_date"] <= end_date)
+        ]
     elif begin_date is not None:
-        df = dataframe[(dataframe['open_date'] >= begin_date)]
+        df = dataframe[(dataframe["open_date"] >= begin_date)]
     elif end_date is not None:
-        df = dataframe[(dataframe['open_date'] <= end_date)]
+        df = dataframe[(dataframe["open_date"] <= end_date)]
     else:
         df = dataframe
     return df.reset_index(drop=True)
-if __name__=="__main__":
+
+
+if __name__ == "__main__":
     PATH = r"./data/binance-BTCUSDT-5m.pkl"
-    df = filter_dataframe_by_date_range(y_build(open_dataframe(PATH=PATH),column="close"),begin_date="2023-04-03",end_date="2023-05-06")
+    df = filter_dataframe_by_date_range(
+        y_build(open_dataframe(PATH=PATH), column="close"),
+        begin_date="2023-04-03",
+        end_date="2023-05-06",
+    )
     print(df.head())
