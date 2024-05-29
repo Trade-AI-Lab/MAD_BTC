@@ -1,33 +1,15 @@
 import toml
+import datetime
 
-config = {
-    "bitget":
-        {
-            "limit":100,
-            "pause_every":1,
-            "pause":3
-        },
-    "bitfinex2": {
-        "limit": 10_000,
-        "pause_every": 1,
-        "pause": 3,  # seconds
-    },
-    "binance": {
-        "limit": 1_000,
-        "pause_every": 1,
-        "pause": 1,  # seconds
-    },
-    "kucoin":
-            {
-                "limit":1500,
-                "pause_every":1,
-                "pause":3
-        },
-    "huobi": {
-        "limit": 1_000,
-        "pause_every": 10,
-        "pause": 1,  # seconds
-    }
-}
+config = {"date": datetime.datetime.now().isoformat()}
 
 print(toml.dumps(config))
+
+# load a config file:
+with open("src/configs/download_config.toml", "r") as file:
+    config = toml.load(file)
+
+date_str = config.get("date")
+date = datetime.datetime.fromisoformat(date_str)
+print(date_str)
+print(date)
