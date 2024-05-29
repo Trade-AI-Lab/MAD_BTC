@@ -5,6 +5,12 @@ exchange = ["binance"]
 symbols = ["BNBUSDT"]
 
 time_frame = ["4h", "1d"]
+
+folder = "data"
+
+since = "2018-04-01T00:00:00"
+until = "2024-05-28T00:00:00"
+
 # EXCHANGE_LIMIT_RATES
 [bitget]
 limit = 100

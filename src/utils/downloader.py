@@ -9,9 +9,6 @@ import os
 
 nest_asyncio.apply()
 
-with open("src/configs/download_config.toml", "r") as file:
-    CONFIG = toml.load(file)
-
 
 async def _ohlcv(exchange, symbol, timeframe, limit, step_since, timedelta):
     result = await exchange.fetch_ohlcv(
@@ -79,24 +76,21 @@ async def _download_symbols(exchange_name, symbols, dir, timeframes, **kwargs):
 
 
 async def _download(
-    exchange_names,
-    symbols,
-    timeframe,
-    dir,
-    since: datetime.datetime,
-    until: datetime.datetime = datetime.datetime.now(),
+    config,
 ):
     tasks = []
-    for exchange_name in exchange_names:
-        limit = CONFIG[exchange_name]["limit"]
-        pause_every = CONFIG[exchange_name]["pause_every"]
-        pause = CONFIG[exchange_name]["pause"]
+    since = datetime.datetime.fromisoformat(config["since"])
+    until = datetime.datetime.fromisoformat(config["until"])
+    for exchange_name in config["exchange"]:
+        limit = config[exchange_name]["limit"]
+        pause_every = config[exchange_name]["pause_every"]
+        pause = config[exchange_name]["pause"]
         tasks.append(
             _download_symbols(
                 exchange_name=exchange_name,
-                symbols=symbols,
-                timeframes=timeframe,
-                dir=dir,
+                symbols=config["symbols"],
+                timeframes=config["time_frame"],
+                dir=config["folder"],
                 limit=limit,
                 pause_every=pause_every,
                 pause=pause,
@@ -113,12 +107,13 @@ def download(*args, **kwargs):
 
 
 # Main function do modify
-async def main(time_frame: str = "5m"):
+async def main(config: dict):
     absolute_path = os.path.abspath(__file__)[
         : os.path.abspath(__file__).find("MAD_BTC") + len("MAD_BTC")
     ]
     # check if data folder exists
-    dir = absolute_path + "/data"
+    dir = os.path.join(absolute_path, config["folder"])
+    config["folder"] = dir
     if not os.path.exists(dir):
         # Create the folder
         os.makedirs(dir)
@@ -129,19 +124,14 @@ async def main(time_frame: str = "5m"):
     folder_name = os.path.basename(dir)
     print(f"The folder '{folder_name}' {created_or_exists}.")
 
-    await _download(
-        CONFIG["exchange"],  # select your exchange
-        # select your currencies
-        symbols=CONFIG["symbols"],
-        timeframe=time_frame,  # the time frame you can change
-        dir=dir,  # directory
-        since=datetime.datetime(year=2018, month=4, day=1),  # starting date
-    )
+    await _download(config)
 
 
 if __name__ == "__main__":
+    with open("src/configs/download_config.toml", "r") as file:
+        config = toml.load(file)
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(main(time_frame=CONFIG["time_frame"]))
+    loop.run_until_complete(main(config))
     print("Done ")
     # asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     # asyncio.run(main())
