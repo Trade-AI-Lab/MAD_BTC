@@ -19,7 +19,7 @@ def get_open_date_values(file_path):
 
 
 def check_open_dates_consistency(folder, files):
-    # TODO specify the dates we want here
+    # TODO specify the dates we want here and then handle the error for mismatch data (adapt the dataset if possible)
     first_date, last_date = None, None
     bad_dataset = []
     for file in files:
@@ -77,11 +77,7 @@ def check_data_availability_in_folder(folder, brokers, crypto_currencies, times)
     data_to_download = {
         f"{broker}-{crypto}-{time}.pkl" for broker, crypto, time in missing_combinations
     }
-    # # Print available combinations
-    # for broker, crypto, time in found_combinations:
-    #     print(
-    #         f"Data is available for broker {broker}, cryptocurrency {crypto}, and time {time}."
-    #     )
+
     available_data = {
         f"{broker}-{crypto}-{time}.pkl" for broker, crypto, time in found_combinations
     }
@@ -97,9 +93,10 @@ if __name__ == "__main__":
     list_time = ["1h", "4h", "1d"]
     folder = "data"
 
-    check_data_availability_in_folder(
+    data_to_download = check_data_availability_in_folder(
         folder,
         brokers=list_brokers,
         crypto_currencies=list_crypto_currency,
         times=list_time,
     )
+    print(data_to_download)

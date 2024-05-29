@@ -4,6 +4,7 @@ from itertools import product
 from src.strategy_utils.launcher_strategy import momentum_strategy, envelop_strategy
 from src.strategy_utils.strategy_comparator import evalutation
 from src.utils.utils_signature import create_signature
+from src.utils.data_checks import check_data_availability_in_folder
 import os
 import optuna
 import copy
@@ -308,54 +309,6 @@ class optimiser_envelop_strategy(trading_optimisation):
         return simulation_df["Portfolio"].iloc[-1]
 
 
-def check_data_availability_in_folder(folder, brokers, crypto_currencies, times):
-    # Convert lists to sets for faster lookup
-    set_crypto_currencies = set(crypto_currencies)
-    set_times = set(times)
-    set_brokers = set(brokers)
-
-    # Initialize sets to store found items
-    found_brokers = set()
-    found_crypto = set()
-    found_times = set()
-
-    # Process each file in the folder
-    for file_name in os.listdir(folder):
-        if file_name.endswith(".pkl"):
-            # Extract the parts from the filename
-            title_parts = os.path.splitext(file_name)[0].split("-")
-            if len(title_parts) == 3:
-                brokers_in_file = set(title_parts[0].split("_"))
-                crypto_in_file = set(title_parts[1].split("_"))
-                times_in_file = set(title_parts[2].split("_"))
-
-                # Update found sets with intersection of the file data and target sets
-                found_brokers.update(brokers_in_file & set_brokers)
-                found_crypto.update(crypto_in_file & set_crypto_currencies)
-                found_times.update(times_in_file & set_times)
-
-    # Determine missing items
-    missing_brokers = set_brokers - found_brokers
-    missing_crypto = set_crypto_currencies - found_crypto
-    missing_times = set_times - found_times
-
-    # Print missing items
-    for broker in missing_brokers:
-        print(f"Broker {broker} is missing.")
-    for crypto in missing_crypto:
-        print(f"Cryptocurrency {crypto} is missing.")
-    for time in missing_times:
-        print(f"Time {time} is missing.")
-
-    # Print available data combinations
-    for broker in found_brokers:
-        for crypto in found_crypto:
-            for time in found_times:
-                print(
-                    f"Data is available for broker {broker}, cryptocurrency {crypto}, and time {time}."
-                )
-
-
 if __name__ == "__main__":
     absolute_path = os.path.abspath(__file__)[
         : os.path.abspath(__file__).find("MAD_BTC") + len("MAD_BTC")
@@ -365,7 +318,6 @@ if __name__ == "__main__":
     with open("src/configs/optimiser_momentum_config.toml", "r") as file:
         config = toml.load(file)
     # TODO test if file is already downloaded, otherwise download it
-    # TODO further check if the start and end date are the same for each df
     check_data_availability_in_folder(
         "data",
         config["multi"]["list_brokers"],
