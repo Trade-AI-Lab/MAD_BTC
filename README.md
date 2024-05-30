@@ -24,7 +24,7 @@ git clone https://github.com/Dante-Berth/MAD_BTC.git
 cd MAD_BTC
 python -m venv trading_research
 source trading_research/bin/activate
-pip install pandas optuna optuna-dashboard matplotlib ccxt==4.2.58 nest_asyncio ta plotly
+pip install requirements.txt
 python3 src/utils/downloader.py
 python3 multi_optimiser_momentum_strategy.py
 ```
