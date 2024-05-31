@@ -2,7 +2,11 @@ import pickle
 import pandas as pd
 import os
 import itertools
-from custom_exceptions import DateMismatch
+from collections import defaultdict
+import sys
+
+sys.path.append("./")
+from src.utils.custom_exceptions import DateMismatch
 
 
 def get_open_date_values(file_path):
@@ -19,7 +23,7 @@ def get_open_date_values(file_path):
 
 
 def check_open_dates_consistency(folder, files):
-    # TODO specify the dates we want here and then handle the error for mismatch data (adapt the dataset if possible)
+    # TODO handle the error for mismatch data (adapt the dataset if possible)
     first_date, last_date = None, None
     bad_dataset = []
     for file in files:
@@ -30,10 +34,10 @@ def check_open_dates_consistency(folder, files):
             else:
                 if dates[0] != first_date or dates[1] != last_date:
                     bad_dataset.append(file)
-    if not bad_dataset:
-        return
-    else:
-        raise DateMismatch(bad_dataset)
+    # if not bad_dataset:
+    #     return
+    # else:
+    #     raise DateMismatch(bad_dataset)
 
 
 def check_data_availability_in_folder(folder, brokers, crypto_currencies, times):
@@ -74,16 +78,36 @@ def check_data_availability_in_folder(folder, brokers, crypto_currencies, times)
         print(
             f"Data is missing for broker {broker}, cryptocurrency {crypto}, and time {time}."
         )
-    data_to_download = {
-        f"{broker}-{crypto}-{time}.pkl" for broker, crypto, time in missing_combinations
-    }
+    data_to_download = sort_download_data(missing_combinations)
 
     available_data = {
         f"{broker}-{crypto}-{time}.pkl" for broker, crypto, time in found_combinations
     }
     # check if the dates corresponds between the datasets:
+    # TODO adapt this one and change to a try except
     check_open_dates_consistency(folder, available_data)
     return data_to_download
+
+
+def sort_download_data(data):
+    # Initialize sets to avoid duplicates
+    currencies_set = set()
+    periods_set = set()
+    broker_set = set()
+
+    # Populate the sets with unique currencies and periods
+    # Assume there only is one broker here.
+    for broker, crypto, period in data:
+        currencies_set.add(crypto)
+        periods_set.add(period)
+        broker_set.add(broker)
+
+    # Convert sets to sorted lists
+    currencies_list = sorted(currencies_set)
+    periods_list = sorted(periods_set)
+    broker_list = sorted(broker_set)
+
+    return currencies_list, periods_list, broker_list
 
 
 if __name__ == "__main__":

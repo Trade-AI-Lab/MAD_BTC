@@ -106,10 +106,10 @@ def download(*args, **kwargs):
     loop.run_until_complete(_download(*args, **kwargs))
 
 
-# Main function do modify
-async def main(config: dict):
+# Downloader function do modify
+async def downloader(config: dict):
     """
-    Main function for downloading symbols
+    Downloader function for downloading symbols
 
     :param config: Configuration parameters for optimization.
     :type config: dict
@@ -140,7 +140,7 @@ if __name__ == "__main__":
     with open("src/configs/download_config.toml", "r") as file:
         config = toml.load(file)
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(main(config))
+    loop.run_until_complete(downloader(config))
     print("Done ")
     # asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-    # asyncio.run(main())
+    # asyncio.run(downloader())

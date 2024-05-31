@@ -1,23 +1,25 @@
+import os
+import optuna
+import copy
+import toml
+import asyncio
+import numpy as np
 import pandas as pd
+from IPython.display import display
+from PIL import Image
+import imageio
+
 from src.utils.utils_df import open_dataframe
 from itertools import product
 from src.strategy_utils.launcher_strategy import momentum_strategy, envelop_strategy
 from src.strategy_utils.strategy_comparator import evalutation
 from src.utils.utils_signature import create_signature
 from src.utils.data_checks import check_data_availability_in_folder
-import os
-import optuna
-import copy
-import toml
+from src.utils.downloader import downloader
 
 absolute_path = os.path.abspath(__file__)[
     : os.path.abspath(__file__).find("MAD_BTC") + len("MAD_BTC")
 ]
-import numpy as np
-
-from IPython.display import display
-from PIL import Image
-import imageio
 
 
 class trading_optimisation:
@@ -317,13 +319,23 @@ if __name__ == "__main__":
     # read the config file:
     with open("src/configs/optimiser_momentum_config.toml", "r") as file:
         config = toml.load(file)
-    # TODO test if file is already downloaded, otherwise download it
-    check_data_availability_in_folder(
+    missing_data = check_data_availability_in_folder(
         "data",
         config["multi"]["list_brokers"],
         config["multi"]["list_crypto_currency"],
         config["multi"]["list_time"],
     )
+    if len(missing_data) != 0:
+        print("Downloading missing data")
+        with open("src/configs/download_config.toml", "r") as file:
+            data_config = toml.load(file)
+        data_config["symbols"] = missing_data[0]
+        data_config["time_frame"] = missing_data[1]
+        data_config["broker"] = missing_data[2]
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(downloader(data_config))
+        print("Downloading finished")
+
     optimiser_momentum_strategy(config=config).optimiser_multiple_currency(
         **config["multi"]
     )
