@@ -20,13 +20,12 @@ This repository contains code specifically tailored for applying the MAD strateg
 
 If you are new launch :
 ```
-git clone https://github.com/Dante-Berth/MAD_BTC.git
-cd MAD_BTC
-python -m venv trading_research
-source trading_research/bin/activate
-pip install requirements.txt
-python3 src/utils/downloader.py
-python3 multi_optimiser_momentum_strategy.py
+./init.sh
+```
+If missing, add the execution permission to the shell file:
+
+```
+sudo chmod +x init.sh
 ```
 
 It is needed to install [pandas](https://github.com/pandas-dev/pandas), [Technical Analysis](https://github.com/bukosabino/ta), [optuna](https://github.com/optuna/optuna), matplotlib
