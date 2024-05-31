@@ -108,6 +108,15 @@ def download(*args, **kwargs):
 
 # Main function do modify
 async def main(config: dict):
+    """
+    Main function for downloading symbols
+
+    :param config: Configuration parameters for optimization.
+    :type config: dict
+
+    For the required keys, see download_config.toml
+
+    """
     absolute_path = os.path.abspath(__file__)[
         : os.path.abspath(__file__).find("MAD_BTC") + len("MAD_BTC")
     ]
