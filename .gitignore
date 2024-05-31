@@ -165,3 +165,12 @@ cython_debug/
 #Documentation
 docs/
 doc/
+
+# varia
+*bin
+*.json
+*.js
+*.h
+*.LICENSE.txt
+*.cfg
+*.1
