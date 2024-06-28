@@ -45,6 +45,21 @@ class indicator_momentum:
 
     @staticmethod
     def zlema_ratio(data: pd.DataFrame, x: int, y: int) -> pd.Series:
+        """
+        Zl Exponential Moving Average Ratio
+
+        This method calculates the ratio of two ZL exponential moving averages.
+
+        :param data: DataFrame containing 'open' prices.
+        :type data: pd.DataFrame
+        :param x: Window size for the first exponential moving average.
+        :type x: int
+        :param y: Window size for the second exponential moving average.
+        :type y: int
+        :return: Series containing the exponential moving average ratio.
+        :rtype: pd.Series
+        """
+
         def zlema(data, period):
             ema_data = data + (data - data.shift((period - 1) // 2))
             return EMAIndicator(ema_data, window=period).ema_indicator()
@@ -55,6 +70,21 @@ class indicator_momentum:
 
     @staticmethod
     def dema_ratio(data: pd.DataFrame, x: int, y: int) -> pd.Series:
+        """
+        Double Exponential Moving Average Ratio
+
+        This method calculates the ratio of two Double exponential moving averages.
+
+        :param data: DataFrame containing 'open' prices.
+        :type data: pd.DataFrame
+        :param x: Window size for the first exponential moving average.
+        :type x: int
+        :param y: Window size for the second exponential moving average.
+        :type y: int
+        :return: Series containing the exponential moving average ratio.
+        :rtype: pd.Series
+        """
+
         def dema(data, period):
             ema_data = EMAIndicator(data, window=period).ema_indicator()
             return 2 * ema_data - EMAIndicator(ema_data, window=period).ema_indicator()
@@ -65,6 +95,21 @@ class indicator_momentum:
 
     @staticmethod
     def tema_ratio(data: pd.DataFrame, x: int, y: int) -> pd.Series:
+        """
+        Triple Exponential Moving Average Ratio
+
+        This method calculates the ratio of two Triple exponential moving averages.
+
+        :param data: DataFrame containing 'open' prices.
+        :type data: pd.DataFrame
+        :param x: Window size for the first exponential moving average.
+        :type x: int
+        :param y: Window size for the second exponential moving average.
+        :type y: int
+        :return: Series containing the exponential moving average ratio.
+        :rtype: pd.Series
+        """
+
         def tema(data, period):
             ema_data = EMAIndicator(data, window=period).ema_indicator()
             ema_ema_data = EMAIndicator(ema_data, window=period).ema_indicator()
