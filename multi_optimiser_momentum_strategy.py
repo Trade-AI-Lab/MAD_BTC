@@ -93,14 +93,14 @@ class trading_optimisation:
         study = optuna.create_study(
             storage_name,
             sampler=optuna.samplers.TPESampler(
-                multivariate=True, group=True, constant_liar=True, n_startup_trials=100
+                multivariate=True, group=True, constant_liar=True, n_startup_trials=150
             ),
             study_name=study_name,
             direction="maximize",
             load_if_exists="True",
         )  # study created else we reload the past strategy
         study.optimize(
-            lambda trial: self.objective(trial=trial), n_trials=150
+            lambda trial: self.objective(trial=trial), n_trials=300
         )  # we call optuna to optimize it
         self.save_df()
         self.save_mp4()
@@ -170,7 +170,8 @@ class optimiser_momentum_strategy(trading_optimisation):
             "y", 35, 120
         )  # hyperparameters
         self.config["strategy"]["ratio_method"] = trial.suggest_categorical(
-            "ratio_method", ["ma_ratio", "ema_ratio"]
+            "ratio_method",
+            ["ma_ratio", "ema_ratio", "zlema_ratio", "dema_ratio", "tema_ratio"],
         )  # hyperparameters
         self.strategy.change_config(
             self.config
