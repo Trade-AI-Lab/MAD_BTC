@@ -108,6 +108,67 @@ BETTER PLOT
 ## Example 12
 <img src="Robustness_Plot\Ratio_method_x_y_study_momentum_strategy_ETHUSDT_binance_4h.png" width="1024"/>
 
+# Video MP4
+<video width="640" height="480" controls>
+  <source src="mp4_folder_experience/momentum_strategy_ADAUSDT_1d_output_video.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
+<video width="640" height="480" controls>
+  <source src="mp4_folder_experience/momentum_strategy_ADAUSDT_1h_output_video.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
+<video width="640" height="480" controls>
+  <source src="mp4_folder_experience/momentum_strategy_ADAUSDT_4h_output_video.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
+<video width="640" height="480" controls>
+  <source src="mp4_folder_experience/momentum_strategy_BNBUSDT_1d_output_video.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
+<video width="640" height="480" controls>
+  <source src="mp4_folder_experience/momentum_strategy_BNBUSDT_1h_output_video.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
+<video width="640" height="480" controls>
+  <source src="mp4_folder_experience/momentum_strategy_BNBUSDT_4h_output_video.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
+<video width="640" height="480" controls>
+  <source src="mp4_folder_experience/momentum_strategy_BTCUSDT_1d_output_video.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
+<video width="640" height="480" controls>
+  <source src="mp4_folder_experience/momentum_strategy_BTCUSDT_1h_output_video.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
+<video width="640" height="480" controls>
+  <source src="mp4_folder_experience/momentum_strategy_BTCUSDT_4h_output_video.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
+<video width="640" height="480" controls>
+  <source src="mp4_folder_experience/momentum_strategy_ETHUSDT_1d_output_video.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
+<video width="640" height="480" controls>
+  <source src="mp4_folder_experience/momentum_strategy_ETHUSDT_1h_output_video.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
+<video width="640" height="480" controls>
+  <source src="mp4_folder_experience/momentum_strategy_ETHUSDT_4h_output_video.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
 
 # New feature added 
 We recently added envelop strategy
