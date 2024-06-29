@@ -71,12 +71,32 @@ CROSS-VALIDATION IN BACKTESTING
 COMPUTE THE SHARP RATIO 
 COMPUTE THE MAX DRAWDOWN
 BETTER PLOT
-## Clustering is it robust ?
-## Example 1 :
-<img src="img\clustering_ADAUSDT_binance_4h.png" width="1024"/>
+# Images of Clustering
+## Example 1
+![Ratio_method_x_y_study_momentum_strategy_ADAUSDT_binance_1d.png](Robustness_plot\Ratio_method_x_y_study_momentum_strategy_ADAUSDT_binance_1d.png)
+## Example 2
+![Ratio_method_x_y_study_momentum_strategy_ADAUSDT_binance_1h.png](Robustness_plot\Ratio_method_x_y_study_momentum_strategy_ADAUSDT_binance_1h.png)
+## Example 3
+![Ratio_method_x_y_study_momentum_strategy_ADAUSDT_binance_4h.png](Robustness_plot\Ratio_method_x_y_study_momentum_strategy_ADAUSDT_binance_4h.png)
+## Example 4
+![Ratio_method_x_y_study_momentum_strategy_BNBUSDT_binance_1d.png](Robustness_plot\Ratio_method_x_y_study_momentum_strategy_BNBUSDT_binance_1d.png)
+## Example 5
+![Ratio_method_x_y_study_momentum_strategy_BNBUSDT_binance_1h.png](Robustness_plot\Ratio_method_x_y_study_momentum_strategy_BNBUSDT_binance_1h.png)
+## Example 6
+![Ratio_method_x_y_study_momentum_strategy_BNBUSDT_binance_4h.png](Robustness_plot\Ratio_method_x_y_study_momentum_strategy_BNBUSDT_binance_4h.png)
+## Example 7
+![Ratio_method_x_y_study_momentum_strategy_BTCUSDT_binance_1d.png](Robustness_plot\Ratio_method_x_y_study_momentum_strategy_BTCUSDT_binance_1d.png)
+## Example 8
+![Ratio_method_x_y_study_momentum_strategy_BTCUSDT_binance_1h.png](Robustness_plot\Ratio_method_x_y_study_momentum_strategy_BTCUSDT_binance_1h.png)
+## Example 9
+![Ratio_method_x_y_study_momentum_strategy_BTCUSDT_binance_4h.png](Robustness_plot\Ratio_method_x_y_study_momentum_strategy_BTCUSDT_binance_4h.png)
+## Example 10
+![Ratio_method_x_y_study_momentum_strategy_ETHUSDT_binance_1d.png](Robustness_plot\Ratio_method_x_y_study_momentum_strategy_ETHUSDT_binance_1d.png)
+## Example 11
+![Ratio_method_x_y_study_momentum_strategy_ETHUSDT_binance_1h.png](Robustness_plot\Ratio_method_x_y_study_momentum_strategy_ETHUSDT_binance_1h.png)
+## Example 12
+![Ratio_method_x_y_study_momentum_strategy_ETHUSDT_binance_4h.png](Robustness_plot\Ratio_method_x_y_study_momentum_strategy_ETHUSDT_binance_4h.png)
 
-## Example 2 :
-<img src="img\clustering_BNBUSDT_binance_1h.png" width="1024"/>
 
 # New feature added 
 We recently added envelop strategy
