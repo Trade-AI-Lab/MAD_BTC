@@ -73,29 +73,40 @@ COMPUTE THE MAX DRAWDOWN
 BETTER PLOT
 # Images of Clustering
 ## Example 1
-![Ratio_method_x_y_study_momentum_strategy_ADAUSDT_binance_1d.png](Robustness_plot\Ratio_method_x_y_study_momentum_strategy_ADAUSDT_binance_1d.png)
+<img src="Robustness_plot\Ratio_method_x_y_study_momentum_strategy_ADAUSDT_binance_1d.png" width="1024"/>
+
 ## Example 2
-![Ratio_method_x_y_study_momentum_strategy_ADAUSDT_binance_1h.png](Robustness_plot\Ratio_method_x_y_study_momentum_strategy_ADAUSDT_binance_1h.png)
+<img src="Robustness_plot\Ratio_method_x_y_study_momentum_strategy_ADAUSDT_binance_1h.png" width="1024"/>
+
 ## Example 3
-![Ratio_method_x_y_study_momentum_strategy_ADAUSDT_binance_4h.png](Robustness_plot\Ratio_method_x_y_study_momentum_strategy_ADAUSDT_binance_4h.png)
+<img src="Robustness_plot\Ratio_method_x_y_study_momentum_strategy_ADAUSDT_binance_4h.png" width="1024"/>
+
 ## Example 4
-![Ratio_method_x_y_study_momentum_strategy_BNBUSDT_binance_1d.png](Robustness_plot\Ratio_method_x_y_study_momentum_strategy_BNBUSDT_binance_1d.png)
+<img src="Robustness_plot\Ratio_method_x_y_study_momentum_strategy_BNBUSDT_binance_1d.png" width="1024"/>
+
 ## Example 5
-![Ratio_method_x_y_study_momentum_strategy_BNBUSDT_binance_1h.png](Robustness_plot\Ratio_method_x_y_study_momentum_strategy_BNBUSDT_binance_1h.png)
+<img src="Robustness_plot\Ratio_method_x_y_study_momentum_strategy_BNBUSDT_binance_1h.png" width="1024"/>
+
 ## Example 6
-![Ratio_method_x_y_study_momentum_strategy_BNBUSDT_binance_4h.png](Robustness_plot\Ratio_method_x_y_study_momentum_strategy_BNBUSDT_binance_4h.png)
+<img src="Robustness_plot\Ratio_method_x_y_study_momentum_strategy_BNBUSDT_binance_4h.png" width="1024"/>
+
 ## Example 7
-![Ratio_method_x_y_study_momentum_strategy_BTCUSDT_binance_1d.png](Robustness_plot\Ratio_method_x_y_study_momentum_strategy_BTCUSDT_binance_1d.png)
+<img src="Robustness_plot\Ratio_method_x_y_study_momentum_strategy_BTCUSDT_binance_1d.png" width="1024"/>
+
 ## Example 8
-![Ratio_method_x_y_study_momentum_strategy_BTCUSDT_binance_1h.png](Robustness_plot\Ratio_method_x_y_study_momentum_strategy_BTCUSDT_binance_1h.png)
+<img src="Robustness_plot\Ratio_method_x_y_study_momentum_strategy_BTCUSDT_binance_1h.png" width="1024"/>
+
 ## Example 9
-![Ratio_method_x_y_study_momentum_strategy_BTCUSDT_binance_4h.png](Robustness_plot\Ratio_method_x_y_study_momentum_strategy_BTCUSDT_binance_4h.png)
+<img src="Robustness_plot\Ratio_method_x_y_study_momentum_strategy_BTCUSDT_binance_4h.png" width="1024"/>
+
 ## Example 10
-![Ratio_method_x_y_study_momentum_strategy_ETHUSDT_binance_1d.png](Robustness_plot\Ratio_method_x_y_study_momentum_strategy_ETHUSDT_binance_1d.png)
+<img src="Robustness_plot\Ratio_method_x_y_study_momentum_strategy_ETHUSDT_binance_1d.png" width="1024"/>
+
 ## Example 11
-![Ratio_method_x_y_study_momentum_strategy_ETHUSDT_binance_1h.png](Robustness_plot\Ratio_method_x_y_study_momentum_strategy_ETHUSDT_binance_1h.png)
+<img src="Robustness_plot\Ratio_method_x_y_study_momentum_strategy_ETHUSDT_binance_1h.png" width="1024"/>
+
 ## Example 12
-![Ratio_method_x_y_study_momentum_strategy_ETHUSDT_binance_4h.png](Robustness_plot\Ratio_method_x_y_study_momentum_strategy_ETHUSDT_binance_4h.png)
+<img src="Robustness_plot\Ratio_method_x_y_study_momentum_strategy_ETHUSDT_binance_4h.png" width="1024"/>
 
 
 # New feature added 

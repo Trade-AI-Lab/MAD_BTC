@@ -24,7 +24,7 @@ for file_name in sorted(os.listdir(plot_dir)):
     if file_name.endswith(".png"):
         plot_path = os.path.join(plot_dir, file_name)
         image_lines.append(f"## Example {i + 1}\n")
-        image_lines.append(f"![{file_name}]({plot_path})\n")
+        image_lines.append(f'<img src="{plot_path}" width="1024"/>\n\n')
         i += 1
 # Insert the image paths at the placeholder location
 with open(markdown_file, "w") as file:
