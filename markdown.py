@@ -1,7 +1,7 @@
 import os
 
 # Directory containing the PNG files
-plot_dir = "Robustness_plot"
+plot_dir = "Robustness_Plot"
 
 # Ensure the directory exists
 if not os.path.exists(plot_dir):
