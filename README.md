@@ -73,101 +73,77 @@ COMPUTE THE MAX DRAWDOWN
 BETTER PLOT
 # Images of Clustering
 ## Example 1
-<img src="robustness_Plot\Ratio_method_x_y_study_momentum_strategy_ADAUSDT_binance_1d.png" width="1024"/>
+<img src="robustness_plot\Ratio_method_x_y_study_momentum_strategy_ADAUSDT_binance_15m.png" width="1024"/>
 
 ## Example 2
-<img src="robustness_Plot\Ratio_method_x_y_study_momentum_strategy_ADAUSDT_binance_1h.png" width="1024"/>
+<img src="robustness_plot\Ratio_method_x_y_study_momentum_strategy_ADAUSDT_binance_1d.png" width="1024"/>
 
 ## Example 3
-<img src="robustness_Plot\Ratio_method_x_y_study_momentum_strategy_ADAUSDT_binance_4h.png" width="1024"/>
+<img src="robustness_plot\Ratio_method_x_y_study_momentum_strategy_ADAUSDT_binance_1h.png" width="1024"/>
 
 ## Example 4
-<img src="robustness_Plot\Ratio_method_x_y_study_momentum_strategy_BNBUSDT_binance_1d.png" width="1024"/>
+<img src="robustness_plot\Ratio_method_x_y_study_momentum_strategy_ADAUSDT_binance_4h.png" width="1024"/>
 
 ## Example 5
-<img src="robustness_Plot\Ratio_method_x_y_study_momentum_strategy_BNBUSDT_binance_1h.png" width="1024"/>
+<img src="robustness_plot\Ratio_method_x_y_study_momentum_strategy_BNBUSDT_binance_15m.png" width="1024"/>
 
 ## Example 6
-<img src="robustness_Plot\Ratio_method_x_y_study_momentum_strategy_BNBUSDT_binance_4h.png" width="1024"/>
+<img src="robustness_plot\Ratio_method_x_y_study_momentum_strategy_BNBUSDT_binance_1d.png" width="1024"/>
 
 ## Example 7
-<img src="robustness_Plot\Ratio_method_x_y_study_momentum_strategy_BTCUSDT_binance_1d.png" width="1024"/>
+<img src="robustness_plot\Ratio_method_x_y_study_momentum_strategy_BNBUSDT_binance_1h.png" width="1024"/>
 
 ## Example 8
-<img src="robustness_Plot\Ratio_method_x_y_study_momentum_strategy_BTCUSDT_binance_1h.png" width="1024"/>
+<img src="robustness_plot\Ratio_method_x_y_study_momentum_strategy_BNBUSDT_binance_4h.png" width="1024"/>
 
 ## Example 9
-<img src="robustness_Plot\Ratio_method_x_y_study_momentum_strategy_BTCUSDT_binance_4h.png" width="1024"/>
+<img src="robustness_plot\Ratio_method_x_y_study_momentum_strategy_BTCUSDT_binance_15m.png" width="1024"/>
 
 ## Example 10
-<img src="robustness_Plot\Ratio_method_x_y_study_momentum_strategy_ETHUSDT_binance_1d.png" width="1024"/>
+<img src="robustness_plot\Ratio_method_x_y_study_momentum_strategy_BTCUSDT_binance_1d.png" width="1024"/>
 
 ## Example 11
-<img src="robustness_Plot\Ratio_method_x_y_study_momentum_strategy_ETHUSDT_binance_1h.png" width="1024"/>
+<img src="robustness_plot\Ratio_method_x_y_study_momentum_strategy_BTCUSDT_binance_1h.png" width="1024"/>
 
 ## Example 12
-<img src="robustness_Plot\Ratio_method_x_y_study_momentum_strategy_ETHUSDT_binance_4h.png" width="1024"/>
+<img src="robustness_plot\Ratio_method_x_y_study_momentum_strategy_BTCUSDT_binance_4h.png" width="1024"/>
+
+## Example 13
+<img src="robustness_plot\Ratio_method_x_y_study_momentum_strategy_DOGEUSDT_binance_15m.png" width="1024"/>
+
+## Example 14
+<img src="robustness_plot\Ratio_method_x_y_study_momentum_strategy_DOTUSDT_binance_15m.png" width="1024"/>
+
+## Example 15
+<img src="robustness_plot\Ratio_method_x_y_study_momentum_strategy_ETHUSDT_binance_15m.png" width="1024"/>
+
+## Example 16
+<img src="robustness_plot\Ratio_method_x_y_study_momentum_strategy_ETHUSDT_binance_1d.png" width="1024"/>
+
+## Example 17
+<img src="robustness_plot\Ratio_method_x_y_study_momentum_strategy_ETHUSDT_binance_1h.png" width="1024"/>
+
+## Example 18
+<img src="robustness_plot\Ratio_method_x_y_study_momentum_strategy_ETHUSDT_binance_4h.png" width="1024"/>
+
+## Example 19
+<img src="robustness_plot\Ratio_method_x_y_study_momentum_strategy_MATICUSDT_binance_15m.png" width="1024"/>
+
+## Example 20
+<img src="robustness_plot\Ratio_method_x_y_study_momentum_strategy_OCEANUSDT_binance_15m.png" width="1024"/>
+
+## Example 21
+<img src="robustness_plot\Ratio_method_x_y_study_momentum_strategy_SOLUSDT_binance_15m.png" width="1024"/>
+
+## Example 22
+<img src="robustness_plot\Ratio_method_x_y_study_momentum_strategy_TRXUSDT_binance_15m.png" width="1024"/>
+
+## Example 23
+<img src="robustness_plot\Ratio_method_x_y_study_momentum_strategy_XRPUSDT_binance_15m.png" width="1024"/>
+
 
 # Video MP4
-<video width="640" height="480" controls>
-  <source src="mp4_folder_experience/momentum_strategy_ADAUSDT_1d_output_video.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
 
-<video width="640" height="480" controls>
-  <source src="mp4_folder_experience/momentum_strategy_ADAUSDT_1h_output_video.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
-
-<video width="640" height="480" controls>
-  <source src="mp4_folder_experience/momentum_strategy_ADAUSDT_4h_output_video.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
-
-<video width="640" height="480" controls>
-  <source src="mp4_folder_experience/momentum_strategy_BNBUSDT_1d_output_video.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
-
-<video width="640" height="480" controls>
-  <source src="mp4_folder_experience/momentum_strategy_BNBUSDT_1h_output_video.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
-
-<video width="640" height="480" controls>
-  <source src="mp4_folder_experience/momentum_strategy_BNBUSDT_4h_output_video.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
-
-<video width="640" height="480" controls>
-  <source src="mp4_folder_experience/momentum_strategy_BTCUSDT_1d_output_video.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
-
-<video width="640" height="480" controls>
-  <source src="mp4_folder_experience/momentum_strategy_BTCUSDT_1h_output_video.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
-
-<video width="640" height="480" controls>
-  <source src="mp4_folder_experience/momentum_strategy_BTCUSDT_4h_output_video.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
-
-<video width="640" height="480" controls>
-  <source src="mp4_folder_experience/momentum_strategy_ETHUSDT_1d_output_video.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
-
-<video width="640" height="480" controls>
-  <source src="mp4_folder_experience/momentum_strategy_ETHUSDT_1h_output_video.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
-
-<video width="640" height="480" controls>
-  <source src="mp4_folder_experience/momentum_strategy_ETHUSDT_4h_output_video.mp4" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
 
 
 # New feature added 
