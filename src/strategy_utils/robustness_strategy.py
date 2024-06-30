@@ -7,7 +7,7 @@ absolute_path = os.path.abspath(__file__)[
 ]
 if __name__ == "__main__":
     list_studies = os.listdir(absolute_path + "/study")
-    os.makedirs("Robustness_Plot", exist_ok=True)
+    os.makedirs("robustness_plot", exist_ok=True)
     for study_name in list_studies:
         study_name = study_name.split(".")[0]
         PATH = os.path.join(absolute_path, "study/", study_name)
@@ -27,7 +27,7 @@ if __name__ == "__main__":
                 "params_y": "Y",
             },
         )
-        fig.write_image(f"Robustness_Plot/Ratio_method_x_y_{study_name}.png")
+        fig.write_image(f"robustness_plot/Ratio_method_x_y_{study_name}.png")
         # fig.show()
         from sklearn.cluster import KMeans
         from sklearn.preprocessing import StandardScaler
