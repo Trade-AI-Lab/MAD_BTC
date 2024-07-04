@@ -1,5 +1,5 @@
 # init config
-crypto_currency = "OCEANUSDT"
+crypto_currency = "BTCUSDT"
 time = "4h"
 exchange = "binance"
 initial_capital = 1000
