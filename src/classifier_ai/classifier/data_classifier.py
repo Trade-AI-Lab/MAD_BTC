@@ -1,0 +1,60 @@
+import pandas as pd
+import os
+import sys
+import numpy as np
+
+__file__ = os.getcwd()
+absolute_path = os.path.abspath(__file__)[
+    : os.path.abspath(__file__).find("MAD_BTC") + len("MAD_BTC")
+]
+sys.path.append(absolute_path)
+from src.utils.utils_df import open_dataframe
+
+
+def convert_time_iloc(dt, first, end, window_size):
+    """
+    Args:
+        dt ():
+        first ():
+        end ():
+        window_size ():
+
+    Returns:
+    """
+    start = end - dt * window_size
+    duration = start - first
+    start_index = duration // dt + 1  # le +1 car on démarre à iloc[0]
+    end_index = start_index + window_size
+    return start_index, end_index
+
+
+def dataset_creator(path: str):
+    df = pd.read_csv(path)
+    df["binary_classification"] = np.where(
+        df["Relative_Portfolio_VS_Relative_Buy&Hold"] > 0, 1, 0
+    )
+    data_df = open_dataframe(absolute_path + r"\data\binance-BNBUSDT-1D.pkl")
+
+    df["Time"] = pd.to_datetime(df["Time"])
+    dt = data_df["open_date"].diff().iloc[1]
+    window_size = 20
+    i = 30
+    end = df["Time"].iloc[i]
+    first = data_df["open_date"].iloc[0]
+
+    print(end, "Time for the data")
+    print(dt)
+    start_index, end_index = convert_time_iloc(dt, first, end, window_size)
+    print(
+        data_df[["high", "low", "open", "open_date"]].iloc[
+            start_index - 1 : end_index - 1
+        ]
+    )
+
+
+if __name__ == "__main__":
+    PATH = (
+        absolute_path
+        + r"\experience\BNBUSDT\binance\1d\momentum_strategy\0ab83010636d975d48474b5abee4903145a93cf60c8953c46bd62ceb65317f51\output_file.csv"
+    )
+    dataset_creator(PATH)
