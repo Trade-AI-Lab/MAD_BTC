@@ -28,6 +28,19 @@ def convert_time_iloc(dt, first, end, window_size):
     return start_index, end_index
 
 
+class dataset_creator:
+    def __init__(self, config: dict):
+        path_momentum_strategy = (
+            absolute_path
+            + rf"\experience\{self.config['crypto_currency']}\{self.config['exchange']}\{self.config['time']}\momentum_strategy"
+        )
+        path_data = (
+            absolute_path
+            + rf"\data\{self.config['exchange']}-{self.config['crypto_currency']}-{self.config['time']}.pkl"
+        )
+        self.data_df = open_dataframe(path_data)
+
+
 def dataset_creator(path: str):
     df = pd.read_csv(path)
     df["binary_classification"] = np.where(
@@ -53,8 +66,13 @@ def dataset_creator(path: str):
 
 
 if __name__ == "__main__":
+    config = {
+        "crypto_currency": "BNBUSDT",
+        "exchange": "binance",
+        "time": "1d",
+    }
     PATH = (
         absolute_path
-        + r"\experience\BNBUSDT\binance\1d\momentum_strategy\0ab83010636d975d48474b5abee4903145a93cf60c8953c46bd62ceb65317f51\output_file.csv"
+        + rf"\experience\{crypto_currency}\{exchange}\{time}\momentum_strategy\0ab83010636d975d48474b5abee4903145a93cf60c8953c46bd62ceb65317f51\output_file.csv"
     )
     dataset_creator(PATH)
