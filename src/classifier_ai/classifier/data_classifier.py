@@ -2,6 +2,7 @@ import pandas as pd
 import os
 import sys
 import numpy as np
+import json
 
 __file__ = os.getcwd()
 absolute_path = os.path.abspath(__file__)[
@@ -9,6 +10,12 @@ absolute_path = os.path.abspath(__file__)[
 ]
 sys.path.append(absolute_path)
 from src.utils.utils_df import open_dataframe
+
+
+def load_json(file_path: str) -> dict:
+    with open(file_path, "r") as file:
+        data = json.load(file)
+    return data
 
 
 def convert_time_iloc(dt, first, end, window_size):
@@ -44,6 +51,8 @@ class dataset_creator:
         self.list_strategies = os.listdir(path_momentum_strategy)
         self.dt = self.data_df["open_date"].diff().iloc[1]
         self.first = self.data_df["open_date"].iloc[0]
+        self.dict_df_train = {}
+        self.dict_df_validation = {}
 
     def _load_csv_on_fly(self, path: str):
         df = pd.read_csv(path)
@@ -52,6 +61,15 @@ class dataset_creator:
         )
         df["Time"] = pd.to_datetime(df["Time"])
         return df[["Time", "binary_classification"]]
+
+    def add_df(self, dictionnary: dict, path: str):
+        strategy_config = load_json(path)
+        x = strategy_config["x"]
+        y = strategy_config["y"]
+        ratio_method = strategy_config["ratio_method"]
+        key = f"{x}_{y}_{ratio_method}"
+        if key not in dictionnary.keys():
+            dictionnary[key] = self._load_csv_on_fly(path)
 
 
 def dataset_creator(path: str):
