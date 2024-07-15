@@ -30,6 +30,7 @@ def convert_time_iloc(dt, first, end, window_size):
 
 class dataset_creator:
     def __init__(self, config: dict):
+        self.config = config
         path_momentum_strategy = (
             absolute_path
             + rf"\experience\{self.config['crypto_currency']}\{self.config['exchange']}\{self.config['time']}\momentum_strategy"
@@ -38,7 +39,19 @@ class dataset_creator:
             absolute_path
             + rf"\data\{self.config['exchange']}-{self.config['crypto_currency']}-{self.config['time']}.pkl"
         )
+        self.window_size = config["window_size"]
         self.data_df = open_dataframe(path_data)
+        self.list_strategies = os.listdir(path_momentum_strategy)
+        self.dt = self.data_df["open_date"].diff().iloc[1]
+        self.first = self.data_df["open_date"].iloc[0]
+
+    def _load_csv_on_fly(self, path: str):
+        df = pd.read_csv(path)
+        df["binary_classification"] = np.where(
+            df["Relative_Portfolio_VS_Relative_Buy&Hold"] > 0, 1, 0
+        )
+        df["Time"] = pd.to_datetime(df["Time"])
+        return df[["Time", "binary_classification"]]
 
 
 def dataset_creator(path: str):
