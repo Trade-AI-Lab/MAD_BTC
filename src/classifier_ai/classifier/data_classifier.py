@@ -11,7 +11,7 @@ absolute_path = os.path.abspath(__file__)[
 sys.path.append(absolute_path)
 from src.utils.utils_df import open_dataframe
 from src.strategy.momentum import indicator_momentum
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 
 def load_json(file_path: str) -> dict:
     with open(file_path, "r") as file:
