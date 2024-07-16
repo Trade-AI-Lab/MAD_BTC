@@ -11,6 +11,7 @@ absolute_path = os.path.abspath(__file__)[
 sys.path.append(absolute_path)
 from src.utils.utils_df import open_dataframe
 from src.strategy.momentum import indicator_momentum
+from torch.utils.data import Dataset, DataLoader
 
 def load_json(file_path: str) -> dict:
     with open(file_path, "r") as file:
@@ -35,7 +36,7 @@ def convert_time_iloc(dt, first, end, window_size):
     return start_index, end_index
 
 
-class dataset_creator:
+class dataset_creator(Dataset):
     def __init__(self, config: dict):
         self.config = config
         path_momentum_strategy = (
