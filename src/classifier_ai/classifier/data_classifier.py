@@ -10,7 +10,7 @@ absolute_path = os.path.abspath(__file__)[
 ]
 sys.path.append(absolute_path)
 from src.utils.utils_df import open_dataframe
-
+from src.strategy.momentum import indicator_momentum
 
 def load_json(file_path: str) -> dict:
     with open(file_path, "r") as file:
@@ -64,12 +64,14 @@ class dataset_creator:
 
     def add_df(self, dictionnary: dict, path: str):
         strategy_config = load_json(path)
-        x = strategy_config["x"]
-        y = strategy_config["y"]
-        ratio_method = strategy_config["ratio_method"]
-        key = f"{x}_{y}_{ratio_method}"
+        key = f"{strategy_config["x"]}_{strategy_config["y"]}_{strategy_config["ratio_method"]}"
         if key not in dictionnary.keys():
-            dictionnary[key] = self._load_csv_on_fly(path)
+            dictionnary[key] = {}
+            dictionnary[key]["df"] = self._load_csv_on_fly(path)
+            dictionnary[key]["ratio_method"] = getattr(indicator_momentum,strategy_config["ratio_method"])(self.data_df,strategy_config["x"],strategy_config["y"])
+    
+    def get_data(self, dictionnary: dict):
+        
 
 
 def dataset_creator(path: str):
