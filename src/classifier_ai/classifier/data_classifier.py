@@ -106,5 +106,10 @@ if __name__ == "__main__":
         "crypto_currency": "BNBUSDT",
         "exchange": "binance",
         "time": "1d",
+        "window_size" : 30,
+        "percentage_strats":0.7,
+        "features": ["high","low","open","ratio_method","sin_weekly","sin_daily"]
+        
+        
     }
     dataset_creator(config)
