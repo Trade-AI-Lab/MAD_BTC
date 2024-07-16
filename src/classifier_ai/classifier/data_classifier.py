@@ -39,21 +39,20 @@ def convert_time_iloc(dt, first, end, window_size):
 class dataset_creator(Dataset):
     def __init__(self, config: dict):
         self.config = config
-        path_momentum_strategy = (
+        self.path_momentum_strategy = (
             absolute_path
             + rf"\experience\{self.config['crypto_currency']}\{self.config['exchange']}\{self.config['time']}\momentum_strategy"
         )
-        path_data = (
+        self.path_data = (
             absolute_path
             + rf"\data\{self.config['exchange']}-{self.config['crypto_currency']}-{self.config['time']}.pkl"
         )
         self.window_size = config["window_size"]
-        self.data_df = open_dataframe(path_data)
-        self.list_strategies = os.listdir(path_momentum_strategy)
+        self.data_df = open_dataframe(self.path_data)
+        self.list_strategies = os.listdir(self.path_momentum_strategy)
         self.dt = self.data_df["open_date"].diff().iloc[1]
         self.first = self.data_df["open_date"].iloc[0]
-        self.dict_df_train = {}
-        self.dict_df_validation = {}
+        self.nb_strats = self.config["percentage_strats"]*len(self.list_strategies)
 
     def _load_csv_on_fly(self, path: str):
         df = pd.read_csv(path)
@@ -71,7 +70,15 @@ class dataset_creator(Dataset):
             dictionnary[key]["df"] = self._load_csv_on_fly(path)
             dictionnary[key]["ratio_method"] = getattr(indicator_momentum,strategy_config["ratio_method"])(self.data_df,strategy_config["x"],strategy_config["y"])
     
-    def get_data(self, dictionnary: dict):
+    def __len__(self):
+        return len(self.dict_df)
+    
+    def create_dict_df(self):
+        self.dict_df = {}
+        for name_strategy in self.list_strategies[:self.nb_strats]:
+            self.add_df(self,os.path.join(self.path_momentum_strategy, name_strategy, "output.csv"))
+        
+            
         
 
 
