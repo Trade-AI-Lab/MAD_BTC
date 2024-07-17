@@ -41,23 +41,25 @@ def convert_time_iloc(dt, first, end, window_size):
     return start_index, end_index
 
 
-class dataset_creator(Dataset):
+class DatasetCreator(Dataset):
     def __init__(self, config: dict):
         self.config = config
-        self.path_momentum_strategy = (
-            absolute_path
-            + rf"\experience\{self.config['crypto_currency']}\{self.config['exchange']}\{self.config['time']}\momentum_strategy"
+        self.path_momentum_strategy = os.path.join(
+            absolute_path,
+            f"experience/{self.config['crypto_currency']}/{self.config['exchange']}/{self.config['time']}/momentum_strategy",
         )
-        self.path_data = (
-            absolute_path
-            + rf"\data\{self.config['exchange']}-{self.config['crypto_currency']}-{self.config['time']}.pkl"
+        self.path_data = os.path.join(
+            absolute_path,
+            f"data/{self.config['exchange']}-{self.config['crypto_currency']}-{self.config['time']}.pkl",
         )
         self.window_size = config["window_size"]
         self.data_df = open_dataframe(self.path_data)
         self.list_strategies = os.listdir(self.path_momentum_strategy)
         self.dt = self.data_df["open_date"].diff().iloc[1]
         self.first = self.data_df["open_date"].iloc[0]
-        self.nb_strats = self.config["percentage_strats"] * len(self.list_strategies)
+        self.nb_strats = int(
+            self.config["percentage_strats"] * len(self.list_strategies)
+        )
         self.features = self.config["features"]
         self.create_dict_df()
         self.normalizer_tool = complex_fct_normalizer()
@@ -94,7 +96,7 @@ class dataset_creator(Dataset):
 
     def create_dict_df(self):
         self.dict_df = {}
-        for name_strategy in self.list_strategies[: int(self.nb_strats)]:
+        for name_strategy in self.list_strategies[: self.nb_strats]:
             self._add_df(
                 os.path.join(self.path_momentum_strategy, name_strategy),
             )
@@ -131,7 +133,7 @@ class dataset_creator(Dataset):
         tensor_ratio_method = torch.tensor(ratio_method.values, dtype=torch.float32)
         X = torch.cat((tensor_x, tensor_ratio_method.unsqueeze(1)), dim=1)
         Y = torch.tensor(
-            selected_df["binary_classification"].iloc[row_idx].values,
+            selected_df["binary_classification"].iloc[row_idx],
             dtype=torch.float32,
         )
 
@@ -155,7 +157,18 @@ if __name__ == "__main__":
             "sin_daily",
         ],
     }
-    dataset = dataset_creator(config)
+    dataset = DatasetCreator(config)
     A, B = dataset.__getitem__(3)
     print(A, B)
-    DataLoader(dataset, batch_size=64, shuffle=True, num_workers=6)
+    dataloader = DataLoader(dataset, batch_size=64, shuffle=True)
+    # Get one batch of data
+    for batch in dataloader:
+        # Assuming the batch is a tuple (inputs, labels)
+        inputs, labels = batch
+
+        # Print the first item
+        print("First input:", inputs.size())
+        print("First label:", labels.size())
+
+        # Break after the first batch
+        break
