@@ -13,6 +13,7 @@ from src.utils.utils_df import open_dataframe
 from src.strategy.momentum import indicator_momentum
 from torch.utils.data import Dataset
 
+
 def load_json(file_path: str) -> dict:
     with open(file_path, "r") as file:
         data = json.load(file)
@@ -52,8 +53,9 @@ class dataset_creator(Dataset):
         self.list_strategies = os.listdir(self.path_momentum_strategy)
         self.dt = self.data_df["open_date"].diff().iloc[1]
         self.first = self.data_df["open_date"].iloc[0]
-        self.nb_strats = self.config["percentage_strats"]*len(self.list_strategies)
+        self.nb_strats = self.config["percentage_strats"] * len(self.list_strategies)
         self.features = self.config["features"]
+        self.create_dict_df()
 
     def _load_csv_on_fly(self, path: str):
         df = pd.read_csv(path)
@@ -63,53 +65,62 @@ class dataset_creator(Dataset):
         df["Time"] = pd.to_datetime(df["Time"])
         return df[["Time", "binary_classification"]][1:]
 
-    def add_df(self, dictionnary: dict, path: str):
+    def _add_df(self, dictionnary: dict, path: str):
         strategy_config = load_json(path)
-        key = f"{strategy_config["x"]}_{strategy_config["y"]}_{strategy_config["ratio_method"]}"
+        key = f"{strategy_config['x']}_{strategy_config['y']}_{strategy_config['ratio_method']}"
         if key not in dictionnary.keys():
             dictionnary[key] = {}
             dictionnary[key]["df"] = self._load_csv_on_fly(path)
-            self.data_df["ratio_method"] = getattr(indicator_momentum,strategy_config["ratio_method"])(self.data_df,strategy_config["x"],strategy_config["y"])
-            dictionnary[key]["ratio_method"] = self.data_df[["open_date","ratio_method"]]
-    
+            self.data_df["ratio_method"] = getattr(
+                indicator_momentum, strategy_config["ratio_method"]
+            )(self.data_df, strategy_config["x"], strategy_config["y"])
+            dictionnary[key]["ratio_method"] = self.data_df[
+                ["open_date", "ratio_method"]
+            ]
+
     def __len__(self):
         return self.total_length
-    
+
     def create_dict_df(self):
         self.dict_df = {}
-        for name_strategy in self.list_strategies[:self.nb_strats]:
-            self.add_df(self,os.path.join(self.path_momentum_strategy, name_strategy, "output.csv"))
+        for name_strategy in self.list_strategies[: int(self.nb_strats)]:
+            self._add_df(
+                self, rf"{self.path_momentum_strategy}/{name_strategy}/output.csv"
+            )
         # Calculate the number of elements in each dataframe
         lengths = [len(self.dict_df[key]["df"]) for key in self.dict_df.keys()]
         self.total_length = sum(lengths)
-        
+
         # Determine which dataframe to sample from based on cumulative sum
         self.cum_lengths = np.cumsum(lengths)
-        
+
     def __getitem__(self, idx):
-        selected_df_idx = np.searchsorted(self.cum_lengths, idx, side='right')
+        selected_df_idx = np.searchsorted(self.cum_lengths, idx, side="right")
         selected_df_key = list(self.dict_df.keys())[selected_df_idx]
         if selected_df_idx == 0:
             row_idx = idx
         else:
             row_idx = idx - self.cum_lengths[selected_df_idx - 1]
-        
+
         selected_df = self.dict_df[selected_df_key]["df"]
         end = selected_df["Time"].iloc[row_idx]
-        start_index, end_index = convert_time_iloc(self.dt, self.first, end, self.window_size)
-        X = pd.concat(self.data_df,self.dict_df[selected_df_key]["ratio_method"])[self.features].iloc[start_index - 1 : end_index - 1]
+        start_index, end_index = convert_time_iloc(
+            self.dt, self.first, end, self.window_size
+        )
+        X = pd.concat(self.data_df, self.dict_df[selected_df_key]["ratio_method"])[
+            self.features
+        ].iloc[start_index - 1 : end_index - 1]
         Y = selected_df["binary_classification"]
-        return X,Y
+        return X, Y
+
 
 if __name__ == "__main__":
     config = {
         "crypto_currency": "BNBUSDT",
         "exchange": "binance",
         "time": "1d",
-        "window_size" : 30,
-        "percentage_strats":0.7,
-        "features": ["high","low","open","ratio_method","sin_weekly","sin_daily"]
-        
-        
+        "window_size": 30,
+        "percentage_strats": 0.7,
+        "features": ["high", "low", "open", "ratio_method", "sin_weekly", "sin_daily"],
     }
-    dataset_creator(config)
+    dataset = dataset_creator(config)
