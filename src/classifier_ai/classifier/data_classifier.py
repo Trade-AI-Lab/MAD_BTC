@@ -65,16 +65,22 @@ class dataset_creator(Dataset):
         df["Time"] = pd.to_datetime(df["Time"])
         return df[["Time", "binary_classification"]][1:]
 
-    def _add_df(self, dictionnary: dict, path: str):
-        strategy_config = load_json(path)
-        key = f"{strategy_config['x']}_{strategy_config['y']}_{strategy_config['ratio_method']}"
-        if key not in dictionnary.keys():
-            dictionnary[key] = {}
-            dictionnary[key]["df"] = self._load_csv_on_fly(path)
+    def _add_df(self, path: str):
+        path_csv = os.path.join(path, "output_file.csv")
+        path_json = os.path.join(path, "strategy.json")
+        strategy_config = load_json(path_json)
+        key = f"{strategy_config['strategy']['x']}_{strategy_config['strategy']['y']}_{strategy_config['strategy']['ratio_method']}"
+        if key not in self.dict_df.keys():
+            self.dict_df[key] = {}
+            self.dict_df[key]["df"] = self._load_csv_on_fly(path_csv)
             self.data_df["ratio_method"] = getattr(
-                indicator_momentum, strategy_config["ratio_method"]
-            )(self.data_df, strategy_config["x"], strategy_config["y"])
-            dictionnary[key]["ratio_method"] = self.data_df[
+                indicator_momentum, strategy_config["strategy"]["ratio_method"]
+            )(
+                self.data_df,
+                strategy_config["strategy"]["x"],
+                strategy_config["strategy"]["y"],
+            )
+            self.dict_df[key]["ratio_method"] = self.data_df[
                 ["open_date", "ratio_method"]
             ]
 
@@ -85,7 +91,7 @@ class dataset_creator(Dataset):
         self.dict_df = {}
         for name_strategy in self.list_strategies[: int(self.nb_strats)]:
             self._add_df(
-                self, rf"{self.path_momentum_strategy}/{name_strategy}/output.csv"
+                os.path.join(self.path_momentum_strategy, name_strategy),
             )
         # Calculate the number of elements in each dataframe
         lengths = [len(self.dict_df[key]["df"]) for key in self.dict_df.keys()]
@@ -107,10 +113,10 @@ class dataset_creator(Dataset):
         start_index, end_index = convert_time_iloc(
             self.dt, self.first, end, self.window_size
         )
-        X = pd.concat(self.data_df, self.dict_df[selected_df_key]["ratio_method"])[
+        X = pd.concat([self.data_df, self.dict_df[selected_df_key]["ratio_method"]])[
             self.features
         ].iloc[start_index - 1 : end_index - 1]
-        Y = selected_df["binary_classification"]
+        Y = selected_df["binary_classification"].iloc[row_idx]
         return X, Y
 
 
@@ -124,3 +130,5 @@ if __name__ == "__main__":
         "features": ["high", "low", "open", "ratio_method", "sin_weekly", "sin_daily"],
     }
     dataset = dataset_creator(config)
+    A, B = dataset.__getitem__(3)
+    print(A, B)
