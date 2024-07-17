@@ -3,6 +3,7 @@ import os
 import sys
 import numpy as np
 import json
+import torch
 
 __file__ = os.getcwd()
 absolute_path = os.path.abspath(__file__)[
@@ -11,7 +12,10 @@ absolute_path = os.path.abspath(__file__)[
 sys.path.append(absolute_path)
 from src.utils.utils_df import open_dataframe
 from src.strategy.momentum import indicator_momentum
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
+from src.classifier_ai.classifier.normaliser.soft_normaliser import (
+    complex_fct_normalizer,
+)
 
 
 def load_json(file_path: str) -> dict:
@@ -56,6 +60,7 @@ class dataset_creator(Dataset):
         self.nb_strats = self.config["percentage_strats"] * len(self.list_strategies)
         self.features = self.config["features"]
         self.create_dict_df()
+        self.normalizer_tool = complex_fct_normalizer()
 
     def _load_csv_on_fly(self, path: str):
         df = pd.read_csv(path)
@@ -113,10 +118,23 @@ class dataset_creator(Dataset):
         start_index, end_index = convert_time_iloc(
             self.dt, self.first, end, self.window_size
         )
-        X = pd.concat([self.data_df, self.dict_df[selected_df_key]["ratio_method"]])[
-            self.features
-        ].iloc[start_index - 1 : end_index - 1]
-        Y = selected_df["binary_classification"].iloc[row_idx]
+        ratio_method = self.dict_df[selected_df_key]["ratio_method"].iloc[
+            start_index - 1 : end_index - 1
+        ]["ratio_method"]
+        _x = self.data_df[self.features].iloc[start_index - 1 : end_index - 1]
+        _x[["open", "low", "high", "close"]] = (
+            self.normalizer_tool.log_division_normalization(
+                df=_x[["open", "low", "high", "close"]], row=0
+            )
+        )
+        tensor_x = torch.tensor(_x.values, dtype=torch.float32)
+        tensor_ratio_method = torch.tensor(ratio_method.values, dtype=torch.float32)
+        X = torch.cat((tensor_x, tensor_ratio_method.unsqueeze(1)), dim=1)
+        Y = torch.tensor(
+            selected_df["binary_classification"].iloc[row_idx].values,
+            dtype=torch.float32,
+        )
+
         return X, Y
 
 
@@ -127,8 +145,17 @@ if __name__ == "__main__":
         "time": "1d",
         "window_size": 30,
         "percentage_strats": 0.7,
-        "features": ["high", "low", "open", "ratio_method", "sin_weekly", "sin_daily"],
+        "features": [
+            "open",
+            "high",
+            "low",
+            "close",
+            "ratio_method",
+            "sin_weekly",
+            "sin_daily",
+        ],
     }
     dataset = dataset_creator(config)
     A, B = dataset.__getitem__(3)
     print(A, B)
+    DataLoader(dataset, batch_size=64, shuffle=True, num_workers=6)
