@@ -2,6 +2,7 @@ import pytorch_lightning as pl
 import torch
 import sys
 import os
+import toml
 
 sys.path.append(
     os.path.abspath(__file__)[
@@ -11,8 +12,7 @@ sys.path.append(
 from src.classifier_ai.classifier.sequencer_classifier import DatasetCreator
 from torch.utils.data import DataLoader
 from pytorch_lightning.loggers import TensorBoardLogger
-from src.model.tsmixer import MixerLayer
-from src.model.layers.normalization_layer.dain import DainLayer
+from model.nn import MixerLayer, DainLayer
 
 
 class ModuleModel(pl.LightningModule):
@@ -45,16 +45,15 @@ class ModuleModel(pl.LightningModule):
 class DataModule(pl.LightningDataModule):
     def __init__(
         self,
-        config_train,
-        config_validation,
+        data_config,
         batch_size,
     ):
         super().__init__()
-        train_dataset = DatasetCreator(config_train)
+        train_dataset = DatasetCreator(data_config["config_train"])
         self.train_loader = DataLoader(
             train_dataset, batch_size=batch_size, shuffle=True
         )
-        val_dataset = DatasetCreator(config_validation)
+        val_dataset = DatasetCreator(data_config["config_validation"])
         self.val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
 
     def get_input_data(self):
@@ -78,22 +77,23 @@ if __name__ == "__main__":
             for i in range(10)
         ]
     )
-    future_time_steps = 32
     mlp_model = torch.nn.Sequential()
 
     combined_model = torch.nn.Sequential(mixer_model, mlp_model)
-    logger = TensorBoardLogger(
-        "lighting_logs_try", name="conv_autoencode_predictor_logs"
-    )
-    price_dm = DataModule(future_time_steps=future_time_steps)
+    logger = TensorBoardLogger("lighting_logs", name="classifier_logs")
+    with open("src\classifier_ai\classifier\configs\config.toml", "r") as file:
+        data_config = toml.load(file)
+
+    datamodule = DataModule(data_config, batch_size=64)
+    exit()
     module_model = ModuleModel(
         combined_model,
-        input_data=price_dm.get_input_data(),
+        input_data=datamodule.get_input_data(),
         loss=torch.nn.BCELoss(),
         lr=1e-4,
     )
-    train_dataloader = price_dm.train_dataloader()
-    val_dataloader = price_dm.val_dataloader()
+    train_dataloader = datamodule.train_dataloader()
+    val_dataloader = datamodule.val_dataloader()
     trainer = pl.Trainer(
         logger=logger, max_epochs=10, val_check_interval=1.0
     )  # Ensure validation runs after every epoch
