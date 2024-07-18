@@ -12,7 +12,8 @@ sys.path.append(
 from src.classifier_ai.classifier.sequencer_classifier import DatasetCreator
 from torch.utils.data import DataLoader
 from pytorch_lightning.loggers import TensorBoardLogger
-from model.nn import MixerLayer, DainLayer
+from model.nn import DainLayer
+from model.tsmixer import MixerLayer
 
 
 class ModuleModel(pl.LightningModule):
@@ -70,7 +71,7 @@ if __name__ == "__main__":
     mixer_model = torch.nn.Sequential(
         *[
             MixerLayer(
-                activation=torch.nn.Tanh(),
+                activation="Tanh",
                 dropout=0.5,
                 layernorm=DainLayer(mode="full", mode_log=False),
             )
@@ -83,7 +84,6 @@ if __name__ == "__main__":
     logger = TensorBoardLogger("lighting_logs", name="classifier_logs")
     with open("src\classifier_ai\classifier\configs\config.toml", "r") as file:
         data_config = toml.load(file)
-
     datamodule = DataModule(data_config, batch_size=64)
     exit()
     module_model = ModuleModel(

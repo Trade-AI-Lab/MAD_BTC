@@ -54,7 +54,11 @@ class DatasetCreator(Dataset):
         )
         self.window_size = config["window_size"]
         self.data_df = open_dataframe(self.path_data)
-        self.list_strategies = os.listdir(self.path_momentum_strategy)
+        self.list_strategies = [
+            strategy
+            for strategy in os.listdir(self.path_momentum_strategy)
+            if "." not in strategy
+        ]
         self.dt = self.data_df["open_date"].diff().iloc[1]
         self.first = self.data_df["open_date"].iloc[0]
         self.nb_first_stats = int(

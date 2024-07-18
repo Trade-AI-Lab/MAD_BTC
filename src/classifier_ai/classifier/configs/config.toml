@@ -1,4 +1,4 @@
-[train]
+[config_train]
 crypto_currency = "BNBUSDT"
 exchange = "binance"
 time = "1d"
@@ -6,7 +6,7 @@ window_size = 30
 nb_first_strats = 0.0
 nb_last_strats = 0.7
 features = ["open","high","low","close","ratio_method","sin_weekly","sin_daily"]
-[validation]
+[config_validation]
 crypto_currency = "BNBUSDT"
 exchange = "binance"
 time = "1d"
