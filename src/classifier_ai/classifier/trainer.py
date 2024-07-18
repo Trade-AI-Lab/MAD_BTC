@@ -11,6 +11,8 @@ sys.path.append(
 from src.classifier_ai.classifier.sequencer_classifier import DatasetCreator
 from torch.utils.data import DataLoader
 from pytorch_lightning.loggers import TensorBoardLogger
+from src.model.tsmixer import MixerLayer
+from src.model.layers.normalization_layer.dain import DainLayer
 
 
 class ModuleModel(pl.LightningModule):
@@ -77,7 +79,7 @@ if __name__ == "__main__":
         ]
     )
     future_time_steps = 32
-    mlp_model = torch.nn.Sequential(HestonLayer(time_steps=future_time_steps))
+    mlp_model = torch.nn.Sequential()
 
     combined_model = torch.nn.Sequential(mixer_model, mlp_model)
     logger = TensorBoardLogger(
