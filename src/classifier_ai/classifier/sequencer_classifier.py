@@ -58,7 +58,7 @@ class DatasetCreator(Dataset):
         self.dt = self.data_df["open_date"].diff().iloc[1]
         self.first = self.data_df["open_date"].iloc[0]
         self.nb_first_stats = int(
-            self.config["nb_first_stats"] * len(self.list_strategies)
+            self.config["nb_first_strats"] * len(self.list_strategies)
         )
         self.nb_last_strats = int(
             self.config["nb_last_strats"] * len(self.list_strategies)
@@ -138,7 +138,7 @@ class DatasetCreator(Dataset):
         tensor_ratio_method = torch.tensor(ratio_method.values, dtype=torch.float32)
         X = torch.cat((tensor_x, tensor_ratio_method.unsqueeze(1)), dim=1)
         Y = torch.tensor(
-            selected_df["binary_classification"].iloc[row_idx],
+            [selected_df["binary_classification"].iloc[row_idx]],
             dtype=torch.float32,
         )
         return X, Y
@@ -150,7 +150,7 @@ if __name__ == "__main__":
         "exchange": "binance",
         "time": "1d",
         "window_size": 30,
-        "nb_first_starts": 0.0,
+        "nb_first_strats": 0.0,
         "nb_last_strats": 0.7,
         "features": [
             "open",

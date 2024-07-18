@@ -8,6 +8,9 @@ sys.path.append(
         : os.path.abspath(__file__).find("MAD_BTC") + len("MAD_BTC")
     ]
 )
+from src.classifier_ai.classifier.sequencer_classifier import DatasetCreator
+from torch.utils.data import DataLoader
+from pytorch_lightning.loggers import TensorBoardLogger
 
 
 class ModuleModel(pl.LightningModule):
@@ -42,15 +45,15 @@ class DataModule(pl.LightningDataModule):
         self,
         config_train,
         config_validation,
+        batch_size,
     ):
         super().__init__()
-
+        train_dataset = DatasetCreator(config_train)
         self.train_loader = DataLoader(
-            train_atomic_dataset, batch_size=batch_size, shuffle=True
+            train_dataset, batch_size=batch_size, shuffle=True
         )
-        self.val_loader = DataLoader(
-            val_atomic_dataset, batch_size=batch_size, shuffle=True
-        )
+        val_dataset = DatasetCreator(config_validation)
+        self.val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
 
     def get_input_data(self):
         return next(iter(self.train_loader))[0]
@@ -60,11 +63,6 @@ class DataModule(pl.LightningDataModule):
 
     def val_dataloader(self):
         return self.val_loader
-
-
-class PytorchWrapper:
-    def __init__(self):
-        super(PytorchWrapper).__init__()
 
 
 if __name__ == "__main__":
@@ -85,11 +83,16 @@ if __name__ == "__main__":
     logger = TensorBoardLogger(
         "lighting_logs_try", name="conv_autoencode_predictor_logs"
     )
-    price_dm = PriceDataModule(future_time_steps=future_time_steps)
-    module_model = ModuleModel(combined_model, input_data=price_dm.get_input_data())
+    price_dm = DataModule(future_time_steps=future_time_steps)
+    module_model = ModuleModel(
+        combined_model,
+        input_data=price_dm.get_input_data(),
+        loss=torch.nn.BCELoss(),
+        lr=1e-4,
+    )
     train_dataloader = price_dm.train_dataloader()
     val_dataloader = price_dm.val_dataloader()
-    trainer = pytorch_lightning.Trainer(
+    trainer = pl.Trainer(
         logger=logger, max_epochs=10, val_check_interval=1.0
     )  # Ensure validation runs after every epoch
 
