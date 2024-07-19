@@ -68,26 +68,40 @@ class DataModule(pl.LightningDataModule):
 
 
 if __name__ == "__main__":
-    mixer_model = torch.nn.Sequential(
-        *[
-            MixerLayer(
-                activation="Tanh",
-                dropout=0.5,
-                layernorm=DainLayer(mode="full", mode_log=False),
-            )
-            for i in range(10)
-        ]
-    )
-    mlp_model = torch.nn.Sequential(torch.nn.LazyLinear(5), torch.nn.Sigmoid())
 
-    combined_model = torch.nn.Sequential(mixer_model, mlp_model)
+    class _mixer_nn(torch.nn.Module):
+        def __init__(self, *args, **kwargs) -> None:
+            super().__init__(*args, **kwargs)
+            self.mixer_model = torch.nn.Sequential(
+                *[
+                    MixerLayer(
+                        activation="Tanh",
+                        dropout=0.5,
+                        layernorm=DainLayer(mode="full", mode_log=False),
+                    )
+                    for i in range(10)
+                ]
+            )
+            self.lazy_layer_1 = torch.nn.Sequential(
+                torch.nn.LazyLinear(1), torch.nn.Sigmoid()
+            )
+            self.lazy_layer_2 = torch.nn.Sequential(
+                torch.nn.LazyLinear(1), torch.nn.Sigmoid()
+            )
+
+        def forward(self, input):
+            x = self.mixer_model(input)  # B,C,H
+            x = self.lazy_layer_1(x)  # B,C,1
+            x = self.lazy_layer_2(x.unsqueeze(-1))  # B,1
+            return x
+
     logger = TensorBoardLogger("lightning_logs", name="classifier_logs")
     with open("src\classifier_ai\classifier\configs\config.toml", "r") as file:
         data_config = toml.load(file)
     datamodule = DataModule(data_config, batch_size=64)
 
     module_model = ModuleModel(
-        combined_model,
+        _mixer_nn,
         input_data=datamodule.get_input_data(),
         loss=torch.nn.BCELoss(),
         lr=1e-4,
