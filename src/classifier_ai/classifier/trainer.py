@@ -78,14 +78,14 @@ if __name__ == "__main__":
             for i in range(10)
         ]
     )
-    mlp_model = torch.nn.Sequential()
+    mlp_model = torch.nn.Sequential(torch.nn.LazyLinear(5), torch.nn.Sigmoid())
 
     combined_model = torch.nn.Sequential(mixer_model, mlp_model)
-    logger = TensorBoardLogger("lighting_logs", name="classifier_logs")
+    logger = TensorBoardLogger("lightning_logs", name="classifier_logs")
     with open("src\classifier_ai\classifier\configs\config.toml", "r") as file:
         data_config = toml.load(file)
     datamodule = DataModule(data_config, batch_size=64)
-    exit()
+
     module_model = ModuleModel(
         combined_model,
         input_data=datamodule.get_input_data(),
