@@ -60,7 +60,6 @@ class DatasetCreator(Dataset):
             if "." not in strategy
         ]
         self.dt = self.data_df["open_date"].diff().iloc[1]
-        self.first = self.data_df["open_date"].iloc[0]
         self.nb_first_stats = int(
             self.config["nb_first_strats"] * len(self.list_strategies)
         )
@@ -70,6 +69,7 @@ class DatasetCreator(Dataset):
         self.features = self.config["features"]
         self.create_dict_df()
         self.normalizer_tool = complex_fct_normalizer()
+        self.data_df.set_index('open_date', inplace=True)
 
     def _load_csv_on_fly(self, path: str):
         df = pd.read_csv(path)
@@ -86,7 +86,6 @@ class DatasetCreator(Dataset):
         key = f"{strategy_config['strategy']['x']}_{strategy_config['strategy']['y']}_{strategy_config['strategy']['ratio_method']}"
         if key not in self.dict_df.keys():
             self.dict_df[key] = {}
-            self.dict_df[key]["df"] = self._load_csv_on_fly(path_csv)
             self.data_df["ratio_method"] = getattr(
                 indicator_momentum, strategy_config["strategy"]["ratio_method"]
             )(
@@ -94,9 +93,21 @@ class DatasetCreator(Dataset):
                 strategy_config["strategy"]["x"],
                 strategy_config["strategy"]["y"],
             )
-            self.dict_df[key]["ratio_method"] = self.data_df[
+            last_nan_index = self.data_df["ratio_method"].isna()[::-1].idxmax() if self.data_df["ratio_method"].isna().any() else None
+            no_nan_window = last_nan_index + self.window_size + 1
+            no_nan_ratio_method = self.data_df["open_date"].iloc[last_nan_index]
+            no_nan_window_date = self.data_df["open_date"].iloc[no_nan_window]
+            df = self._load_csv_on_fly(path_csv)
+            self.dict_df[key]["df"] = df[(df["Time"] >= no_nan_window_date)]
+            self.dict_df[key]["df"].set_index('Time', inplace=True)
+            del df
+            df = self.data_df[
                 ["open_date", "ratio_method"]
             ]
+            self.dict_df[key]["ratio_method"] = df[(df["open_date"] >= no_nan_ratio_method)]
+            self.dict_df[key]["ratio_method"].set_index('open_date', inplace=True)
+            self.dict_df[key]["last_time"] = [no_nan_window_date, no_nan_ratio_method]
+            del df
 
 
     def __len__(self):
@@ -126,23 +137,21 @@ class DatasetCreator(Dataset):
             row_idx = idx - self.cum_lengths[selected_df_idx - 1]
 
         selected_df = self.dict_df[selected_df_key]["df"]
-        end = selected_df["Time"].iloc[row_idx]
-        start_index, end_index = convert_time_iloc(
-            self.dt, self.first, end, self.window_size
-        )
-        
-        ratio_method = self.dict_df[selected_df_key]["ratio_method"].iloc[
-            start_index - 1 : end_index - 1
+        end = selected_df.index[row_idx]
+        start = end - self.dt * self.window_size
+        ratio_method = self.dict_df[selected_df_key]["ratio_method"].loc[
+            start - self.dt : end - self.dt
         ]["ratio_method"]
             
-        _x = self.data_df[self.features].iloc[start_index - 1 : end_index - 1]
+        _x = self.data_df[self.features].loc[start - self.dt : end - self.dt]
         _x[["open", "low", "high", "close"]] = (
             self.normalizer_tool.log_division_normalization(
                 df=_x[["open", "low", "high", "close"]], row=0
             )
         )
         _x["ratio_method"] = ratio_method
-            
+        if _x.isna().any().sum():
+            print("Problem Nan")
         X = torch.tensor(_x.values, dtype=torch.float32)
         Y = torch.tensor(
             [selected_df["binary_classification"].iloc[row_idx]],
@@ -184,21 +193,4 @@ if __name__ == "__main__":
 
         # Break after the first batch
         break
-        """
-        if key not in self.dict_df.keys():
-            self.dict_df[key] = {}
-            df_ratio_method_raw = getattr(
-                indicator_momentum, strategy_config["strategy"]["ratio_method"]
-            )(
-                self.data_df,
-                strategy_config["strategy"]["x"],
-                strategy_config["strategy"]["y"],
-            )
-            self.data_df["ratio_method"] = df_ratio_method_raw
-            
-            last_nan_index = df_ratio_method_raw.isna()[::-1].idxmax() if df_ratio_method_raw.isna().any() else None
-            no_nan_window = last_nan_index + self.window_size + 1
-            
-            self.dict_df[key]["df"] = self._load_csv_on_fly(path_csv).iloc[no_nan_window:]
-            self.dict_df[key]["ratio_method"] = df_ratio_method_raw.iloc[no_nan_window:]
-        """
+        
