@@ -2,6 +2,9 @@
 ## Overview
 This repository contains code and research findings related to the paper titled "Moving Average Distance as a Predictor of Equity Returns" by Doron Avramova, Guy Kaplanski, and Avanidhar Subrahmanyam. The research explores the predictive power of the distance between short- and long-run moving averages of prices (MAD) in the cross-section of equity returns.
 
+## Idea
+Imagine you have 10 stocks, how to create a strategy given this strategy, you can compute 10 different ratio mobing average and then to do the mean and use this mean ratio moving average to buy or to sell.
+
 ## Abstract
 The MAD-based trading strategy demonstrates robust investment payoffs, with annualized value-weighted alphas around 9%. The predictability extends beyond other well-known anomalies, such as momentum, 52-week highs, and profitability. The strategy remains viable even after accounting for reasonable trading costs, and its effectiveness is stronger on the long side compared to the short side.
 
