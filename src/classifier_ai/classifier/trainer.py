@@ -92,16 +92,16 @@ if __name__ == "__main__":
         def forward(self, input):
             x = self.mixer_model(input)  # B,C,H
             x = self.lazy_layer_1(x)  # B,C,1
-            x = self.lazy_layer_2(x.unsqueeze(-1))  # B,1
+            x = self.lazy_layer_2(x.squeeze(-1))  # B,1
             return x
 
     logger = TensorBoardLogger("lightning_logs", name="classifier_logs")
     with open("src\classifier_ai\classifier\configs\config.toml", "r") as file:
         data_config = toml.load(file)
     datamodule = DataModule(data_config, batch_size=64)
-
+    mixer_nn = _mixer_nn()
     module_model = ModuleModel(
-        _mixer_nn,
+        mixer_nn,
         input_data=datamodule.get_input_data(),
         loss=torch.nn.BCELoss(),
         lr=1e-4,

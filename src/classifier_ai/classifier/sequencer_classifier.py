@@ -98,6 +98,7 @@ class DatasetCreator(Dataset):
                 ["open_date", "ratio_method"]
             ]
 
+
     def __len__(self):
         return self.total_length
 
@@ -129,18 +130,20 @@ class DatasetCreator(Dataset):
         start_index, end_index = convert_time_iloc(
             self.dt, self.first, end, self.window_size
         )
+        
         ratio_method = self.dict_df[selected_df_key]["ratio_method"].iloc[
             start_index - 1 : end_index - 1
         ]["ratio_method"]
+            
         _x = self.data_df[self.features].iloc[start_index - 1 : end_index - 1]
         _x[["open", "low", "high", "close"]] = (
             self.normalizer_tool.log_division_normalization(
                 df=_x[["open", "low", "high", "close"]], row=0
             )
         )
-        tensor_x = torch.tensor(_x.values, dtype=torch.float32)
-        tensor_ratio_method = torch.tensor(ratio_method.values, dtype=torch.float32)
-        X = torch.cat((tensor_x, tensor_ratio_method.unsqueeze(1)), dim=1)
+        _x["ratio_method"] = ratio_method
+            
+        X = torch.tensor(_x.values, dtype=torch.float32)
         Y = torch.tensor(
             [selected_df["binary_classification"].iloc[row_idx]],
             dtype=torch.float32,
@@ -181,3 +184,21 @@ if __name__ == "__main__":
 
         # Break after the first batch
         break
+        """
+        if key not in self.dict_df.keys():
+            self.dict_df[key] = {}
+            df_ratio_method_raw = getattr(
+                indicator_momentum, strategy_config["strategy"]["ratio_method"]
+            )(
+                self.data_df,
+                strategy_config["strategy"]["x"],
+                strategy_config["strategy"]["y"],
+            )
+            self.data_df["ratio_method"] = df_ratio_method_raw
+            
+            last_nan_index = df_ratio_method_raw.isna()[::-1].idxmax() if df_ratio_method_raw.isna().any() else None
+            no_nan_window = last_nan_index + self.window_size + 1
+            
+            self.dict_df[key]["df"] = self._load_csv_on_fly(path_csv).iloc[no_nan_window:]
+            self.dict_df[key]["ratio_method"] = df_ratio_method_raw.iloc[no_nan_window:]
+        """
