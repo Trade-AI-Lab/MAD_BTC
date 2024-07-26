@@ -86,7 +86,7 @@ class DatasetCreator(Dataset):
         key = f"{strategy_config['strategy']['x']}_{strategy_config['strategy']['y']}_{strategy_config['strategy']['ratio_method']}"
         if key not in self.dict_df.keys():
             self.dict_df[key] = {}
-            self.data_df["ratio_method"] = getattr(
+            self.data_df["ratio_method"] = -1 + getattr(
                 indicator_momentum, strategy_config["strategy"]["ratio_method"]
             )(
                 self.data_df,
@@ -98,7 +98,7 @@ class DatasetCreator(Dataset):
             no_nan_ratio_method = self.data_df["open_date"].iloc[last_nan_index]
             no_nan_window_date = self.data_df["open_date"].iloc[no_nan_window]
             df = self._load_csv_on_fly(path_csv)
-            self.dict_df[key]["df"] = df[(df["Time"] >= no_nan_window_date)]
+            self.dict_df[key]["df"] = df[(df["Time"] > no_nan_window_date)]
             self.dict_df[key]["df"].set_index('Time', inplace=True)
             del df
             df = self.data_df[
