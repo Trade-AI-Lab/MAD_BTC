@@ -12,7 +12,7 @@ sys.path.append(
 from src.classifier_ai.classifier.sequencer_classifier import DatasetCreator
 from torch.utils.data import DataLoader
 from pytorch_lightning.loggers import TensorBoardLogger
-from model.nn import DainLayer
+from model.nn import DainLayer,DainLayerBothAxis
 from model.tsmixer import MixerLayer
 
 
@@ -68,6 +68,7 @@ class DataModule(pl.LightningDataModule):
 
 
 if __name__ == "__main__":
+    from pytorch_lightning.callbacks import ModelCheckpoint
 
     class _mixer_nn(torch.nn.Module):
         def __init__(self, *args, **kwargs) -> None:
@@ -77,13 +78,13 @@ if __name__ == "__main__":
                     MixerLayer(
                         activation="Tanh",
                         dropout=0.5,
-                        layernorm=DainLayer(mode="full", mode_log=False),
+                        layernorm=None,
                     )
                     for i in range(10)
                 ]
             )
             self.lazy_layer_1 = torch.nn.Sequential(
-                torch.nn.LazyLinear(1), torch.nn.Sigmoid()
+                torch.nn.LazyLinear(1)
             )
             self.lazy_layer_2 = torch.nn.Sequential(
                 torch.nn.LazyLinear(1), torch.nn.Sigmoid()
@@ -108,12 +109,23 @@ if __name__ == "__main__":
     )
     train_dataloader = datamodule.train_dataloader()
     val_dataloader = datamodule.val_dataloader()
+    # Ensure validation runs after every epoch
+    checkpoint_callback = ModelCheckpoint(
+    dirpath=os.path.join(logger.log_dir, "checkpoints"),  # Directory to save checkpoints
+    filename='model-{epoch:02d}-{val_loss:.2f}',  # Checkpoint filename pattern
+    monitor='validation_loss',  # Metric to monitor
+    mode='min',  # Mode to minimize the monitored metric
+    save_top_k=1,  # Save only the best model based on the monitored metric
+    save_weights_only=False,
+    )
     trainer = pl.Trainer(
-        logger=logger, max_epochs=10, val_check_interval=1.0
-    )  # Ensure validation runs after every epoch
+        logger=logger, max_epochs=50, val_check_interval=1.0,
+        callbacks=[checkpoint_callback]
+    )
 
     trainer.fit(
         model=module_model,
         train_dataloaders=train_dataloader,
         val_dataloaders=val_dataloader,
+        
     )

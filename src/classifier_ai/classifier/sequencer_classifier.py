@@ -165,9 +165,9 @@ if __name__ == "__main__":
         "crypto_currency": "BNBUSDT",
         "exchange": "binance",
         "time": "1d",
-        "window_size": 30,
+        "window_size": 50,
         "nb_first_strats": 0.0,
-        "nb_last_strats": 0.7,
+        "nb_last_strats": 0.5,
         "features": [
             "open",
             "high",
