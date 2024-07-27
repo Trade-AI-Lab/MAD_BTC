@@ -17,9 +17,8 @@ from model.tsmixer import MixerLayer
 
 
 class ModuleModel(pl.LightningModule):
-    def __init__(self, model, loss, input_data, lr):
+    def __init__(self, model, loss, lr):
         super().__init__()
-        _ = model(input_data)
         self.model = model
         self.loss = loss
         self.lr = lr
@@ -97,13 +96,24 @@ if __name__ == "__main__":
             return x
 
     logger = TensorBoardLogger("lightning_logs", name="classifier_logs")
-    with open("src\classifier_ai\classifier\configs\config.toml", "r") as file:
+    with open(r"src\classifier_ai\classifier\configs\data_config.toml", "r") as file:
         data_config = toml.load(file)
-    datamodule = DataModule(data_config, batch_size=64)
+    
+    with open(r"src\classifier_ai\classifier\configs\train_config.toml", "r") as file:
+        train_config = toml.load(file)
+        
+    datamodule = DataModule(data_config, batch_size=train_config["batch_size"])
+    # Init the model 
     mixer_nn = _mixer_nn()
+    input_data = datamodule.get_input_data()
+    mixer_nn = mixer_nn(input_data)
+    # Model complete
+    train_config["input_size"] = list(input_data.size())
+    with open(r"src\classifier_ai\classifier\configs\train_config.toml", "w") as file:
+        toml.dump(train_config, file)
+    
     module_model = ModuleModel(
         mixer_nn,
-        input_data=datamodule.get_input_data(),
         loss=torch.nn.BCELoss(),
         lr=1e-4,
     )
@@ -118,8 +128,9 @@ if __name__ == "__main__":
     save_top_k=1,  # Save only the best model based on the monitored metric
     save_weights_only=False,
     )
+    
     trainer = pl.Trainer(
-        logger=logger, max_epochs=50, val_check_interval=1.0,
+        logger=logger, max_epochs=train_config["max_epoch"], val_check_interval=1.0,
         callbacks=[checkpoint_callback]
     )
 
