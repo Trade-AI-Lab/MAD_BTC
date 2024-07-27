@@ -96,14 +96,14 @@ if __name__ == "__main__":
             return x
     path_data_config = r"src\classifier_ai\classifier\configs\data_config.toml"
     path_train_config = r"src\classifier_ai\classifier\configs\train_config.toml"
-    logger = TensorBoardLogger("lightning_logs", name="classifier_logs")
+    
     
     with open(path_data_config, "r") as file:
         data_config = toml.load(file)
     
     with open(path_train_config, "r") as file:
         train_config = toml.load(file)
-        
+    logger = TensorBoardLogger("lightning_logs", name=f"{data_config['crypto_currency']}_{data_config['exchange']}_{data_config['time']}")
     datamodule = DataModule(data_config, batch_size=train_config["batch_size"])
     # Init the model 
     mixer_nn = _mixer_nn()
