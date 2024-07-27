@@ -103,7 +103,7 @@ if __name__ == "__main__":
     
     with open(path_train_config, "r") as file:
         train_config = toml.load(file)
-    logger = TensorBoardLogger("lightning_logs", name=f"{data_config['crypto_currency']}_{data_config['exchange']}_{data_config['time']}")
+    logger = TensorBoardLogger("lightning_logs", name=f"{data_config['config_train']['crypto_currency']}_{data_config['config_train']['exchange']}_{data_config['config_train']['time']}")
     datamodule = DataModule(data_config, batch_size=train_config["batch_size"])
     # Init the model 
     mixer_nn = _mixer_nn()
