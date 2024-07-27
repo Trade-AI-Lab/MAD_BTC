@@ -3,6 +3,7 @@ import torch
 import sys
 import os
 import toml
+import shutil
 
 sys.path.append(
     os.path.abspath(__file__)[
@@ -12,7 +13,6 @@ sys.path.append(
 from src.classifier_ai.classifier.sequencer_classifier import DatasetCreator
 from torch.utils.data import DataLoader
 from pytorch_lightning.loggers import TensorBoardLogger
-from model.nn import DainLayer,DainLayerBothAxis
 from model.tsmixer import MixerLayer
 
 
@@ -94,22 +94,24 @@ if __name__ == "__main__":
             x = self.lazy_layer_1(x)  # B,C,1
             x = self.lazy_layer_2(x.squeeze(-1))  # B,1
             return x
-
+    path_data_config = r"src\classifier_ai\classifier\configs\data_config.toml"
+    path_train_config = r"src\classifier_ai\classifier\configs\train_config.toml"
     logger = TensorBoardLogger("lightning_logs", name="classifier_logs")
-    with open(r"src\classifier_ai\classifier\configs\data_config.toml", "r") as file:
+    
+    with open(path_data_config, "r") as file:
         data_config = toml.load(file)
     
-    with open(r"src\classifier_ai\classifier\configs\train_config.toml", "r") as file:
+    with open(path_train_config, "r") as file:
         train_config = toml.load(file)
         
     datamodule = DataModule(data_config, batch_size=train_config["batch_size"])
     # Init the model 
     mixer_nn = _mixer_nn()
     input_data = datamodule.get_input_data()
-    mixer_nn = mixer_nn(input_data)
+    _ = mixer_nn(input_data)
     # Model complete
     train_config["input_size"] = list(input_data.size())
-    with open(r"src\classifier_ai\classifier\configs\train_config.toml", "w") as file:
+    with open(path_train_config, "w") as file:
         toml.dump(train_config, file)
     
     module_model = ModuleModel(
@@ -133,10 +135,12 @@ if __name__ == "__main__":
         logger=logger, max_epochs=train_config["max_epoch"], val_check_interval=1.0,
         callbacks=[checkpoint_callback]
     )
-
+    
     trainer.fit(
         model=module_model,
         train_dataloaders=train_dataloader,
         val_dataloaders=val_dataloader,
         
     )
+    shutil.copy(path_data_config, logger.log_dir)
+    shutil.copy(path_train_config, logger.log_dir)
