@@ -150,10 +150,6 @@ class DatasetCreator(Dataset):
             )
         )
         _x["ratio_method"] = ratio_method
-        if _x.isna().any().sum():
-            print("Problem Nan")
-        if len(_x) != 51:
-            print("Problem")
         X = torch.tensor(_x.values, dtype=torch.float32)
         Y = torch.tensor(
             [selected_df["binary_classification"].iloc[row_idx]],
