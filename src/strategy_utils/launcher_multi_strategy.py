@@ -285,12 +285,4 @@ class multi_trading_strategy:
         :param config: New configuration for the strategy.
         :type config: dict
         """
-        if (
-            self.PATH
-            == absolute_path
-            + rf"/data/{config['exchange']}-{config['crypto_currency']}-{config['time']}.pkl"
-        ):
-            if self.signature_strategy != create_signature(self.config["strategy"]):
-                self.child_df = None
-        else:
-            super(multi_trading_strategy, self).__init__(config)
+        self.__init__(config)
