@@ -4,7 +4,7 @@ import pandas as pd
 
 class indicator_momentum:
     @staticmethod
-    def ma_ratio(data: pd.DataFrame, x: int, y: int) -> pd.Series:
+    def ma_ratio(data: pd.DataFrame, x: int, y: int, column_name: str = "open") -> pd.Series:
         """
         Moving Average Ratio
 
@@ -19,12 +19,12 @@ class indicator_momentum:
         :return: Series containing the moving average ratio.
         :rtype: pd.Series
         """
-        ma_x = SMAIndicator(data["open"], window=x).sma_indicator()
-        ma_y = SMAIndicator(data["open"], window=y).sma_indicator()
+        ma_x = SMAIndicator(data[column_name], window=x).sma_indicator()
+        ma_y = SMAIndicator(data[column_name], window=y).sma_indicator()
         return ma_x / ma_y
 
     @staticmethod
-    def ema_ratio(data: pd.DataFrame, x: int, y: int) -> pd.Series:
+    def ema_ratio(data: pd.DataFrame, x: int, y: int, column_name: str = "open") -> pd.Series:
         """
         Exponential Moving Average Ratio
 
@@ -39,12 +39,12 @@ class indicator_momentum:
         :return: Series containing the exponential moving average ratio.
         :rtype: pd.Series
         """
-        ema_x = EMAIndicator(data["open"], window=x).ema_indicator()
-        ema_y = EMAIndicator(data["open"], window=y).ema_indicator()
+        ema_x = EMAIndicator(data[column_name], window=x).ema_indicator()
+        ema_y = EMAIndicator(data[column_name], window=y).ema_indicator()
         return ema_x / ema_y
 
     @staticmethod
-    def zlema_ratio(data: pd.DataFrame, x: int, y: int) -> pd.Series:
+    def zlema_ratio(data: pd.DataFrame, x: int, y: int, column_name: str = "open") -> pd.Series:
         """
         Zl Exponential Moving Average Ratio
 
@@ -64,12 +64,12 @@ class indicator_momentum:
             ema_data = data + (data - data.shift((period - 1) // 2))
             return EMAIndicator(ema_data, window=period).ema_indicator()
 
-        zlema_x = zlema(data["open"], period=x)
-        zlema_y = zlema(data["open"], period=y)
+        zlema_x = zlema(data[column_name], period=x)
+        zlema_y = zlema(data[column_name], period=y)
         return zlema_x / zlema_y
 
     @staticmethod
-    def dema_ratio(data: pd.DataFrame, x: int, y: int) -> pd.Series:
+    def dema_ratio(data: pd.DataFrame, x: int, y: int, column_name: str = "open") -> pd.Series:
         """
         Double Exponential Moving Average Ratio
 
@@ -89,12 +89,12 @@ class indicator_momentum:
             ema_data = EMAIndicator(data, window=period).ema_indicator()
             return 2 * ema_data - EMAIndicator(ema_data, window=period).ema_indicator()
 
-        dema_x = dema(data["open"], period=x)
-        dema_y = dema(data["open"], period=y)
+        dema_x = dema(data[column_name], period=x)
+        dema_y = dema(data[column_name], period=y)
         return dema_x / dema_y
 
     @staticmethod
-    def tema_ratio(data: pd.DataFrame, x: int, y: int) -> pd.Series:
+    def tema_ratio(data: pd.DataFrame, x: int, y: int, column_name: str = "open") -> pd.Series:
         """
         Triple Exponential Moving Average Ratio
 
@@ -116,6 +116,6 @@ class indicator_momentum:
             ema_ema_ema_data = EMAIndicator(ema_ema_data, window=period).ema_indicator()
             return 3 * ema_ema_ema_data - 3 * ema_ema_data + ema_data
 
-        dema_x = tema(data["open"], period=x)
-        dema_y = tema(data["open"], period=y)
+        dema_x = tema(data[column_name], period=x)
+        dema_y = tema(data[column_name], period=y)
         return dema_x / dema_y

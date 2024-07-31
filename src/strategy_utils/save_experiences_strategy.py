@@ -39,7 +39,13 @@ def create_save_experiences(config:dict)->str:
     experience_folder_path = absolute_path + "/experience"
     os.makedirs(experience_folder_path,exist_ok=True)
 
-    crypto_currency_efp = experience_folder_path +f"/{config['crypto_currency']}"
+    list_keys = config.keys()
+    if "crypto_currency" in list_keys:
+        crypto_currency_efp = experience_folder_path +f"/{config['crypto_currency']}"
+    elif "list_crypto_currencies" in list_keys:
+        if isinstance(config['list_crypto_currencies'],list):
+           crypto = from_list_to_str(config['list_crypto_currencies'])
+        crypto_currency_efp = experience_folder_path +f"/{crypto}"
     os.makedirs(crypto_currency_efp,exist_ok=True)
 
     exchange_ccefp = crypto_currency_efp +f"/{config['exchange']}"
@@ -52,6 +58,12 @@ def create_save_experiences(config:dict)->str:
     os.makedirs(time_eccefpsn,exist_ok=True)
 
     return time_eccefpsn
+
+def from_list_to_str(list_symbols:str)->str:
+    symbols_sorted = sorted(list_symbols)
+    str_symbols = "_".join(symbols_sorted)
+    # Join the sorted elements with underscores
+    return str_symbols
 
 if __name__=="__main__":
     config = {
