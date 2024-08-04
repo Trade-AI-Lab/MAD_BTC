@@ -13,5 +13,5 @@ ratio_method = "ma_ratio"
 
 [multi]
 list_brokers = ["binance"]
-list_crypto_currency = ["BTCUSDT", "ETHUSDT", "ADAUSDT", "BNBUSDT"]
+list_crypto_currency = ["BTCUSDT", "ETHUSDT", "ADAUSDT", "BNBUSDT", "MATICUSDT", "DOTUSDT"]
 list_time = ["1h", "4h", "1d"]
