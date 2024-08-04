@@ -35,12 +35,12 @@ if __name__ == "__main__":
         if time == TIME:
             df = study.trials_dataframe()
             df_sorted = df.sort_values(by='value', ascending=False)
-            top_df = df_sorted.head(25)
+            top_df = df_sorted.head(50)
             std_dev_open = open_dataframe(r"data/"+f"{exchange}-{crypto_currency}-{time}.pkl")["open"].pct_change().std()
-            list_crypto_currency += 25 * [crypto_currency]
+            list_crypto_currency += 50 * [crypto_currency]
             list_params_x_mean += list(top_df["params_x"].values)
             list_params_y_mean += list(top_df["params_y"].values)
-            list_std_dev_open += 25 * [std_dev_open]
+            list_std_dev_open += 50 * [std_dev_open]
     
     def interpolate_colors(start_color, end_color, num_colors):
         """ Generate a gradient of colors between start_color and end_color """
@@ -52,7 +52,7 @@ if __name__ == "__main__":
 
     # Create a gradient from blue to red
     sort_list = sorted(list_crypto_currency)
-    colors = interpolate_colors('blue', 'red', len(sort_list))
+    colors = interpolate_colors('green', 'red', len(sort_list))
 
     # Create a color mapping dictionary
     name_to_color = dict(zip(sort_list, colors))
