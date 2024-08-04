@@ -179,7 +179,16 @@ class optimiser_momentum_strategy(trading_optimisation):
         simulation_df = self.strategy.compute_simulation()  # compute the simulation
         result_portfolio = simulation_df["Portfolio"].iloc[-1]
         rsi = (simulation_df[f"RSI_Portfolio/Buy_and_Hold"]).mean()
+
+        # portfolio_value = simulation_df["Portfolio"]
+        # buy_and_hold_value = simulation_df["Buy_and_Hold"]
+        # relative_portfolio_value = portfolio_value.pct_change()
+        # relative_buy_and_hold_value = buy_and_hold_value.pct_change()
+        # diff = relative_portfolio_value - relative_buy_and_hold_value
+        # value = round((diff).mean() * 100, 4)
+        # normalized_value = (value + 10) / 20  # it is between 10% and -10%
         result = result_portfolio * rsi  # calculate a result
+        # result = rsi * value
         config = copy.deepcopy(self.config)
         self.liste.append(
             [config, result, result_portfolio, rsi, create_signature(self.config)]
