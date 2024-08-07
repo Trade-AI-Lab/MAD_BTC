@@ -63,8 +63,8 @@ search_space = {
 
 def _run(config):
     algo = OptunaSearch()
-    os.makedirs("raytune", exist_ok=True)
-    os.makedirs(rf"raytune/{config['exchange']}-{config['crypto_currency']}-{config['time']}", exist_ok=True)
+    os.makedirs("experience/raytune", exist_ok=True)
+    os.makedirs(rf"experience/raytune/{config['exchange']}-{config['crypto_currency']}-{config['time']}", exist_ok=True)
     df = open_dataframe(rf"data/{config['exchange']}-{config['crypto_currency']}-{config['time']}.pkl")
     df.set_index("open_date", inplace=True)
     df.columns = [col.capitalize() for col in df.columns]

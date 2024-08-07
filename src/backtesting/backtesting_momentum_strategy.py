@@ -69,8 +69,8 @@ def launcher_backtest(trial, df,config):
 
 def _run(config):
     df = open_dataframe(rf"data/{config['exchange']}-{config['crypto_currency']}-{config['time']}.pkl")
-    os.makedirs("backtest", exist_ok=True)
-    os.makedirs(rf"backtest/{config['exchange']}-{config['crypto_currency']}-{config['time']}", exist_ok=True)
+    os.makedirs("experience/backtest", exist_ok=True)
+    os.makedirs(rf"experience/backtest/{config['exchange']}-{config['crypto_currency']}-{config['time']}", exist_ok=True)
     df.set_index("open_date")
     df.columns = [col.capitalize() for col in df.columns]
     study_name = (
