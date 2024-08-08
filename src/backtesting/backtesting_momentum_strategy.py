@@ -64,7 +64,7 @@ def launcher_backtest(trial, df,config):
     bt = Backtest(df, MaRatio, cash=1000, commission=0.1/100)
     stats = bt.run()
     if stats.loc['Buy & Hold Return [%]']< stats.loc['Return [%]']:# and stats.loc['Equity Final [$]']*2>stats.loc['Equity Peak [$]']:
-        bt.plot(open_browser=False,filename=rf"backtest/{config['exchange']}-{config['crypto_currency']}-{config['time']}/method_{config['strategy']['ratio_method']}_x_{config['strategy']['x']}_y_{config['strategy']['y']}")
+        bt.plot(open_browser=False,filename=rf"experience/backtest/{config['exchange']}-{config['crypto_currency']}-{config['time']}/method_{config['strategy']['ratio_method']}_x_{config['strategy']['x']}_y_{config['strategy']['y']}")
     return stats.loc['Equity Final [$]']
 
 def _run(config):

@@ -73,7 +73,7 @@ def launcher_backtest(trial, df,config):
     HarmoniaStrategy.config = config
     bt = Backtest(df, HarmoniaStrategy, cash=10000, commission=0.4/100)
     stats = bt.run()
-    if stats.loc['Buy & Hold Return [%]']< stats.loc['Return [%]'] and stats.loc['Equity Final [$]']*2>stats.loc['Equity Peak [$]']:
+    if stats.loc['Buy & Hold Return [%]']< stats.loc['Return [%]']: #and stats.loc['Equity Final [$]']*2>stats.loc['Equity Peak [$]']:
         filename = rf"experience/backtest/Harmonia_TP_SL/Harmonia_{config['OVER_TREND']}_{config['TRIGGER']}_{config['TP']}_{config['SL']}"
         bt.plot(open_browser=False, filename=filename, resample=False)
     return stats.loc['Equity Final [$]']
