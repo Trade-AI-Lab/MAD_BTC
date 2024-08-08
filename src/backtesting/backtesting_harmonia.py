@@ -68,8 +68,8 @@ config = {
 def launcher_backtest(trial, df,config):
     config["OVER_TREND"] = 0.01*trial.suggest_int("OVER_TREND", 21, 40)  # hyperparameters
     config["TRIGGER"] = 0.01*trial.suggest_int("TRIGGER", 1, 20)
-    config["TP"] = 0.1*trial.suggest_int("TRIGGER", 1, 50)
-    config["SL"] = 0.1*trial.suggest_int("TRIGGER", 1, 50)
+    config["TP"] = 0.1*trial.suggest_int("TP", 1, 50)
+    config["SL"] = 0.1*trial.suggest_int("SL", 1, 50)
     HarmoniaStrategy.config = config
     bt = Backtest(df, HarmoniaStrategy, cash=10000, commission=0.4/100)
     stats = bt.run()
