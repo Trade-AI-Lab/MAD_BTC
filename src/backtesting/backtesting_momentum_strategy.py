@@ -39,7 +39,7 @@ class MaRatio(Strategy):
                 self.sell()
 
 config = {
-    "crypto_currency":"ADAUSDT",
+    "crypto_currency":"ETHUSDT",
     "exchange":"binance",
     "time":"1d",
     
