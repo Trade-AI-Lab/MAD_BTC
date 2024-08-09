@@ -46,10 +46,10 @@ class HarmoniaStrategy(TrailingStrategy):
             self.bull_block = False
         elif harmonia_signal > -self.config["TRIGGER"]:
             self.bear_block = False
-        if harmonia_signal > self.config["TRIGGER"] and not self.bull_block and not self.position.is_long and self.rsi[-1]<40:
+        if harmonia_signal > self.config["TRIGGER"] and not self.bull_block and not self.position.is_long and self.rsi[-1]<self.config["RSI_SEUIL"]:
             self.position.close()
             self.buy()
-        elif harmonia_signal < -self.config["TRIGGER"] and not self.bear_block and not self.position.is_short and self.rsi[-1]>60:
+        elif harmonia_signal < -self.config["TRIGGER"] and not self.bear_block and not self.position.is_short and self.rsi[-1]>100-self.config["RSI_SEUIL"]:
             self.position.close()
             self.sell()
 """
@@ -77,18 +77,20 @@ config = {
     "TP":1,
     "SL":1,
     "RSI":10,
+    "RSI_SEUIL":20,
 }
 def launcher_backtest(trial, df,config):
     config["OVER_TREND"] = 0.01*trial.suggest_int("OVER_TREND", 21, 40)  # hyperparameters
     config["TRIGGER"] = 0.01*trial.suggest_int("TRIGGER", 1, 20)
     config["TP"] = 0.1*trial.suggest_int("TP", 1, 50)
     config["SL"] = 0.1*trial.suggest_int("SL", 1, 50)
-    config["RSI"] = 0.1*trial.suggest_int("RSI", 1, 50)
+    config["RSI"] = trial.suggest_int("RSI", 1, 50)
+    config["RSI_SEUIL"] = trial.suggest_categorical("RSI_SEUIL",[15,20,25,30,35,40])
     HarmoniaStrategy.config = config
     bt = Backtest(df, HarmoniaStrategy, cash=10000, commission=0.4/100)
     stats = bt.run()
     if stats.loc['Buy & Hold Return [%]']< stats.loc['Return [%]']: #and stats.loc['Equity Final [$]']*2>stats.loc['Equity Peak [$]']:
-        filename = rf"experience/backtest/Harmonia_TP_SL_RSI/Harmonia_{config['OVER_TREND']}_{config['TRIGGER']}_{config['TP']}_{config['SL']}_{config['RSI']}"
+        filename = rf"experience/Harmonia_TP_SL_RSI/Harmonia_{config['OVER_TREND']}_{config['TRIGGER']}_{config['TP']}_{config['SL']}_{config['RSI']}_{config['RSI_SEUIL']}"
         bt.plot(open_browser=False, filename=filename, resample=False)
     return stats.loc['Equity Final [$]']
 
@@ -108,8 +110,7 @@ def _run(config):
     df.set_index("Date", inplace=True)
     df = df.fillna(method='ffill')  # Forward fill NaNs
     
-    os.makedirs("experience/backtest_Harmonia", exist_ok=True)
-    os.makedirs("experience/Harmonia_TP_SL_RSI/Harmonia_TP_SL", exist_ok=True)
+    os.makedirs("experience/Harmonia_TP_SL_RSI", exist_ok=True)
    
     study_name = (
         "study"
