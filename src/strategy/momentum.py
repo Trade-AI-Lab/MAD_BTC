@@ -119,3 +119,47 @@ class indicator_momentum:
         dema_x = tema(data[column_name], period=x)
         dema_y = tema(data[column_name], period=y)
         return dema_x / dema_y
+    
+    @staticmethod
+    def general_ema_ratio(data: pd.DataFrame, x: int, y: int, order_x =3, order_y=3, column_name: str = "open") -> pd.Series:
+        def general_ema(data, order, period):
+            list_ema = [data]
+            final_ema = 0
+
+            for i in range(1, order + 1):
+                # Determine the coefficient based on the order and iteration
+                if i == 1:
+                    coeff = order
+                elif i == order:
+                    coeff = 1 if order % 2 == 1 else -1
+                else:
+                    coeff = (-2 * (order - i) - 1) if i % 2 == 0 else (2 * (order - i) + 1)
+                
+                # Calculate EMA and append to the list
+                ema_value = EMAIndicator(list_ema[-1], window=period).ema_indicator()
+                list_ema.append(ema_value)
+                
+                # Update final EMA
+                final_ema += coeff * ema_value
+
+            return final_ema
+        general_ema_x = general_ema(data[column_name], order=order_x, period=x)
+        general_ema_y = general_ema(data[column_name], order=order_y, period=y)
+        return general_ema_x / general_ema_y
+"""  
+if __name__=="__main__":
+    import pandas as pd
+    df = pd.read_csv(r"data\harmonia-20.1-82-2022-market-23months.csv.zip")
+    import plotly.graph_objs as go
+    period = 10
+    order = 6
+    list_trace = []
+    for i in range(1,order):
+        list_trace.append(go.Scatter(x=df['open_date'], y=indicator_momentum.general_ema(data=df["open_price"],order=i,period=period), mode='lines', name=f'Open Price EMA_{i}_{period}'))
+    list_trace.append(go.Scatter(x=df['open_date'], y=df["open_price"], mode='lines', name='Open Price'))
+    list_trace.append(go.Scatter(x=df['open_date'], y=df["high"], mode='lines', name='High'))
+    list_trace.append(go.Scatter(x=df['open_date'], y=df["low"], mode='lines', name='Low'))
+    fig = go.Figure(data=list_trace)
+    fig.update_layout(title='Open Price and TEMA over Time', xaxis_title='Time', yaxis_title='Price')
+    fig.show()
+"""
