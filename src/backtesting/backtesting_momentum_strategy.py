@@ -11,11 +11,12 @@ from src.strategy.momentum import indicator_momentum
 from src.utils.utils_df import open_dataframe
 
 def function(df,config):
-    return (getattr(
-            indicator_momentum, config["strategy"]["ratio_method"]
-        )(df, config["strategy"]["x"], config["strategy"]["y"], column_name="Open")-1).values
+    return (indicator_momentum.general_ema_ratio(data=df,x = config["strategy"]["x"], 
+                                                 y=config["strategy"]["y"], column_name="Open", 
+                                                 order_x = config['strategy']['order_x'],order_y = config['strategy']['order_y'])-1).values
     
-class MaRatio(Strategy):
+    
+class GeneralEMaRatio(Strategy):
     config = {
     }
     def init(self):
@@ -41,12 +42,14 @@ class MaRatio(Strategy):
 config = {
     "crypto_currency":"ETHUSDT",
     "exchange":"binance",
-    "time":"1d",
+    "time":"1h",
     
         "strategy": {
-            "ratio_method": "ema_ratio",  # Ensure this method exists in indicator_momentum
+            "ratio_method": "general_ema_ratio",  # Ensure this method exists in indicator_momentum
             "x": 4,
             "y": 85,
+            "order_x":5,
+            "order_y":5,
             "name":"momentum",
         }
     }
@@ -54,17 +57,17 @@ config = {
 def launcher_backtest(trial, df,config):
     config["strategy"]["x"] = trial.suggest_int("x", 1, 34)  # hyperparameters
     config["strategy"]["y"] = trial.suggest_int(
-        "y", 35, 120
+        "y", 35, 250
     )  # hyperparameters
-    config["strategy"]["ratio_method"] = trial.suggest_categorical(
-        "ratio_method",
-        ["ma_ratio", "ema_ratio", "zlema_ratio", "dema_ratio", "tema_ratio"],
-    )
-    MaRatio.config = config
-    bt = Backtest(df, MaRatio, cash=1000, commission=0.1/100)
+    config["strategy"]["order_x"] = trial.suggest_int(
+        "order_x", 1,10)
+    config["strategy"]["order_y"] = trial.suggest_int(
+        "order_y", 1,10)
+    GeneralEMaRatio.config = config
+    bt = Backtest(df, GeneralEMaRatio, cash=1000, commission=0.1/100)
     stats = bt.run()
-    if stats.loc['Buy & Hold Return [%]']< stats.loc['Return [%]']:# and stats.loc['Equity Final [$]']*2>stats.loc['Equity Peak [$]']:
-        bt.plot(open_browser=False,filename=rf"experience/backtest/{config['exchange']}-{config['crypto_currency']}-{config['time']}/method_{config['strategy']['ratio_method']}_x_{config['strategy']['x']}_y_{config['strategy']['y']}")
+    if stats.loc['Buy & Hold Return [%]']< stats.loc['Return [%]'] and stats.loc['Equity Final [$]']*2>stats.loc['Equity Peak [$]']:
+        bt.plot(open_browser=False,filename=rf"experience/backtest/{config['exchange']}-{config['crypto_currency']}-{config['time']}/method_{config['strategy']['ratio_method']}_x_{config['strategy']['x']}_y_{config['strategy']['y']}_orderx_{config['strategy']['order_x']}_ordery_{config['strategy']['order_y']}")
     return stats.loc['Equity Final [$]']
 
 def _run(config):
@@ -81,7 +84,7 @@ def _run(config):
     study = optuna.create_study(
         storage_name,
         sampler=optuna.samplers.TPESampler(
-            multivariate=True, group=True, constant_liar=True, n_startup_trials=150
+            multivariate=True, group=True, constant_liar=True, n_startup_trials=100
         ),
         study_name=study_name,
         direction="maximize",
