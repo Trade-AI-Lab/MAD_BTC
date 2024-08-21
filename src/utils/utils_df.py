@@ -48,14 +48,6 @@ def open_dataframe(PATH: str, light: bool = False) -> pd.DataFrame:
     elif light:
         print("Time is  continuous based on the 'open_date' column.")
 
-    # Step 2: Map open_date to timestamps
-    timestamp_s = df["open_date"].map(pd.Timestamp.timestamp)
-
-    day = 24 * 60 * 60
-    week = 7 * day
-    df["sin_weekly"] = np.sin(timestamp_s * (2 * np.pi / week))
-    df["sin_daily"] = np.sin(timestamp_s * (2 * np.pi / day))
-    return df
     return df
 
 
