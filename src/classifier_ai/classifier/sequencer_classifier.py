@@ -54,20 +54,35 @@ class DatasetCreator(Dataset):
         )
         self.window_size = config["window_size"]
         self.data_df = open_dataframe(self.path_data)
+        self.dt = self.data_df["open_date"].diff().iloc[1]
+        
         self.list_strategies = [
             strategy
             for strategy in os.listdir(self.path_momentum_strategy)
             if "." not in strategy
         ]
-        self.dt = self.data_df["open_date"].diff().iloc[1]
+        
         self.nb_first_stats = int(
             self.config["nb_first_strats"] * len(self.list_strategies)
         )
         self.nb_last_strats = int(
             self.config["nb_last_strats"] * len(self.list_strategies)
         )
+        
         self.features = self.config["features"]
+        
+        full_date_range = pd.date_range(start=self.data_df["open_date"].min(), end=self.data_df["open_date"].max(), freq=self.dt)
+        full_date_df = pd.DataFrame({'open_date': full_date_range})
+        # Forward fill the missing values
+        self.data_df = pd.merge(full_date_df, self.data_df, on='open_date', how='left')
+        self.data_df = self.data_df.ffill()
         self.create_dict_df()
+        timestamp_s = self.data_df["open_date"].map(pd.Timestamp.timestamp)
+
+        day = 24 * 60 * 60
+        week = 7 * day
+        self.data_df["sin_weekly"] = np.sin(timestamp_s * (2 * np.pi / week))
+        self.data_df["sin_daily"] = np.sin(timestamp_s * (2 * np.pi / day))
         self.normalizer_tool = complex_fct_normalizer()
         self.data_df.set_index('open_date', inplace=True)
 
