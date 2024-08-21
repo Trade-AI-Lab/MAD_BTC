@@ -40,20 +40,7 @@ class GeneralEMaRatio(Strategy):
             elif self.ratio<=0:
                 self.sell()
 
-config = {
-    "crypto_currency":"ETHUSDT",
-    "exchange":"binance",
-    "time":"1h",
-    
-        "strategy": {
-            "ratio_method": "general_ema_ratio",  # Ensure this method exists in indicator_momentum
-            "x": 4,
-            "y": 85,
-            "order_x":5,
-            "order_y":5,
-            "name":"momentum",
-        }
-    }
+
 
 def launcher_backtest(trial, df,config):
     config["strategy"]["x"] = trial.suggest_int("x", 1, 34)  # hyperparameters
@@ -65,11 +52,11 @@ def launcher_backtest(trial, df,config):
     config["strategy"]["order_y"] = trial.suggest_int(
         "order_y", 1,10)
     GeneralEMaRatio.config = config
-    bt = Backtest(df, GeneralEMaRatio, cash=1000, commission=0.1/100)
+    bt = Backtest(df, GeneralEMaRatio, cash=100000, commission=0.1/100)
     stats = bt.run()
     if stats.loc['Buy & Hold Return [%]']< stats.loc['Return [%]'] and stats.loc['Equity Final [$]']*2>stats.loc['Equity Peak [$]']:
         bt.plot(open_browser=False,filename=rf"experience/backtest/{config['exchange']}-{config['crypto_currency']}-{config['time']}/method_{config['strategy']['ratio_method']}_x_{config['strategy']['x']}_y_{config['strategy']['y']}_orderx_{config['strategy']['order_x']}_ordery_{config['strategy']['order_y']}")
-    return np.log(stats.loc['Return [%]']/stats.loc['Buy & Hold Return [%]'])*1/(1+np.exp(-stats.loc["Max. Drawdown [%]"]))
+    return (stats.loc['Return [%]']-stats.loc['Buy & Hold Return [%]'])/stats.loc['Buy & Hold Return [%]']*100*1/(1+np.exp(-stats.loc['Max. Drawdown [%]']/100))
 
 def _run(config):
     df = open_dataframe(rf"data/{config['exchange']}-{config['crypto_currency']}-{config['time']}.pkl")
@@ -94,4 +81,49 @@ def _run(config):
     study.optimize(
         lambda trial, : launcher_backtest(trial, df, config), n_trials=300
     )
-_run(config)
+config = {
+    "crypto_currency":"BNBUSDT",
+    "exchange":"binance",
+    "time":"15m",
+    
+        "strategy": {
+            "ratio_method": "general_ema_ratio",  # Ensure this method exists in indicator_momentum
+            "x": 4,
+            "y": 85,
+            "order_x":5,
+            "order_y":5,
+            "name":"momentum",
+        }
+    }
+
+list_cryptocurrencies = ["MATICUSDT","OCEANUSDT","TRXUSDT","XRPUSDT"]
+for crypto_currency in list_cryptocurrencies:
+    config["crypto_currency"] = crypto_currency
+    _run(config)
+"""
+if __name__=="__main__":
+    config = {
+    "crypto_currency":"BTCUSDT",
+    "exchange":"binance",
+    "time":"4h",
+    
+        "strategy": {
+            "ratio_method": "general_ema_ratio",  # Ensure this method exists in indicator_momentum
+            "x": 14,
+            "y": 78,
+            "order_x":1,
+            "order_y":1,
+            "name":"momentum",
+        }
+    }
+    df = open_dataframe(rf"data/{config['exchange']}-{config['crypto_currency']}-{config['time']}.pkl")
+    os.makedirs("experience/backtest", exist_ok=True)
+    os.makedirs(rf"experience/backtest/{config['exchange']}-{config['crypto_currency']}-{config['time']}", exist_ok=True)
+    df.set_index("open_date")
+    df.columns = [col.capitalize() for col in df.columns]
+    GeneralEMaRatio.config = config
+    bt = Backtest(df, GeneralEMaRatio, cash=100000, commission=0.1/100)
+    stats = bt.run()
+    print(stats)
+    bt.plot(open_browser=True,resample=False)
+"""

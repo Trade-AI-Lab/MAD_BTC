@@ -59,10 +59,8 @@ class ModuleModel(pl.LightningModule):
         train_all_targets = self.training_step_targets
         f1_macro_epoch = f1_score(train_all_outputs, train_all_targets, average='macro')
         precision_score_epoch = precision_score(train_all_outputs, train_all_targets, average='macro')
-        recall_score_epoch = recall_score(train_all_outputs, train_all_targets, average='macro')
         self.log("training_f1_epoch", f1_macro_epoch, on_step=False, on_epoch=True, prog_bar=True)
         self.log("precision_score_epoch", precision_score_epoch, on_step=False, on_epoch=True, prog_bar=True)
-        self.log("recall_score_epoch", recall_score_epoch, on_step=False, on_epoch=True, prog_bar=True)
 
 
         # free up the memory
@@ -81,10 +79,8 @@ class ModuleModel(pl.LightningModule):
 
         val_f1_macro_epoch = f1_score(val_all_outputs, val_all_targets, average='macro')
         val_precision_score_epoch = precision_score(val_all_outputs, val_all_targets, average='macro')
-        val_recall_score_epoch = recall_score(val_all_outputs, val_all_targets, average='macro')
         self.log("val_f1_epoch", val_f1_macro_epoch, on_step=False, on_epoch=True, prog_bar=True)
         self.log("val_precision_score_epoch", val_precision_score_epoch, on_step=False, on_epoch=True, prog_bar=True)
-        self.log("val_recall_score_epoch", val_recall_score_epoch, on_step=False, on_epoch=True, prog_bar=True)
 
 
         # free up the memory
