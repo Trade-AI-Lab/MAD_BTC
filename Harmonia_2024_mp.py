@@ -134,27 +134,35 @@ def process_config(args):
     if cumulative_percentage > 0:
         return monthly_returns.index.to_timestamp(), monthly_returns.values, config
     return None
+def main():
+    hours = 8  # example time limit in hours
 
-hours = 8  # example time limit in hours
+    # Create a list of all combinations of tp_value and sl_value
+    args_list = [(tp_value / 100, sl_value / 1000, df, hours) for tp_value in range(1, 35) for sl_value in range(1, 35)]
 
-# Create a list of all combinations of tp_value and sl_value
-args_list = [(tp_value / 100, sl_value / 1000, df, hours) for tp_value in range(1, 35) for sl_value in range(1, 35)]
+    # Create a pool of processes
+    with mp.Pool(mp.cpu_count()) as pool:
+        results = pool.map(process_config, args_list)
+        
+    fig = go.Figure()
+    # Process the results
+    for result in results:
+        if result is not None:
+            x_values, y_values, config = result
+            fig.add_trace(go.Scatter(
+                x=x_values, 
+                y=y_values, 
+                mode='lines+markers', 
+                name=f"TP_{config['TP']} ,SL_{config['SL']} ,Trigger_{config['TRIGGER']} ,OverTrend_{config['OVER_TREND']} Cumulative Return"
+            ))
 
-# Create a pool of processes
-with mp.Pool(mp.cpu_count()) as pool:
-    results = pool.map(process_config, args_list)
+    fig.update_layout(title='Cumulative Return per Month',
+                        xaxis_title='Month',
+                        yaxis_title='Cumulative Return (%)',
+                        xaxis=dict(type='date'),
+                        yaxis=dict(title='Cumulative Return (%)'),
+                        template='plotly_dark')
+    fig.show("browser")
     
-fig = go.Figure()
-# Process the results
-for result in results:
-    if result is not None:
-        x_values, y_values, config = result
-        fig.add_trace(go.Scatter(x=x_values, y=y_values, mode='lines+markers', name=f'TP_{config['TP']} ,SL_{config['SL']} ,Trigger_{config['Trigger']} , OverTrend_{config['OverTrend']} Cumulative Return'))
-
-fig.update_layout(title='Cumulative Return per Month',
-                    xaxis_title='Month',
-                    yaxis_title='Cumulative Return (%)',
-                    xaxis=dict(type='date'),
-                    yaxis=dict(title='Cumulative Return (%)'),
-                    template='plotly_dark')
-fig.show()
+if __name__ == '__main__':
+    main()
