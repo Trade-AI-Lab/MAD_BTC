@@ -22,9 +22,7 @@ def _backtesting_process(config, df, saved=False):
     # Initialize variables
     positions = []
     trades = []
-    percentage_returns = [0]  # Start with 0% return
-    date_history = []
-
+    print("Begin")
     def save(index, price, position, trades):
         position['status'] = 'closed'
         position['exit_time'] = index
@@ -111,10 +109,11 @@ def _backtesting_process(config, df, saved=False):
         trade_df.to_csv(f"trades_harmonia_automatic_tp_{config['TP']}_sl_{config['SL']}_TRIGGER_{config['TRIGGER']}_OVERTREND_{config['OVER_TREND']}_TIMELIMIT_{hours}h_trading_comission_{commission}.csv")
     trade_df['date'] = pd.to_datetime(trade_df['trade_entry_time'])
     trade_df['month'] = trade_df['date'].dt.to_period('M')
-
     # Calculate cumulative returns per month
     monthly_returns = trade_df.groupby('month')['trade_return'].sum().cumsum()
-    return trade_df, monthly_returns, cumulative_percentage
+    print("End")
+    del trade_df
+    return monthly_returns, cumulative_percentage
 
 import plotly.graph_objects as go
 import multiprocessing as mp
@@ -130,7 +129,7 @@ def process_config(args):
         "OVER_TREND": sl_value * 100,
         "TIME_LIMIT": datetime.timedelta(hours=hours).total_seconds()  # Time limit of 8 hours in seconds
     }
-    trade_df, monthly_returns, cumulative_percentage = _backtesting_process(config, df)
+    monthly_returns, cumulative_percentage = _backtesting_process(config, df)
     if cumulative_percentage > 0:
         return monthly_returns.index.to_timestamp(), monthly_returns.values, config
     return None
@@ -144,7 +143,7 @@ def main():
     # Create a pool of processes
     with mp.Pool(mp.cpu_count()) as pool:
         results = pool.map(process_config, args_list)
-        print("Done")
+        
     fig = go.Figure()
     # Process the results
     for result in results:
