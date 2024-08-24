@@ -18,7 +18,7 @@ hours  = 8
 commission = 0.01/100
 
 
-def _backtesting_process(config, df, saved:False):
+def _backtesting_process(config, df, saved=False):
     # Initialize variables
     positions = []
     trades = []
@@ -134,6 +134,7 @@ def process_config(args):
     if cumulative_percentage > 0:
         return monthly_returns.index.to_timestamp(), monthly_returns.values, config
     return None
+
 def main():
     hours = 8  # example time limit in hours
 
@@ -143,7 +144,7 @@ def main():
     # Create a pool of processes
     with mp.Pool(mp.cpu_count()) as pool:
         results = pool.map(process_config, args_list)
-        
+        print("Done")
     fig = go.Figure()
     # Process the results
     for result in results:
