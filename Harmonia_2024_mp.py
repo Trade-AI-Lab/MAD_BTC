@@ -82,6 +82,11 @@ def _backtesting_process(config, df, saved=False):
                 'tp': tp,
                 'status': 'open'
             })
+    if not trades:
+        print("End")
+        # If no trades were made, return empty results
+        return pd.Series(dtype='float64'), 0
+    
     trade_data = []
     cumulative_percentage = 0
 
@@ -103,7 +108,7 @@ def _backtesting_process(config, df, saved=False):
                     }
             )
         
-
+    
     trade_df = pd.DataFrame(trade_data)
     if saved:
         trade_df.to_csv(f"trades_harmonia_automatic_tp_{config['TP']}_sl_{config['SL']}_TRIGGER_{config['TRIGGER']}_OVERTREND_{config['OVER_TREND']}_TIMELIMIT_{hours}h_trading_comission_{commission}.csv")
@@ -131,7 +136,7 @@ def process_config(args):
     }
     monthly_returns, cumulative_percentage = _backtesting_process(config, df)
     if cumulative_percentage > 0:
-        return monthly_returns.index.to_timestamp(), monthly_returns.values, config
+        return monthly_returns.index.to_timestamp(), monthly_returns.values, config, cumulative_percentage
     return None
 
 def main():
@@ -148,7 +153,8 @@ def main():
     # Process the results
     for result in results:
         if result is not None:
-            x_values, y_values, config = result
+            x_values, y_values, config, cumulative_percentage = result
+            print(f"Cumulative Percentage Returns:{cumulative_percentage}")
             fig.add_trace(go.Scatter(
                 x=x_values, 
                 y=y_values, 

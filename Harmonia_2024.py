@@ -14,7 +14,7 @@ df.rename(columns={
 
 
 
-def _backtesting_process(config, df, saved=False):
+def _backtesting_process(config, df, saved=True):
     # Initialize variables
     positions = []
     trades = []
@@ -96,6 +96,8 @@ def _backtesting_process(config, df, saved=False):
             {
                 'trade_entry_time': trade['entry_time'],
                 "trade_return":trade_return,
+                "entry_price": trade['entry_price'],
+                "exit_price":trade['exit_price'],
                 "trade_type":trade['type'],
                 "trade_exit_time":trade['exit_time'],
                 "trade_tp":trade["tp"],
@@ -171,7 +173,7 @@ def plot_one_backtest(hours:int, commission:float, config:dict):
 
 if __name__=="__main__":
     hours  = 8
-    commission = 0 #0.01/100
+    commission = 0.01/100 #0.01/100
     config = {
         "TP": 0.01,   # Take Profit (1%)
         "SL": 0.002,  # Stop Loss (0.5%)
