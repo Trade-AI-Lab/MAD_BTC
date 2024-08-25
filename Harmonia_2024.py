@@ -114,7 +114,27 @@ def _backtesting_process(config, df, saved=False):
     monthly_returns = trade_df.groupby('month')['trade_return'].sum().cumsum()
     return monthly_returns, cumulative_percentage, trade_df
 
-if __name__=="__main__":
+def process_config(args):
+    tp_value, sl_value, trigger, overtrend, df, hours = args
+    # Example configuration
+    config = {
+        "TP": tp_value,   # Take Profit (1%)
+        "SL": sl_value,  # Stop Loss (0.5%)
+        "TRIGGER": trigger,
+        "OVER_TREND": overtrend,
+        "TIME_LIMIT": datetime.timedelta(hours=hours).total_seconds()  # Time limit of 8 hours in seconds
+    }
+    monthly_returns, cumulative_percentage, trade_df = _backtesting_process(config, df)
+    if cumulative_percentage > 0:
+        del trade_df
+        return monthly_returns.index.to_timestamp(), monthly_returns.values, config, cumulative_percentage
+    return None
+
+def plot_one_backtest(hours:int, commission:float, config:dict):
+    """
+    plot_one_backtest _summary_
+    
+    Example:
     hours  = 8
     commission = 0.01/100
     config = {
@@ -124,6 +144,13 @@ if __name__=="__main__":
         "OVER_TREND": 0.3,
         "TIME_LIMIT": datetime.timedelta(hours=hours).total_seconds()  # Time limit of 8 hours in seconds
     }
+    plot_one_backtest(hours, commission, config)
+
+    Args:
+        hours (int): window size before we end the trade
+        commission (float): comission is broker dependant
+        config (dict): dictionnary containing the configuration of the strategy
+    """
     import plotly.graph_objects as go
     fig = go.Figure()
     monthly_returns, cumulative_percentage, trade_df = _backtesting_process(config, df, True)
@@ -134,10 +161,22 @@ if __name__=="__main__":
         mode='lines+markers', 
         name=f"TP_{config['TP']} ,SL_{config['SL']} ,Trigger_{config['TRIGGER']} ,OverTrend_{config['OVER_TREND']} Cumulative Return"
     ))
-    fig.update_layout(title='Cumulative Return per Month',
+    fig.update_layout(title=f"Cumulative Return per Week, TP_{config['TP']} ,SL_{config['SL']} ,Trigger_{config['TRIGGER']} ,OverTrend_{config['OVER_TREND']}, Commission_{commission}, Time duration max_{hours}h",
                         xaxis_title='Month',
                         yaxis_title='Cumulative Return (%)',
                         xaxis=dict(type='date'),
                         yaxis=dict(title='Cumulative Return (%)'),
                         template='plotly_dark')
     fig.show("browser")
+
+if __name__=="__main__":
+    hours  = 8
+    commission = 0 #0.01/100
+    config = {
+        "TP": 0.01,   # Take Profit (1%)
+        "SL": 0.002,  # Stop Loss (0.5%)
+        "TRIGGER": 0.1,
+        "OVER_TREND": 0.3,
+        "TIME_LIMIT": datetime.timedelta(hours=hours).total_seconds()  # Time limit of 8 hours in seconds
+    }
+    plot_one_backtest(hours, commission, config)
