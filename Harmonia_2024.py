@@ -3,14 +3,47 @@ import numpy as np
 import datetime
 import matplotlib.pyplot as plt
 df = pd.read_csv("https://github.com/blockhain-elite-labs/harmonia-v20.1-82-backtests/raw/main/harmonia-20.1-82-2024-market-9months.zip")
+
 print(df.columns)
 df["open_date"] = pd.to_datetime(df["open_date"])
+
+one_min_delay = False
+if one_min_delay:
+    offset_time = '1min'
+    df_1min = pd.read_csv(r"D:\ressources_v3\2_READY_candles\BINANCE-ONLY\1m\ETHUSDT-1m-without-aggr.zip")
+    df_1min["open_date"] = pd.to_datetime(df_1min["open_date"])
+    max_date = "2024-06-28 00:00:00"
+    min_date = df["open_date"].iloc[0]
+    df_1min = df_1min[(df_1min["open_date"]<=max_date) & (df_1min["open_date"]>=min_date)]
+    df_1min = df_1min.reset_index(drop=True)
+    df_1min.set_index('open_date', inplace=True)
+    # Resample and aggregate the required columns with an offset
+    df_5min = df_1min.resample('5T', offset=offset_time).agg({
+        'open_price': 'first',  # First value in the 5-minute window
+        'high': 'max',          # Maximum value in the 5-minute window
+        'low': 'min',           # Minimum value in the 5-minute window
+        'close': 'last',        # Last value in the 5-minute window
+        # Add more columns and aggregation methods if necessary
+    })
+    del df_1min
+    df_5min.reset_index(inplace=True)
+    df_5min = df_5min[(df_5min["open_date"]<=max_date) & (df_5min["open_date"]>min_date)]
+    df_5min = df_5min[['open_date', 'open_price', 'high', 'low', 'close']]
+    df = df[(df["open_date"]<max_date) & (df["open_date"]>=min_date)]
+    df_5min.reset_index(inplace=True)
+    df.reset_index(inplace=True)
+    df_5min["harmonia_prediction"] = df["harmonia_prediction"]
+    
+if one_min_delay:
+    df = df_5min.copy() 
+    del df_5min 
 df.rename(columns={"harmonia_prediction":"harmonia_prediction_2024"}, inplace=True)
 df = df.set_index("open_date")
 df.columns = [col.capitalize() for col in df.columns]
 df.rename(columns={
     "Open_price": "Open"
 }, inplace=True)
+
 
 
 
