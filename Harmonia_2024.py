@@ -6,6 +6,8 @@ df = pd.read_csv("https://github.com/blockhain-elite-labs/harmonia-v20.1-82-back
 
 print(df.columns)
 df["open_date"] = pd.to_datetime(df["open_date"])
+# Améliorer la stratégie par exemple en phase haussière éviter de prendre des shorts (Utiliser des EMA)
+# Faire belle présentation, améliorer Notebook (sexy) rendre ergonomique qu'ils trouvent eux-mêmes!
 
 one_min_delay = False
 if one_min_delay:
@@ -206,11 +208,11 @@ def plot_one_backtest(hours:int, commission:float, config:dict):
 
 if __name__=="__main__":
     hours  = 8
-    commission = 0.01/100 #0.01/100
+    commission = 0.01/100
     config = {
         "TP": 0.01,   # Take Profit (1%)
-        "SL": 0.002,  # Stop Loss (0.5%)
-        "TRIGGER": 0.1,
+        "SL": 0.005,  # Stop Loss (0.5%)
+        "TRIGGER": 0.14,
         "OVER_TREND": 0.3,
         "TIME_LIMIT": datetime.timedelta(hours=hours).total_seconds()  # Time limit of 8 hours in seconds
     }
