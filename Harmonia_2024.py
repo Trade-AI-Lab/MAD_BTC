@@ -258,7 +258,7 @@ def main():
     
     
     # Create a list of all combinations of tp_value and sl_value
-    args_list = [tp_value,sl_value,trigger,overtrend_value,hours_value,ema_period_value]
+    args_list = [ (tp,sl,tr,overtrend, hours,period_value) for tp in tp_value for sl in sl_value for tr in trigger for overtrend in overtrend_value for hours in hours_value for period_value in ema_period_value]
 
     # Create a pool of processes
     with mp.Pool(mp.cpu_count()) as pool:
