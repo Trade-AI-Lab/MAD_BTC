@@ -287,3 +287,4 @@ if __name__=="__main__":
         "SAVED":False
     }
     plot_one_backtest(hours, commission, config)
+    main()
