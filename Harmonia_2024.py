@@ -61,7 +61,7 @@ def _backtesting_process(config, df):
     trades = []
     saved = config["SAVED"] if "SAVED" in config.keys() else False
     ema_column = build_ema(df, "Open", config["EMA"]["period"]) if config["EMA"]["period"]>0 else False
-    
+    commission = config["comission"]
         
     def save(index, price, position, trades):
         position['status'] = 'closed'
@@ -200,6 +200,7 @@ def process_config(args):
             "period":period
             },# Time limit of 8 hours in seconds
         "SAVED":False,
+        "comission":0.01/100
     }
     monthly_returns, cumulative_percentage, trade_df = _backtesting_process(config, df)
     if cumulative_percentage > 0:
@@ -284,7 +285,8 @@ if __name__=="__main__":
         "EMA":{
             "period":0,
         },
-        "SAVED":False
+        "SAVED":False,
+        "comission":commission
     }
     plot_one_backtest(hours, commission, config)
     main()
