@@ -152,7 +152,7 @@ def _backtesting_process(config, df):
                 pass
     if not trades:
         # If no trades were made, return empty results
-        return pd.Series(dtype='float64'), 0
+        return pd.Series(dtype='float64'), 0, pd.Series(dtype='float64'), config
     
     trade_data = []
     cumulative_percentage = 0
@@ -185,7 +185,7 @@ def _backtesting_process(config, df):
     trade_df['month'] = trade_df['date'].dt.to_period('W')
     # Calculate cumulative returns per month
     monthly_returns = trade_df.groupby('month')['trade_return'].sum().cumsum()
-    return monthly_returns, cumulative_percentage, trade_df
+    return monthly_returns, cumulative_percentage, trade_df, config
 
 def process_config(args):
     tp_value, sl_value, trigger, overtrend, hours, period = args
@@ -202,7 +202,7 @@ def process_config(args):
         "SAVED":False,
         "comission":0.01/100
     }
-    monthly_returns, cumulative_percentage, trade_df = _backtesting_process(config, df)
+    monthly_returns, cumulative_percentage, trade_df, config = _backtesting_process(config, df)
     if cumulative_percentage > 0:
         del trade_df
         return monthly_returns.index.to_timestamp(), monthly_returns.values, config, cumulative_percentage
@@ -252,10 +252,10 @@ def main():
     import multiprocessing as mp
     tp_value = [0.001,0.0025,0.005,0.01,0.015,0.02,0.03,0.04]
     sl_value = [0.001,0.002,0.005,0.0075, 0.01, 0.015]
-    trigger = [0.05, 0.06, 0.07, 0.08, 0.09, 0.1, 0.11, 0.12, 0.13, 0.14]
-    overtrend_value = [0.15,0.16,0.17,0.18,0.19,0.20,0.21,0.22,0.23,0.24,0.25,0.26,0.27,0.28,0.29,0.3]
+    trigger = [0.05, 0.08, 0.1, 0.11, 0.12, 0.13, 0.14]
+    overtrend_value = [0.15,0.16,0.17,0.18,0.19,0.20,0.22,0.24,0.26,0.28,0.3]
     hours_value = [2,4,6,8]
-    ema_period_value = [0,1,5,10,20,25,30,35,40,45,50]
+    ema_period_value = [0,1,5,30,50]
     
     
     # Create a list of all combinations of tp_value and sl_value
@@ -267,7 +267,7 @@ def main():
     list_config = []
     for result in results:
         if result is not None:
-            monthly_returns_timestamp, monthly_returns_values, config, cumulative_percentage = results
+            _, cumulative_percentage, _, config = results
             config["cumulative_percentage"] = cumulative_percentage
             list_config.append(config)
     df = pd.DataFrame(list_config)
@@ -288,5 +288,5 @@ if __name__=="__main__":
         "SAVED":False,
         "comission":commission
     }
-    plot_one_backtest(hours, commission, config)
+    #plot_one_backtest(hours, commission, config)
     main()
