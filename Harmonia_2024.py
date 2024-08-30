@@ -226,10 +226,9 @@ def plot_one_backtest(hours:int, commission:float, config:dict):
         commission (float): comission is broker dependant
         config (dict): dictionnary containing the configuration of the strategy
     """
-    raise "Error, you have to change _backtesing_process"
     import plotly.graph_objects as go
     fig = go.Figure()
-    monthly_returns, cumulative_percentage, trade_df = _backtesting_process(config, df)
+    monthly_returns, cumulative_percentage, trade_df, config = _backtesting_process(config, df)
     print(f"Cumulative Percentage Returns:{cumulative_percentage}")
     print(f"Nombre de Trades:{len(trade_df)}")
     fig.add_trace(go.Scatter(
