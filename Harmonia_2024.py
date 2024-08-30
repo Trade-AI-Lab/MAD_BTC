@@ -202,11 +202,8 @@ def process_config(args):
         "SAVED":False,
         "comission":0.01/100
     }
-    monthly_returns, cumulative_percentage, trade_df, config = _backtesting_process(config, df)
-    if cumulative_percentage > 0:
-        del trade_df
-        return monthly_returns.index.to_timestamp(), monthly_returns.values, config, cumulative_percentage
-    return None
+    return _backtesting_process(config, df)
+    
 
 def plot_one_backtest(hours:int, commission:float, config:dict):
     """
@@ -229,6 +226,7 @@ def plot_one_backtest(hours:int, commission:float, config:dict):
         commission (float): comission is broker dependant
         config (dict): dictionnary containing the configuration of the strategy
     """
+    raise "Error, you have to change _backtesing_process"
     import plotly.graph_objects as go
     fig = go.Figure()
     monthly_returns, cumulative_percentage, trade_df = _backtesting_process(config, df)
@@ -250,13 +248,20 @@ def plot_one_backtest(hours:int, commission:float, config:dict):
 
 def main():
     import multiprocessing as mp
+    """
     tp_value = [0.001,0.0025,0.005,0.01,0.015,0.02,0.03,0.04]
     sl_value = [0.001,0.002,0.005,0.0075, 0.01, 0.015]
     trigger = [0.05, 0.08, 0.1, 0.11, 0.12, 0.13, 0.14]
     overtrend_value = [0.15,0.16,0.17,0.18,0.19,0.20,0.22,0.24,0.26,0.28,0.3]
     hours_value = [2,4,6,8]
     ema_period_value = [0,1,5,30,50]
-    
+    """
+    tp_value = [0.01]
+    sl_value = [0.001]
+    trigger = [0.05,0.08]
+    overtrend_value = [0.15,0.16]
+    hours_value = [2]
+    ema_period_value = [0]
     
     # Create a list of all combinations of tp_value and sl_value
     args_list = [ (tp,sl,tr,overtrend, hours,period_value) for tp in tp_value for sl in sl_value for tr in trigger for overtrend in overtrend_value for hours in hours_value for period_value in ema_period_value]
@@ -264,10 +269,11 @@ def main():
     # Create a pool of processes
     with mp.Pool(mp.cpu_count()) as pool:
         results = pool.map(process_config, args_list)
+    #results = process_config(args_list[0])
     list_config = []
     for result in results:
         if result is not None:
-            _, cumulative_percentage, _, config = results
+            _, cumulative_percentage, _, config = result
             config["cumulative_percentage"] = cumulative_percentage
             list_config.append(config)
     df = pd.DataFrame(list_config)
