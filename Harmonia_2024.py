@@ -14,7 +14,7 @@ def build_ema(df:pd.DataFrame, column_name:str, period:int)->None:
     df[ema_name] = df[column_name].ewm(span=period, adjust=False).mean()
     return ema_name
 
-one_min_delay = False
+one_min_delay = True
 
 if one_min_delay:
     offset_time = '1min'
@@ -255,11 +255,11 @@ def main():
     hours_value = [2,4,6,8]
     ema_period_value = [0,1,5,30,50]
     """
-    tp_value = [0.01]
-    sl_value = [0.001]
-    trigger = [0.05,0.08]
-    overtrend_value = [0.15,0.16]
-    hours_value = [2]
+    tp_value = [0.001,0.0025,0.005,0.01,0.02,0.03,0.04]
+    sl_value = [0.001,0.002,0.005, 0.01, 0.015]
+    trigger = [0.05, 0.08, 0.1]
+    overtrend_value = [0.15,0.2,0.3]
+    hours_value = [2, 4]
     ema_period_value = [0]
     
     # Create a list of all combinations of tp_value and sl_value
@@ -279,12 +279,12 @@ def main():
     df.to_csv("list_configs_cumulative_percentage.csv")
     
 if __name__=="__main__":
-    hours  = 8
+    hours  = 2
     commission = 0.01/100
     config = {
         "TP": 0.01,   # Take Profit (1%)
-        "SL": 0.002,  # Stop Loss (0.5%)
-        "TRIGGER": 0.1,
+        "SL": 0.001,  # Stop Loss (0.5%)
+        "TRIGGER": 0.05,
         "OVER_TREND": 0.3,
         "TIME_LIMIT": datetime.timedelta(hours=hours).total_seconds(),  # Time limit of 8 hours in seconds
         "EMA":{
@@ -293,5 +293,5 @@ if __name__=="__main__":
         "SAVED":False,
         "comission":commission
     }
-    #plot_one_backtest(hours, commission, config)
-    main()
+    plot_one_backtest(hours, commission, config)
+    # main()
