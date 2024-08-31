@@ -290,7 +290,7 @@ if __name__=="__main__":
         "EMA":{
             "period":0,
         },
-        "SAVED":False,
+        "SAVED":True,
         "comission":commission
     }
     plot_one_backtest(hours, commission, config)

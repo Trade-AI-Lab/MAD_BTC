@@ -1,11 +1,19 @@
-
 import pandas as pd
 import numpy as np
 import datetime
 import matplotlib.pyplot as plt
 df = pd.read_csv("https://github.com/blockhain-elite-labs/harmonia-v20.1-82-backtests/raw/main/harmonia-20.1-82-2024-market-9months.zip")
+
 print(df.columns)
 df["open_date"] = pd.to_datetime(df["open_date"])
+# Améliorer la stratégie par exemple en phase haussière éviter de prendre des shorts (Utiliser des EMA)
+# Faire belle présentation, améliorer Notebook (sexy) rendre ergonomique qu'ils trouvent eux-mêmes!
+
+def build_ema(df:pd.DataFrame, column_name:str, period:int)->None:
+    ema_name = f"ema_{column_name}_{period}"
+    df[ema_name] = df[column_name].ewm(span=period, adjust=False).mean()
+    return ema_name
+
 df.rename(columns={"harmonia_prediction":"harmonia_prediction_2024"}, inplace=True)
 df = df.set_index("open_date")
 df.columns = [col.capitalize() for col in df.columns]
@@ -14,15 +22,16 @@ df.rename(columns={
 }, inplace=True)
 
 
-hours  = 8
-commission = 0.01/100
 
 
-def _backtesting_process(config, df, saved=False):
+def _backtesting_process(config, df):
     # Initialize variables
     positions = []
     trades = []
-    print("Begin")
+    saved = config["SAVED"] if "SAVED" in config.keys() else False
+    ema_column = build_ema(df, "Open", config["EMA"]["period"]) if config["EMA"]["period"]>0 else False
+    commission = config["comission"]
+        
     def save(index, price, position, trades):
         position['status'] = 'closed'
         position['exit_time'] = index
@@ -35,6 +44,8 @@ def _backtesting_process(config, df, saved=False):
         high = row['High']
         low = row['Low']
         harmonia_signal = row['Harmonia_prediction_2024']
+        if ema_column:
+            ema_value = row[ema_column]
 
         # Check for open positions and update their status
         for position in positions[:]:
@@ -61,31 +72,56 @@ def _backtesting_process(config, df, saved=False):
 
         # Open new positions based on Harmonia signal
         if harmonia_signal >= config["TRIGGER"] and harmonia_signal < config["OVER_TREND"]:
-            sl = (1 - config["SL"]) * price
-            tp = (1 + config["TP"]) * price
-            positions.append({
-                'type': 'long',
-                'entry_time': index,
-                'entry_price': price,
-                'sl': sl,
-                'tp': tp,
-                'status': 'open'
-            })
+            if not ema_column:
+                sl = (1 - config["SL"]) * price
+                tp = (1 + config["TP"]) * price
+                positions.append({
+                    'type': 'long',
+                    'entry_time': index,
+                    'entry_price': price,
+                    'sl': sl,
+                    'tp': tp,
+                    'status': 'open'
+                })
+            elif price>ema_value: # si on a une colonne ema et si le prix est supérieur à l'EMA <=> phase haussière on obéit
+                sl = (1 - config["SL"]) * price
+                tp = (1 + config["TP"]) * price
+                positions.append({
+                    'type': 'long',
+                    'entry_time': index,
+                    'entry_price': price,
+                    'sl': sl,
+                    'tp': tp,
+                    'status': 'open'
+                })
         elif harmonia_signal <= -config["TRIGGER"] and harmonia_signal > -config["OVER_TREND"]:
-            sl = (1 + config["SL"]) * price
-            tp = (1 - config["TP"]) * price
-            positions.append({
-                'type': 'short',
-                'entry_time': index,
-                'entry_price': price,
-                'sl': sl,
-                'tp': tp,
-                'status': 'open'
-            })
+            if not ema_column:
+                sl = (1 + config["SL"]) * price
+                tp = (1 - config["TP"]) * price
+                positions.append({
+                    'type': 'short',
+                    'entry_time': index,
+                    'entry_price': price,
+                    'sl': sl,
+                    'tp': tp,
+                    'status': 'open'
+                })
+            elif price<ema_value:
+                sl = (1 + config["SL"]) * price
+                tp = (1 - config["TP"]) * price
+                positions.append({
+                    'type': 'short',
+                    'entry_time': index,
+                    'entry_price': price,
+                    'sl': sl,
+                    'tp': tp,
+                    'status': 'open'
+                })
+            else:
+                pass
     if not trades:
-        print("End")
         # If no trades were made, return empty results
-        return pd.Series(dtype='float64'), 0
+        return pd.Series(dtype='float64'), 0, pd.Series(dtype='float64'), config
     
     trade_data = []
     cumulative_percentage = 0
@@ -100,6 +136,8 @@ def _backtesting_process(config, df, saved=False):
             {
                 'trade_entry_time': trade['entry_time'],
                 "trade_return":trade_return,
+                "entry_price": trade['entry_price'],
+                "exit_price":trade['exit_price'],
                 "trade_type":trade['type'],
                 "trade_exit_time":trade['exit_time'],
                 "trade_tp":trade["tp"],
@@ -113,62 +151,65 @@ def _backtesting_process(config, df, saved=False):
     if saved:
         trade_df.to_csv(f"trades_harmonia_automatic_tp_{config['TP']}_sl_{config['SL']}_TRIGGER_{config['TRIGGER']}_OVERTREND_{config['OVER_TREND']}_TIMELIMIT_{hours}h_trading_comission_{commission}.csv")
     trade_df['date'] = pd.to_datetime(trade_df['trade_entry_time'])
-    trade_df['month'] = trade_df['date'].dt.to_period('M')
+    trade_df['month'] = trade_df['date'].dt.to_period('W')
     # Calculate cumulative returns per month
     monthly_returns = trade_df.groupby('month')['trade_return'].sum().cumsum()
-    print("End")
-    del trade_df
-    return monthly_returns, cumulative_percentage
+    return monthly_returns, cumulative_percentage, trade_df, config
+    
 
-import plotly.graph_objects as go
-import multiprocessing as mp
-import datetime
-
-def process_config(args):
-    tp_value, sl_value, df, hours = args
-    # Example configuration
+def plot_one_backtest(hours:int, commission:float, config:dict):
+    """
+    plot_one_backtest _summary_
+    
+    Example:
+    hours  = 8
+    commission = 0.01/100
     config = {
-        "TP": tp_value,   # Take Profit (1%)
-        "SL": sl_value,  # Stop Loss (0.5%)
-        "TRIGGER": tp_value * 10,
-        "OVER_TREND": sl_value * 100,
+        "TP": 0.01,   # Take Profit (1%)
+        "SL": 0.002,  # Stop Loss (0.5%)
+        "TRIGGER": 0.1,
+        "OVER_TREND": 0.3,
         "TIME_LIMIT": datetime.timedelta(hours=hours).total_seconds()  # Time limit of 8 hours in seconds
     }
-    monthly_returns, cumulative_percentage = _backtesting_process(config, df)
-    if cumulative_percentage > 0:
-        return monthly_returns.index.to_timestamp(), monthly_returns.values, config, cumulative_percentage
-    return None
+    plot_one_backtest(hours, commission, config)
 
-def main():
-    hours = 8  # example time limit in hours
-
-    # Create a list of all combinations of tp_value and sl_value
-    args_list = [(tp_value / 100, sl_value / 1000, df, hours) for tp_value in range(1, 35) for sl_value in range(1, 35)]
-
-    # Create a pool of processes
-    with mp.Pool(mp.cpu_count()) as pool:
-        results = pool.map(process_config, args_list)
-        
+    Args:
+        hours (int): window size before we end the trade
+        commission (float): comission is broker dependant
+        config (dict): dictionnary containing the configuration of the strategy
+    """
+    import plotly.graph_objects as go
     fig = go.Figure()
-    # Process the results
-    for result in results:
-        if result is not None:
-            x_values, y_values, config, cumulative_percentage = result
-            print(f"Cumulative Percentage Returns:{cumulative_percentage}")
-            fig.add_trace(go.Scatter(
-                x=x_values, 
-                y=y_values, 
-                mode='lines+markers', 
-                name=f"TP_{config['TP']} ,SL_{config['SL']} ,Trigger_{config['TRIGGER']} ,OverTrend_{config['OVER_TREND']} Cumulative Return"
-            ))
-
-    fig.update_layout(title='Cumulative Return per Month',
+    monthly_returns, cumulative_percentage, trade_df, config = _backtesting_process(config, df)
+    print(f"Cumulative Percentage Returns:{cumulative_percentage}")
+    print(f"Nombre de Trades:{len(trade_df)}")
+    fig.add_trace(go.Scatter(
+        x=monthly_returns.index.to_timestamp(), 
+        y=monthly_returns.values, 
+        mode='lines+markers', 
+        name=f"TP_{config['TP']} ,SL_{config['SL']} ,Trigger_{config['TRIGGER']} ,OverTrend_{config['OVER_TREND']} Cumulative Return"
+    ))
+    fig.update_layout(title=f"Cumulative Return per Week, TP_{config['TP']} ,SL_{config['SL']} ,Trigger_{config['TRIGGER']} ,OverTrend_{config['OVER_TREND']}, Commission_{commission}, Time duration max_{hours}h",
                         xaxis_title='Month',
                         yaxis_title='Cumulative Return (%)',
                         xaxis=dict(type='date'),
                         yaxis=dict(title='Cumulative Return (%)'),
                         template='plotly_dark')
     fig.show("browser")
-    
-if __name__ == '__main__':
-    main()
+
+if __name__=="__main__":
+    hours  = 2
+    commission = 0.01/100
+    config = {
+        "TP": 0.01,   # Take Profit (1%)
+        "SL": 0.001,  # Stop Loss (0.5%)
+        "TRIGGER": 0.05,
+        "OVER_TREND": 0.3,
+        "TIME_LIMIT": datetime.timedelta(hours=hours).total_seconds(),  # Time limit of 8 hours in seconds
+        "EMA":{
+            "period":0,
+        },
+        "SAVED":False,
+        "comission":commission
+    }
+    plot_one_backtest(hours, commission, config)
