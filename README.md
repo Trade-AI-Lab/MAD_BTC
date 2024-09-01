@@ -1,7 +1,7 @@
 # Moving Average Distance as a Predictor of Cryptocurrency Returns [article](https://deliverypdf.ssrn.com/delivery.php?ID=017096020116090003008025004027089098015051021063079059125002022095123124109009068127006055125009047120052112024114022099020070052085021064086098089091093103003064028045087117116007001084102003115127025085064011116083072069031126083102065085098071027&EXT=pdf&INDEX=TRUE)
 ## Overview
 This repository contains code and research findings related to the paper titled "Moving Average Distance as a Predictor of Equity Returns" by Doron Avramova, Guy Kaplanski, and Avanidhar Subrahmanyam. The research explores the predictive power of the distance between short- and long-run moving averages of prices (MAD) in the cross-section of equity returns.
-
+## See cryptorobot
 ## Idea
 Imagine you have 10 stocks, how to create a strategy given this strategy, you can compute 10 different ratio mobing average and then to do the mean and use this mean ratio moving average to buy or to sell.
 This idea was implemented that does not work well that means for each stock there is a unique combinaison, it is mainly caused by the fact each asset has its own standard deviation. For instance, if the std variation of BTC is two times lower than MATIC that means the ratio of the same X,Y moving average is quite different, X,Y for each cryptocurrency is dependant from the std deviation. I compared it , and it seems also to be false.
