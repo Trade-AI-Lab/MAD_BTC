@@ -255,12 +255,12 @@ def main():
     hours_value = [2,4,6,8]
     ema_period_value = [0,1,5,30,50]
     """
-    tp_value = [0.001,0.0025,0.005,0.01,0.02,0.03,0.04]
-    sl_value = [0.001,0.002,0.005, 0.01, 0.015]
+    tp_value = [0.005,0.01,0.02,0.03,0.04]
+    sl_value = [0.005, 0.01, 0.015]
     trigger = [0.05, 0.08, 0.1]
     overtrend_value = [0.15,0.2,0.3]
     hours_value = [2, 4]
-    ema_period_value = [0]
+    ema_period_value = [0, 1 ,5 ,30 ,50]
     
     # Create a list of all combinations of tp_value and sl_value
     args_list = [ (tp,sl,tr,overtrend, hours,period_value) for tp in tp_value for sl in sl_value for tr in trigger for overtrend in overtrend_value for hours in hours_value for period_value in ema_period_value]
