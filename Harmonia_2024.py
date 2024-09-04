@@ -14,7 +14,7 @@ def build_ema(df:pd.DataFrame, column_name:str, period:int)->None:
     df[ema_name] = df[column_name].ewm(span=period, adjust=False).mean()
     return ema_name
 
-one_min_delay = True
+one_min_delay = False
 
 if one_min_delay:
     offset_time = '1min'
@@ -293,5 +293,5 @@ if __name__=="__main__":
         "SAVED":True,
         "comission":commission
     }
-    plot_one_backtest(hours, commission, config)
-    # main()
+    # plot_one_backtest(hours, commission, config)
+    main()
