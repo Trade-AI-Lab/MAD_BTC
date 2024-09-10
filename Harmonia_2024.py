@@ -280,11 +280,11 @@ def main():
     
 if __name__=="__main__":
     hours  = 2
-    commission = 0.01/100
+    commission = 0.02/100
     config = {
         "TP": 0.01,   # Take Profit (1%)
-        "SL": 0.001,  # Stop Loss (0.5%)
-        "TRIGGER": 0.05,
+        "SL": 0.002,  # Stop Loss (0.5%)
+        "TRIGGER": 0.1,
         "OVER_TREND": 0.3,
         "TIME_LIMIT": datetime.timedelta(hours=hours).total_seconds(),  # Time limit of 8 hours in seconds
         "EMA":{
@@ -293,5 +293,6 @@ if __name__=="__main__":
         "SAVED":True,
         "comission":commission
     }
-    # plot_one_backtest(hours, commission, config)
-    main()
+    plot_one_backtest(hours, commission, config)
+    # main()
+    
