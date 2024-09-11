@@ -71,7 +71,7 @@ def _run(df, config):
         load_if_exists="True",
     )  # study created else we reload the past strategy
     study.optimize(
-        lambda trial, : launcher_backtest(trial, df, config), n_trials=300
+        lambda trial, : launcher_backtest(trial, df, config), n_trials=400
     )
 
 def load_df():
