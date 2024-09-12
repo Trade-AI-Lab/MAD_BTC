@@ -87,9 +87,9 @@ class Trix():
         self.trix_line = EMAIndicator(ema_ema_data, window=self.trix_length).ema_indicator()     
         self.trix_pct_line = self.trix_line.pct_change()*100
         
-        if self.trix_signal_type != general_ema:
+        if self.trix_signal_type != "general_ema":
             self.trix_signal_line = getattr(moving_average,self.trix_signal_type)(self.trix_pct_line,self.trix_signal_length)
-        elif self.trix_signal_type == general_ema:
+        elif self.trix_signal_type == "general_ema":
             self.trix_signal_line = getattr(moving_average,self.trix_signal_type)(self.trix_pct_line,self.trix_signal_length,self.order)
         else: 
             raise f"Error {self.trix_signal_type} does not exist, please implemented if needed"
