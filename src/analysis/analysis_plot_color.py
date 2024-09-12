@@ -86,3 +86,4 @@ class AnalysisVisualizer:
 if __name__ == "__main__":
     PATH = "study/study_momentum_strategy_BTCUSDT_binance_1h.db"
     analysisvisualizer = AnalysisVisualizer(PATH)
+    analysisvisualizer.plot(2,12,"ema_ratio")
