@@ -9,18 +9,23 @@ absolute_path = os.path.abspath(__file__)[
 sys.path.append(absolute_path)
 from src.utils.utils_df import open_dataframe, filter_dataframe_by_date_range
 from src.strategy.momentum import indicator_momentum
+from src.utils.utils_json import config_data_available
 
+config = config_data_available("data")
 
 class AnalysisVisualizer:
     def __init__(self, PATH) -> None:
-        study_name = PATH.split("/")[-1]
-        study_name = study_name.split(".")[0]
-        storage_name = f"sqlite:///{PATH}.db"
+        study_name = PATH.split("/")[-1].split(".")[0]
+        storage_name = f"sqlite:///{PATH}"
         study = optuna.study.load_study(study_name=study_name, storage=storage_name)
         list_study_name_split = study_name.split("_")
-        crypto_currency = list_study_name_split[3]
-        exchange = list_study_name_split[4]
-        time = list_study_name_split[5]
+        for element in list_study_name_split:
+            if element in  config["crypto_currency"]:
+                crypto_currency = element
+            elif element in  config["time"]:
+                time = element
+            elif element in  config["exchange"]:
+                exchange = element
         self.data_df = open_dataframe(
             r"data/" + f"{exchange}-{crypto_currency}-{time}.pkl"
         )
@@ -79,5 +84,5 @@ class AnalysisVisualizer:
 
 
 if __name__ == "__main__":
-    PATH = "study/study_momentum_strategy_BNBUSDT_binance_4h.db"
+    PATH = "study/study_momentum_strategy_BTCUSDT_binance_1h.db"
     analysisvisualizer = AnalysisVisualizer(PATH)
