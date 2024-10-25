@@ -7,7 +7,7 @@ Imagine you have 10 stocks, how to create a strategy given this strategy, you ca
 This idea was implemented that does not work well that means for each stock there is a unique combinaison, it is mainly caused by the fact each asset has its own standard deviation. For instance, if the std variation of BTC is two times lower than MATIC that means the ratio of the same X,Y moving average is quite different, X,Y for each cryptocurrency is dependant from the std deviation. I compared it , and it seems also to be false.
 ## Abstract
 The MAD-based trading strategy demonstrates robust investment payoffs, with annualized value-weighted alphas around 9%. The predictability extends beyond other well-known anomalies, such as momentum, 52-week highs, and profitability. The strategy remains viable even after accounting for reasonable trading costs, and its effectiveness is stronger on the long side compared to the short side.
-
+## Have to finish the TRIX STRAT
 # Aim repository : does MAD allow to establish a wealthy strategy for cryptocurrencies ?
 
 This repository contains code specifically tailored for applying the MAD strategy to cryptocurrency datasets. The code includes calculations of MAD, implementation of cryptocurrency trading strategies, and an examination of MAD's predictive power in the cryptocurrency market.
