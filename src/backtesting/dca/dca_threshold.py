@@ -15,13 +15,13 @@ class Args:
     exchange: str = "binance"
     cryptocurrency: str = "BTCUSDT"
     time: str = "4h"
-    monthly_investment: float = 125
-    investment_interval: str = "W"
+    monthly_investment: float = 500
+    investment_interval: str = "M"
     begin_date: str = "2020-01-01 00:00:00"
     end_date: str = None
     fees: float = 0.1 / 100
     increase_factor: float = 5 / 100
-    decrease_threshold: float = 0.5 / 100
+    decrease_threshold: float = 0.01 / 100
 
 
 def calculate_dca_from_dataframe(

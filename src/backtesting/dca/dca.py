@@ -15,8 +15,8 @@ class Args:
     exchange: str = "binance"
     cryptocurrency: str = "BTCUSDT"
     time: str = "4h"
-    monthly_investment: float = 125
-    investment_interval: str = "W"
+    monthly_investment: float = 500
+    investment_interval: str = "M"
     begin_date: str = "2020-01-01 00:00:00"
     end_date: str = None
     fees: float = 0.1 / 100
@@ -52,9 +52,7 @@ def calculate_dca_from_dataframe(df, monthly_investment, interval, fees):
 
     # Final portfolio value and return
     not_invested = np.arange(0, len(portfolio_values)) * args.monthly_investment
-    return_percentage = (
-        (portfolio_values[-1] - total_invested) / total_invested
-    ) * 100
+    return_percentage = ((portfolio_values[-1] - total_invested) / total_invested) * 100
     return (
         portfolio_values,
         total_invested,
