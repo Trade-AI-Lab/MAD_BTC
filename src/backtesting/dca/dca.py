@@ -11,7 +11,7 @@ absolute_path = os.path.abspath(__file__)[
 
 
 @dataclass
-class Args:
+class Dca_Args:
     exchange: str = "binance"
     cryptocurrency: str = "BTCUSDT"
     time: str = "4h"
@@ -22,7 +22,7 @@ class Args:
     fees: float = 0.1 / 100
 
 
-class dca:
+class Dca:
     def __init__(self, args):
         self.args = args
         self.df = self._open_dataframe()
@@ -58,25 +58,27 @@ class dca:
             total_invested += self.args.monthly_investment
             portfolio_values.append(total_shares * price)
 
-        not_invested = np.arange(0, len(portfolio_values)) * args.monthly_investment
+        not_invested_values = (
+            np.arange(0, len(portfolio_values)) * self.args.monthly_investment
+        )
         resampled_dates = resampled_df.index
-        # Print results
+
         return (
             portfolio_values,
             total_invested,
             resampled_df,
-            not_invested,
+            not_invested_values,
             resampled_dates,
         )
 
     @staticmethod
-    def _plot(resampled_dates, not_invested, portfolio_values):
+    def _plot(resampled_dates, not_invested_values, portfolio_values):
         # Plot results with Plotly
         fig = go.Figure()
         fig.add_trace(
             go.Scatter(
                 x=resampled_dates,
-                y=not_invested,
+                y=not_invested_values,
                 mode="lines",
                 name="Not invested",
                 line=dict(color="blue"),
@@ -110,7 +112,7 @@ class dca:
             portfolio_values,
             total_invested,
             resampled_df,
-            not_invested,
+            not_invested_values,
             resampled_dates,
         ) = self._dca_loop()
 
@@ -121,18 +123,79 @@ class dca:
         print(f"Final Portfolio Value: ${portfolio_values[-1]:.2f}")
         print(f"Return on Investment: {return_percentage:.2f}%")
         if plot:
-            self._plot(resampled_dates, not_invested, portfolio_values)
+            self._plot(resampled_dates, not_invested_values, portfolio_values)
         if output:
             return (
                 portfolio_values,
                 total_invested,
-                resampled_df.index,
-                not_invested,
-                return_percentage,
+                resampled_df,
+                not_invested_values,
+                resampled_dates,
             )
 
 
+@dataclass
+class Dca_Ema_Args:
+    exchange: str = "binance"
+    cryptocurrency: str = "BTCUSDT"
+    time: str = "4h"
+    monthly_investment: float = 125
+    investment_interval: str = "W"
+    begin_date: str = "2020-01-01 00:00:00"
+    end_date: str = None
+    fees: float = 0.1 / 100
+    increase_factor: float = 5 / 100
+    decrease_threshold: float = 0.01 / 100
+
+
+class Dca_Ema(Dca):
+    def _dca_loop(self):
+        resampled_df = self.df.resample(
+            self.args.investment_interval
+        ).first()  # Use the first close price of the period
+
+        total_invested = 0
+        total_shares = 0
+        portfolio_values = []
+        not_invested_values = []
+        resampled_df["price_change"] = (
+            resampled_df["close"] - resampled_df["open"]
+        ) / resampled_df["close"]
+        monthly_investment = self.args.monthly_investment
+        fees = self.args.fees
+        increase_factor = self.args.increase_factor
+        decrease_threshold = self.args.decrease_threshold
+        for index, row in resampled_df.iterrows():
+            price = row["close"]
+            price_change = row["price_change"]
+            if price_change >= decrease_threshold:
+                current_investment = monthly_investment * (1 + increase_factor)
+            elif price_change <= -decrease_threshold:
+                current_investment = monthly_investment * (1 - increase_factor)
+            else:
+                current_investment = monthly_investment
+            shares_bought = current_investment * (1 - fees) / price
+            total_shares += shares_bought
+            total_invested += current_investment
+            portfolio_values.append(total_shares * price)
+            not_invested_values.append(total_invested)
+        resampled_dates = resampled_df.index
+        return (
+            portfolio_values,
+            total_invested,
+            resampled_df,
+            not_invested_values,
+            resampled_dates,
+        )
+
+
 if __name__ == "__main__":
-    args = Args
-    dca_element = dca(args)
-    dca_element.compute_dca_from_dataframe(output=False, plot=True)
+    # Initialize the Dca_Args instance for DCA
+    dca_args = Dca_Args()
+    dca_element = Dca(dca_args)
+    dca_element.compute_dca_from_dataframe(output=False, plot=False)
+
+    # Initialize the Dca_Ema_Args instance with correct parameters
+    dca_ema_args = Dca_Ema_Args()  # Create an instance of Dca_Ema_Args
+    dca_ema_element = Dca_Ema(dca_ema_args)  # Pass it to the Dca_Ema class
+    dca_ema_element.compute_dca_from_dataframe(output=False, plot=False)
