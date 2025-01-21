@@ -57,56 +57,71 @@ class dca:
             total_shares += monthly_investment_fees / price
             total_invested += self.args.monthly_investment
             portfolio_values.append(total_shares * price)
-        return portfolio_values, total_invested, resampled_df
+
+        not_invested = np.arange(0, len(portfolio_values)) * args.monthly_investment
+        resampled_dates = resampled_df.index
+        # Print results
+        return (
+            portfolio_values,
+            total_invested,
+            resampled_df,
+            not_invested,
+            resampled_dates,
+        )
+
+    @staticmethod
+    def _plot(resampled_dates, not_invested, portfolio_values):
+        # Plot results with Plotly
+        fig = go.Figure()
+        fig.add_trace(
+            go.Scatter(
+                x=resampled_dates,
+                y=not_invested,
+                mode="lines",
+                name="Not invested",
+                line=dict(color="blue"),
+            )
+        )
+
+        fig.add_trace(
+            go.Scatter(
+                x=resampled_dates,
+                y=portfolio_values,
+                mode="lines",
+                name="Portfolio Value",
+                line=dict(color="green"),
+            )
+        )
+
+        fig.update_layout(
+            title="Dollar-Cost Averaging (DCA) Simulation",
+            xaxis_title="Time",
+            yaxis_title="Value ($)",
+            legend=dict(
+                orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1
+            ),
+            template="plotly_white",
+        )
+
+        fig.show()
 
     def compute_dca_from_dataframe(self, output: float = False, plot: float = False):
-        portfolio_values, total_invested, resampled_df = self._dca_loop()
-        # Final portfolio value and return
-        not_invested = np.arange(0, len(portfolio_values)) * args.monthly_investment
+        (
+            portfolio_values,
+            total_invested,
+            resampled_df,
+            not_invested,
+            resampled_dates,
+        ) = self._dca_loop()
+
         return_percentage = (
             (portfolio_values[-1] - total_invested) / total_invested
         ) * 100
-
-        final_portfolio_value = portfolio_values[-1]
-        resampled_dates = resampled_df.index
-        # Print results
         print(f"Total Invested: ${total_invested:.2f}")
-        print(f"Final Portfolio Value: ${final_portfolio_value:.2f}")
+        print(f"Final Portfolio Value: ${portfolio_values[-1]:.2f}")
         print(f"Return on Investment: {return_percentage:.2f}%")
         if plot:
-            # Plot results with Plotly
-            fig = go.Figure()
-            fig.add_trace(
-                go.Scatter(
-                    x=resampled_dates,
-                    y=not_invested,
-                    mode="lines",
-                    name="Not invested",
-                    line=dict(color="blue"),
-                )
-            )
-
-            fig.add_trace(
-                go.Scatter(
-                    x=resampled_dates,
-                    y=portfolio_values,
-                    mode="lines",
-                    name="Portfolio Value",
-                    line=dict(color="green"),
-                )
-            )
-
-            fig.update_layout(
-                title="Dollar-Cost Averaging (DCA) Simulation",
-                xaxis_title="Time",
-                yaxis_title="Value ($)",
-                legend=dict(
-                    orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1
-                ),
-                template="plotly_white",
-            )
-
-            fig.show()
+            self._plot(resampled_dates, not_invested, portfolio_values)
         if output:
             return (
                 portfolio_values,
