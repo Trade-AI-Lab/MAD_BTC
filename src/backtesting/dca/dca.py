@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
+from ta.trend import SMAIndicator, EMAIndicator
 from dataclasses import dataclass
 from src.utils.utils_df import open_dataframe
 import sys, os
@@ -145,7 +146,7 @@ class Dca_Ema_Args:
     end_date: str = None
     fees: float = 0.1 / 100
     increase_factor: float = 5 / 100
-    decrease_threshold: float = 0.01 / 100
+    window: int = 10
 
 
 class Dca_Ema(Dca):
@@ -154,23 +155,22 @@ class Dca_Ema(Dca):
             self.args.investment_interval
         ).first()  # Use the first close price of the period
 
+        resampled_df["indicator"] = SMAIndicator(
+            resampled_df["close"], window=self.args.window
+        ).sma_indicator()
         total_invested = 0
         total_shares = 0
         portfolio_values = []
         not_invested_values = []
-        resampled_df["price_change"] = (
-            resampled_df["close"] - resampled_df["open"]
-        ) / resampled_df["close"]
         monthly_investment = self.args.monthly_investment
         fees = self.args.fees
         increase_factor = self.args.increase_factor
-        decrease_threshold = self.args.decrease_threshold
         for index, row in resampled_df.iterrows():
             price = row["close"]
-            price_change = row["price_change"]
-            if price_change >= decrease_threshold:
+            indicator = row["indicator"]
+            if price >= indicator:
                 current_investment = monthly_investment * (1 + increase_factor)
-            elif price_change <= -decrease_threshold:
+            elif price <= indicator:
                 current_investment = monthly_investment * (1 - increase_factor)
             else:
                 current_investment = monthly_investment
@@ -179,13 +179,15 @@ class Dca_Ema(Dca):
             total_invested += current_investment
             portfolio_values.append(total_shares * price)
             not_invested_values.append(total_invested)
-        resampled_dates = resampled_df.index
+            return_percentage = (
+                (portfolio_values[-1] - total_invested) / total_invested
+            ) * 100
         return (
             portfolio_values,
             total_invested,
-            resampled_df,
+            resampled_df.index,
             not_invested_values,
-            resampled_dates,
+            return_percentage,
         )
 
 
