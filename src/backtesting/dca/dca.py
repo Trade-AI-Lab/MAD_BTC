@@ -205,9 +205,7 @@ class Dca_PriceVariation_Args:
 
 class Dca_PriceVariation(Dca):
     def _dca_loop(self):
-        resampled_df = self.df.resample(
-            self.args.investment_interval
-        ).first()  # Use the first close price of the period
+        resampled_df = self.df.resample(self.args.investment_interval).first()
 
         total_invested = 0
         total_shares = 0
@@ -234,6 +232,7 @@ class Dca_PriceVariation(Dca):
             total_invested += current_investment
             portfolio_values.append(total_shares * price)
             not_invested_values.append(total_invested)
+
         resampled_dates = resampled_df.index
         return (
             portfolio_values,
@@ -242,6 +241,7 @@ class Dca_PriceVariation(Dca):
             not_invested_values,
             resampled_dates,
         )
+
 
 if __name__ == "__main__":
     # Initialize the Dca_Args instance for DCA
@@ -253,3 +253,7 @@ if __name__ == "__main__":
     dca_ema_args = Dca_Ema_Args()  # Create an instance of Dca_Ema_Args
     dca_ema_element = Dca_Ema(dca_ema_args)  # Pass it to the Dca_Ema class
     dca_ema_element.compute_dca_from_dataframe(output=False, plot=False)
+
+    dca_pricevariation_args = Dca_PriceVariation_Args()
+    dca_pricevariation_element = Dca_PriceVariation(dca_pricevariation_args)
+    dca_pricevariation_element.compute_dca_from_dataframe(output=False, plot=False)
