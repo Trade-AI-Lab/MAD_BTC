@@ -136,17 +136,15 @@ class Dca:
 
 
 @dataclass
-class Dca_Ema_Args:
-    exchange: str = "binance"
-    cryptocurrency: str = "BTCUSDT"
-    time: str = "4h"
-    monthly_investment: float = 125
-    investment_interval: str = "W"
-    begin_date: str = "2020-01-01 00:00:00"
-    end_date: str = None
-    fees: float = 0.1 / 100
-    increase_factor: float = 5 / 100
-    window: int = 10
+class Dca_Ema_Args(Dca_Args):
+    increase_factor: float = 5 / 100  # Default value for increase factor
+    window: int = 12  # Default window size for EMA
+
+    def __init__(self, **kwargs):
+        # Pass parent attributes to Dca_Args
+        self.increase_factor = kwargs.pop("increase_factor", self.increase_factor)
+        self.window = kwargs.pop("window", self.window)
+        super().__init__(**kwargs)
 
 
 class Dca_Ema(Dca):
@@ -192,17 +190,18 @@ class Dca_Ema(Dca):
 
 
 @dataclass
-class Dca_PriceVariation_Args:
-    exchange: str = "binance"
-    cryptocurrency: str = "BTCUSDT"
-    time: str = "4h"
-    monthly_investment: float = 125
-    investment_interval: str = "W"
-    begin_date: str = "2020-01-01 00:00:00"
-    end_date: str = None
-    fees: float = 0.1 / 100
-    increase_factor: float = 5 / 100
-    decrease_threshold: float = 0.01 / 100
+class Dca_PriceVariation_Args(Dca_Args):
+    increase_factor: float = 5 / 100  # Default value for increase factor
+    decrease_threshold: float = (
+        0.01 / 100
+    )  # Default value for price variation threshold
+
+    def __init__(self, **kwargs):
+        self.increase_factor = kwargs.pop("increase_factor", self.increase_factor)
+        self.decrease_threshold = kwargs.pop(
+            "decrease_threshold", self.decrease_threshold
+        )
+        super().__init__(**kwargs)
 
 
 class Dca_PriceVariation(Dca):
@@ -225,7 +224,7 @@ class Dca_PriceVariation(Dca):
             price_change = row["price_change"]
             if price_change >= decrease_threshold:
                 current_investment = monthly_investment * (1 + increase_factor)
-            elif price_change <= -decrease_threshold:
+            elif price_change < -decrease_threshold:
                 current_investment = monthly_investment * (1 - increase_factor)
             else:
                 current_investment = monthly_investment
@@ -256,6 +255,8 @@ if __name__ == "__main__":
     dca_ema_element = Dca_Ema(dca_ema_args)  # Pass it to the Dca_Ema class
     dca_ema_element.compute_dca_from_dataframe(output=False, plot=False)
 
-    dca_pricevariation_args = Dca_PriceVariation_Args()
+    dca_pricevariation_args = Dca_PriceVariation_Args(
+        increase_factor=7 / 100, decrease_threshold=0.01
+    )
     dca_pricevariation_element = Dca_PriceVariation(dca_pricevariation_args)
     dca_pricevariation_element.compute_dca_from_dataframe(output=False, plot=False)
