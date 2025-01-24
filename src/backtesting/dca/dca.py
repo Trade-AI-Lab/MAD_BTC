@@ -238,7 +238,58 @@ class Dca_PriceVariation(Dca):
         )
 
 
+# Function to process a single date range
+def process_date_range(begin_date, end_date):
+    print(f"Processing date range: {begin_date} to {end_date}")
+    liste = []
+    for i in range(0, 7):  # Days of the week
+        for j in range(0, 24):  # Hours of the day
+            dca_args = Dca_Args(
+                offset=j, day=i, begin_date=begin_date, end_date=end_date
+            )
+            dca_element = Dca(dca_args)
+            portfolio_values, total_invested, _, _, _ = dca_element._dca_loop()
+            return_percentage = (
+                (portfolio_values[-1] - total_invested) / total_invested
+            ) * 100
+            liste.append([i, j, return_percentage])
+
+    # Create a DataFrame and generate the heatmap
+    df = pd.DataFrame(liste, columns=["day", "hour", "return_percentage"])
+    heatmap_data = df.pivot(index="day", columns="hour", values="return_percentage")
+    fig = go.Figure(
+        data=go.Heatmap(
+            z=heatmap_data.values / heatmap_data.values.min(),  # Normalized ROI data
+            x=heatmap_data.columns,  # Hours (columns)
+            y=[
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday",
+                "Saturday",
+                "Sunday",
+            ],  # Days (rows)
+            colorscale="Viridis",  # Choose a color scale
+            colorbar_title="ROI (%)",
+        )
+    )
+    fig.update_layout(
+        title=f"Return on Investment by Day and Hour\nBegin Date: {begin_date}, End Date: {end_date}",
+        xaxis_title="Hour of Day",
+        yaxis_title="Day of Week",
+        xaxis=dict(tickmode="linear"),
+        yaxis=dict(tickmode="array", tickvals=list(range(7))),
+    )
+
+    # Save or display the plot
+    fig.show()
+    print(f"Finished processing date range: {begin_date} to {end_date}")
+
+
 if __name__ == "__main__":
+    import multiprocessing
+
     # Initialize the Dca_Args instance for DCA
     dca_args = Dca_Args()
     dca_element = Dca(dca_args)
@@ -256,61 +307,14 @@ if __name__ == "__main__":
     dca_pricevariation_element.compute_dca_from_dataframe(output=False, plot=False)
 
     begin_date = pd.to_datetime("2020-01-01 00:00:00")
-    end_date = begin_date + pd.Timedelta(weeks=int(52))
-    while end_date < pd.to_datetime("2024-05-26 00:00:00"):
-        liste = []
-        for i in range(0, 7):
-            for j in range(0, 24):
-                dca_args = Dca_Args(
-                    offset=j, day=i, begin_date=begin_date, end_date=end_date
-                )
-                dca_element = Dca(dca_args)
-                portfolio_values, total_invested, _, _, _ = dca_element._dca_loop()
-                return_percentage = (
-                    (portfolio_values[-1] - total_invested) / total_invested
-                ) * 100
-                print(i, j)
-                liste.append(
-                    [
-                        i,
-                        j,
-                        return_percentage,
-                    ]
-                )
-        df = pd.DataFrame(liste, columns=["day", "hour", "return_percentage"])
-
-        # Pivot the DataFrame to create a matrix-like format (days as rows, hours as columns)
-        heatmap_data = df.pivot(index="day", columns="hour", values="return_percentage")
-
-        # Create the heatmap with Plotly
-        fig = go.Figure(
-            data=go.Heatmap(
-                z=heatmap_data.values / heatmap_data.values.min(),  # The ROI data
-                x=heatmap_data.columns,  # Hours (columns)
-                y=[
-                    "Monday",
-                    "Tuesday",
-                    "Wednesday",
-                    "Thursday",
-                    "Friday",
-                    "Saturday",
-                    "Sunday",
-                ],  # Days (rows)
-                colorscale="Viridis",  # Choose a color scale
-                colorbar_title="ROI (%)",
-            )
-        )
-
-        # Add titles and labels
-        fig.update_layout(
-            title=f"Return on Investment by Day and Hour, Begin Date:f{begin_date} and End Date:f{end_date}",
-            xaxis_title="Hour of Day",
-            yaxis_title="Day of Week",
-            xaxis=dict(tickmode="linear"),
-            yaxis=dict(tickmode="array", tickvals=list(range(7))),
-        )
-
-        # Show the heatmap
-        fig.show()
-        end_date += pd.Timedelta(weeks=int(4))
+    end_date = begin_date + pd.Timedelta(weeks=int(52 * 1.5))
+    final_date = pd.to_datetime("2024-05-26 00:00:00")
+    date_ranges = []
+    while end_date < final_date:
+        date_ranges.append((begin_date, end_date))
         begin_date += pd.Timedelta(weeks=int(4))
+        end_date += pd.Timedelta(weeks=int(4))
+
+    # Use multiprocessing to process each date range
+    with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
+        pool.starmap(process_date_range, date_ranges)
