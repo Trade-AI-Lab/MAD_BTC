@@ -15,18 +15,32 @@ absolute_path = os.path.abspath(__file__)[
 class Dca_Args:
     exchange: str = "binance"
     cryptocurrency: str = "ETHUSDT"
-    time: str = "4h"
     investment: float = 125
-    investment_interval: str = "W"
+    investment_interval: str = "W-SAT"
     begin_date: str = "2020-01-01 00:00:00"
-    end_date: str = None
+    end_date: str = "2024-05-01 00:00:00"
     fees: float = 0.1 / 100
+    offset: int = 16
 
 
 class Dca:
+    weekday_map = {
+        "Monday": 0,
+        "Tuesday": 1,
+        "Wednesday": 2,
+        "Thursday": 3,
+        "Friday": 4,
+        "Saturday": 5,
+        "Sunday": 6,
+    }
+
     def __init__(self, args):
         self.args = args
+        self.args.time = "1h"
         self.df = self._open_dataframe()
+        self.resampled_df = self.df.resample(
+            args.investment_interval, offset=f"{args.offset}h"
+        ).first()
 
     def _open_dataframe(self):
         df = open_dataframe(
@@ -49,25 +63,19 @@ class Dca:
         total_invested = 0
         total_shares = 0
         portfolio_values = []
-        resampled_df = (
-            self.df["close"].resample(self.args.investment_interval).first()
-        )  # Use the first close price of the period
-
         investment_fees = self.args.investment * (1 - self.args.fees)
-        for price in resampled_df.dropna():
+        for price in self.resampled_df["close"].dropna():
             total_shares += investment_fees / price
             total_invested += self.args.investment
             portfolio_values.append(total_shares * price)
 
-        not_invested_values = (
-            np.arange(0, len(portfolio_values)) * self.args.investment
-        )
-        resampled_dates = resampled_df.index
+        not_invested_values = np.arange(0, len(portfolio_values)) * self.args.investment
+        resampled_dates = self.resampled_df.index
 
         return (
             portfolio_values,
             total_invested,
-            resampled_df,
+            self.resampled_df,
             not_invested_values,
             resampled_dates,
         )
@@ -149,12 +157,8 @@ class Dca_Ema_Args(Dca_Args):
 
 class Dca_Ema(Dca):
     def _dca_loop(self):
-        resampled_df = self.df.resample(
-            self.args.investment_interval
-        ).first()  # Use the first close price of the period
-
-        resampled_df["indicator"] = SMAIndicator(
-            resampled_df["close"], window=self.args.window
+        self.resampled_df["indicator"] = SMAIndicator(
+            self.resampled_df["close"], window=self.args.window
         ).sma_indicator()
         total_invested = 0
         total_shares = 0
@@ -163,7 +167,7 @@ class Dca_Ema(Dca):
         investment = self.args.investment
         fees = self.args.fees
         increase_factor = self.args.increase_factor
-        for index, row in resampled_df.iterrows():
+        for index, row in self.resampled_df.iterrows():
             price = row["close"]
             indicator = row["indicator"]
             if price >= indicator:
@@ -183,7 +187,7 @@ class Dca_Ema(Dca):
         return (
             portfolio_values,
             total_invested,
-            resampled_df.index,
+            self.resampled_df,
             not_invested_values,
             return_percentage,
         )
@@ -206,20 +210,18 @@ class Dca_PriceVariation_Args(Dca_Args):
 
 class Dca_PriceVariation(Dca):
     def _dca_loop(self):
-        resampled_df = self.df.resample(self.args.investment_interval).first()
-
         total_invested = 0
         total_shares = 0
         portfolio_values = []
         not_invested_values = []
-        resampled_df["price_change"] = (
-            resampled_df["close"] - resampled_df["open"]
-        ) / resampled_df["close"]
+        self.resampled_df["price_change"] = (
+            self.resampled_df["close"] - self.resampled_df["open"]
+        ) / self.resampled_df["close"]
         investment = self.args.investment
         fees = self.args.fees
         increase_factor = self.args.increase_factor
         decrease_threshold = self.args.decrease_threshold
-        for index, row in resampled_df.iterrows():
+        for index, row in self.resampled_df.iterrows():
             price = row["close"]
             price_change = row["price_change"]
             if price_change >= decrease_threshold:
@@ -234,11 +236,11 @@ class Dca_PriceVariation(Dca):
             portfolio_values.append(total_shares * price)
             not_invested_values.append(total_invested)
 
-        resampled_dates = resampled_df.index
+        resampled_dates = self.resampled_df.index
         return (
             portfolio_values,
             total_invested,
-            resampled_df,
+            self.resampled_df,
             not_invested_values,
             resampled_dates,
         )
@@ -256,7 +258,7 @@ if __name__ == "__main__":
     dca_ema_element.compute_dca_from_dataframe(output=False, plot=False)
 
     dca_pricevariation_args = Dca_PriceVariation_Args(
-        increase_factor=7 / 100, decrease_threshold=0.01
+        increase_factor=3 / 100, decrease_threshold=0.03
     )
     dca_pricevariation_element = Dca_PriceVariation(dca_pricevariation_args)
     dca_pricevariation_element.compute_dca_from_dataframe(output=False, plot=False)
