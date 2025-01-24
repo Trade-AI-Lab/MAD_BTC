@@ -16,30 +16,24 @@ class Dca_Args:
     exchange: str = "binance"
     cryptocurrency: str = "ETHUSDT"
     investment: float = 125
-    investment_interval: str = "W-SAT"
+    investment_interval: str = "W"
     begin_date: str = "2020-01-01 00:00:00"
-    end_date: str = "2024-05-01 00:00:00"
+    end_date: str = "2024-12-01 00:00:00"
     fees: float = 0.1 / 100
-    offset: int = 16
+    day: int = 5
+    offset: int = 22
 
 
 class Dca:
-    weekday_map = {
-        "Monday": 0,
-        "Tuesday": 1,
-        "Wednesday": 2,
-        "Thursday": 3,
-        "Friday": 4,
-        "Saturday": 5,
-        "Sunday": 6,
-    }
+    weekday_map = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
 
     def __init__(self, args):
         self.args = args
         self.args.time = "1h"
         self.df = self._open_dataframe()
+        self.df.index = self.df.index + pd.Timedelta(hours=args.offset)
         self.resampled_df = self.df.resample(
-            args.investment_interval, offset=f"{args.offset}h"
+            args.investment_interval + f"-{self.weekday_map[args.day % 7]}"
         ).first()
 
     def _open_dataframe(self):
@@ -181,15 +175,13 @@ class Dca_Ema(Dca):
             total_invested += current_investment
             portfolio_values.append(total_shares * price)
             not_invested_values.append(total_invested)
-            return_percentage = (
-                (portfolio_values[-1] - total_invested) / total_invested
-            ) * 100
+        resampled_dates = self.resampled_df.index
         return (
             portfolio_values,
             total_invested,
             self.resampled_df,
             not_invested_values,
-            return_percentage,
+            resampled_dates,
         )
 
 
@@ -247,6 +239,7 @@ class Dca_PriceVariation(Dca):
 
 
 if __name__ == "__main__":
+
     # Initialize the Dca_Args instance for DCA
     dca_args = Dca_Args()
     dca_element = Dca(dca_args)
@@ -262,3 +255,63 @@ if __name__ == "__main__":
     )
     dca_pricevariation_element = Dca_PriceVariation(dca_pricevariation_args)
     dca_pricevariation_element.compute_dca_from_dataframe(output=False, plot=False)
+
+    begin_date = pd.to_datetime("2020-01-01 00:00:00")
+    end_date = begin_date + pd.Timedelta(weeks=int(52))
+    while end_date < pd.to_datetime("2024-05-26 00:00:00"):
+        liste = []
+        for i in range(0, 7):
+            for j in range(0, 24):
+                dca_args = Dca_Args(
+                    offset=j, day=i, begin_date=begin_date, end_date=end_date
+                )
+                dca_element = Dca(dca_args)
+                portfolio_values, total_invested, _, _, _ = dca_element._dca_loop()
+                return_percentage = (
+                    (portfolio_values[-1] - total_invested) / total_invested
+                ) * 100
+                print(i, j)
+                liste.append(
+                    [
+                        i,
+                        j,
+                        return_percentage,
+                    ]
+                )
+        df = pd.DataFrame(liste, columns=["day", "hour", "return_percentage"])
+
+        # Pivot the DataFrame to create a matrix-like format (days as rows, hours as columns)
+        heatmap_data = df.pivot(index="day", columns="hour", values="return_percentage")
+
+        # Create the heatmap with Plotly
+        fig = go.Figure(
+            data=go.Heatmap(
+                z=heatmap_data.values,  # The ROI data
+                x=heatmap_data.columns,  # Hours (columns)
+                y=[
+                    "Monday",
+                    "Tuesday",
+                    "Wednesday",
+                    "Thursday",
+                    "Friday",
+                    "Saturday",
+                    "Sunday",
+                ],  # Days (rows)
+                colorscale="Viridis",  # Choose a color scale
+                colorbar_title="ROI (%)",
+            )
+        )
+
+        # Add titles and labels
+        fig.update_layout(
+            title=f"Return on Investment by Day and Hour, Begin Date:f{begin_date} and End Date:f{end_date}",
+            xaxis_title="Hour of Day",
+            yaxis_title="Day of Week",
+            xaxis=dict(tickmode="linear"),
+            yaxis=dict(tickmode="array", tickvals=list(range(7))),
+        )
+
+        # Show the heatmap
+        fig.show()
+        end_date += pd.Timedelta(weeks=int(4))
+        begin_date += pd.Timedelta(weeks=int(4))
