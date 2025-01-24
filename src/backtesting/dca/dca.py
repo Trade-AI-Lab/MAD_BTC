@@ -239,7 +239,6 @@ class Dca_PriceVariation(Dca):
 
 
 if __name__ == "__main__":
-
     # Initialize the Dca_Args instance for DCA
     dca_args = Dca_Args()
     dca_element = Dca(dca_args)
@@ -286,7 +285,7 @@ if __name__ == "__main__":
         # Create the heatmap with Plotly
         fig = go.Figure(
             data=go.Heatmap(
-                z=heatmap_data.values,  # The ROI data
+                z=heatmap_data.values / heatmap_data.values.min(),  # The ROI data
                 x=heatmap_data.columns,  # Hours (columns)
                 y=[
                     "Monday",
