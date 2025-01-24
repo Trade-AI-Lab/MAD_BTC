@@ -14,9 +14,9 @@ absolute_path = os.path.abspath(__file__)[
 @dataclass
 class Dca_Args:
     exchange: str = "binance"
-    cryptocurrency: str = "BTCUSDT"
+    cryptocurrency: str = "ETHUSDT"
     time: str = "4h"
-    monthly_investment: float = 125
+    investment: float = 125
     investment_interval: str = "W"
     begin_date: str = "2020-01-01 00:00:00"
     end_date: str = None
@@ -53,14 +53,14 @@ class Dca:
             self.df["close"].resample(self.args.investment_interval).first()
         )  # Use the first close price of the period
 
-        monthly_investment_fees = self.args.monthly_investment * (1 - self.args.fees)
+        investment_fees = self.args.investment * (1 - self.args.fees)
         for price in resampled_df.dropna():
-            total_shares += monthly_investment_fees / price
-            total_invested += self.args.monthly_investment
+            total_shares += investment_fees / price
+            total_invested += self.args.investment
             portfolio_values.append(total_shares * price)
 
         not_invested_values = (
-            np.arange(0, len(portfolio_values)) * self.args.monthly_investment
+            np.arange(0, len(portfolio_values)) * self.args.investment
         )
         resampled_dates = resampled_df.index
 
@@ -160,18 +160,18 @@ class Dca_Ema(Dca):
         total_shares = 0
         portfolio_values = []
         not_invested_values = []
-        monthly_investment = self.args.monthly_investment
+        investment = self.args.investment
         fees = self.args.fees
         increase_factor = self.args.increase_factor
         for index, row in resampled_df.iterrows():
             price = row["close"]
             indicator = row["indicator"]
             if price >= indicator:
-                current_investment = monthly_investment * (1 + increase_factor)
+                current_investment = investment * (1 + increase_factor)
             elif price <= indicator:
-                current_investment = monthly_investment * (1 - increase_factor)
+                current_investment = investment * (1 - increase_factor)
             else:
-                current_investment = monthly_investment
+                current_investment = investment
             shares_bought = current_investment * (1 - fees) / price
             total_shares += shares_bought
             total_invested += current_investment
@@ -215,7 +215,7 @@ class Dca_PriceVariation(Dca):
         resampled_df["price_change"] = (
             resampled_df["close"] - resampled_df["open"]
         ) / resampled_df["close"]
-        monthly_investment = self.args.monthly_investment
+        investment = self.args.investment
         fees = self.args.fees
         increase_factor = self.args.increase_factor
         decrease_threshold = self.args.decrease_threshold
@@ -223,11 +223,11 @@ class Dca_PriceVariation(Dca):
             price = row["close"]
             price_change = row["price_change"]
             if price_change >= decrease_threshold:
-                current_investment = monthly_investment * (1 + increase_factor)
+                current_investment = investment * (1 + increase_factor)
             elif price_change < -decrease_threshold:
-                current_investment = monthly_investment * (1 - increase_factor)
+                current_investment = investment * (1 - increase_factor)
             else:
-                current_investment = monthly_investment
+                current_investment = investment
             shares_bought = current_investment * (1 - fees) / price
             total_shares += shares_bought
             total_invested += current_investment
