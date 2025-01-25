@@ -19,7 +19,7 @@ class Dca_Args:
     investment: float = 125
     investment_interval: str = "W"
     begin_date: str = "2020-01-01 00:00:00"
-    end_date: str = "2024-12-01 00:00:00"
+    end_date: str = "2024-05-20 00:00:00"
     fees: float = 0.1 / 100
     day: int = 5
     offset: int = 22
@@ -246,13 +246,19 @@ class Dca_PriceVariation(Dca):
         )
 
 
-def process(offset, weekday):
-    dca_args = Dca_Args(offset=offset, day=weekday, begin_date=None, end_date=None)
+def process(offset, weekday, begin_date, end_date):
+    dca_args = Dca_Args(
+        offset=offset,
+        day=weekday,
+        begin_date=begin_date,
+        end_date=end_date,
+    )
     dca_element = Dca(dca_args)
     portfolio_values, total_invested, _, not_invested_values, dates = (
         dca_element._dca_loop()
     )
-    return portfolio_values, total_invested, not_invested_values, dates, offset, weekday
+    return_percentage = ((portfolio_values[-1] - total_invested) / total_invested) * 100
+    return weekday, offset, begin_date, end_date, return_percentage
 
 
 # Function to process a single date range
@@ -341,20 +347,138 @@ if __name__ == "__main__":
     day_hour_combinations = [
         (day, hour) for day, hour in product(range(0, 7), range(0, 24))
     ]
-    with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
-        results = pool.starmap(process, day_hour_combinations)
+    begin_date = pd.to_datetime("2020-01-01 00:00:00")
+    end_date = pd.to_datetime("2024-05-26 00:00:00")
+    date_ranges = []
+    while begin_date < end_date - pd.Timedelta(weeks=int(12)):
+        date_ranges.append((begin_date, end_date))
+        begin_date += pd.Timedelta(weeks=int(4))
 
-    collected_results = []
-    for result in results:
-        (
-            portfolio_values,
-            total_invested,
-            not_invested_values,
-            dates,
-            offset,
-            weekday,
-        ) = result
-        return_percentage = (
-            (portfolio_values[-1] - total_invested) / total_invested
-        ) * 100
-        collected_results.append([weekday, offset, return_percentage])
+    combined_pairs = [
+        (day, hour, begin_date, end_date)
+        for (day, hour), (begin_date, end_date) in product(
+            day_hour_combinations, date_ranges
+        )
+    ]
+    with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
+        results = pool.starmap(process, combined_pairs)
+    df = pd.DataFrame(
+        results,
+        columns=["offset", "weekday", "begin_date", "end_date", "return_percentage"],
+    )
+
+    def softmax(x):
+        e_x = np.exp(x - np.max(x))  # Subtract max for numerical stability
+        return e_x / e_x.sum(axis=0)
+
+    # Apply softmax for each 'begin_date' group
+    df["return_percentage_softmax"] = df.groupby("begin_date")[
+        "return_percentage"
+    ].transform(lambda x: softmax(x))
+
+    fig = go.Figure()
+    weekday_map = {
+        0: "Monday",
+        1: "Tuesday",
+        2: "Wednesday",
+        3: "Thursday",
+        4: "Friday",
+        5: "Saturday",
+        6: "Sunday",
+    }
+    # Loop through unique weekday and offset combinations
+    for (weekday, offset), group in df.groupby(["weekday", "offset"]):
+        fig.add_trace(
+            go.Scatter(
+                x=group["begin_date"],
+                y=group["return_percentage_softmax"],
+                mode="lines+markers",  # You can change to 'lines' or 'markers' depending on preference
+                name=f"{weekday_map[weekday]}_{offset}",
+            )
+        )
+
+    # Update layout
+    fig.update_layout(
+        title="Softmax-Transformed Return Percentage by Begin Date",
+        xaxis_title="Begin Date",
+        yaxis_title="Softmax Transformed Return Percentage",
+        legend_title="Weekday and Offset",
+        showlegend=True,
+    )
+
+    # Show the plot
+    fig.show()
+
+    # Ensure 'begin_date' is in datetime format
+    df["begin_date"] = pd.to_datetime(df["begin_date"])
+
+    # Group by 'weekday' and calculate the mean return percentage for each day
+    df_grouped = (
+        df.groupby(["weekday", "begin_date"])["return_percentage"].mean().reset_index()
+    )
+
+    # Define the weekday names
+    weekday_map = {
+        0: "Monday",
+        1: "Tuesday",
+        2: "Wednesday",
+        3: "Thursday",
+        4: "Friday",
+        5: "Saturday",
+        6: "Sunday",
+    }
+
+    # Create a plot
+    fig = go.Figure()
+
+    # Loop through each weekday and plot its data
+    for weekday, group in df_grouped.groupby("weekday"):
+        fig.add_trace(
+            go.Scatter(
+                x=group["begin_date"],
+                y=group["return_percentage"],
+                mode="lines+markers",
+                name=weekday_map[weekday],
+            )
+        )
+
+    # Update the layout
+    fig.update_layout(
+        title="Return Percentage by Begin Date and Weekday",
+        xaxis_title="Begin Date",
+        yaxis_title="Return Percentage",
+        legend_title="Weekday",
+        showlegend=True,
+    )
+
+    # Show the plot
+    fig.show()
+
+    df_grouped = (
+        df.groupby(["offset", "begin_date"])["return_percentage"].mean().reset_index()
+    )
+    # Create a plot
+    fig = go.Figure()
+
+    # Loop through each weekday and plot its data
+    for offset, group in df_grouped.groupby("offset"):
+        fig.add_trace(
+            go.Scatter(
+                x=group["begin_date"],
+                y=group["return_percentage"],
+                mode="lines+markers",
+                name=f"Hours:{offset}",
+            )
+        )
+
+    # Update the layout
+    fig.update_layout(
+        title="Return Percentage by hours and Weekday",
+        xaxis_title="Hours",
+        yaxis_title="Return Percentage",
+        legend_title="Weekday",
+        showlegend=True,
+    )
+
+    # Show the plot
+    fig.show()
