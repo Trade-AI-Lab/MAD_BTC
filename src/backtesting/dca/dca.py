@@ -15,7 +15,7 @@ absolute_path = os.path.abspath(__file__)[
 @dataclass
 class Dca_Args:
     exchange: str = "binance"
-    cryptocurrency: str = "ETHUSDT"
+    cryptocurrency: str = "ADAUSDT"
     investment: float = 125
     investment_interval: str = "W"
     begin_date: str = "2020-01-01 00:00:00"

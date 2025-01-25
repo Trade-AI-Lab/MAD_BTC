@@ -22,3 +22,4 @@
 if you want to launch a [DCA](https://github.com/Trade-AI-Lab/MAD_BTC/blob/main/src/backtesting/dca/dca.py) strategy on your favorite cryptocurrency
 I have also done a threshold DCA when the price variation is higher(resp. lower) than a threshold you increase (resp. decrease) your investement given a factor.
 I found thanks to [DCA](https://github.com/Trade-AI-Lab/MAD_BTC/blob/main/src/backtesting/dca/dca.py), it is better to do a weekly investment compared to a monthly investment.
+What a found very interesting amon BTC,ETH,ADA, BNB cryptocurrencies with DCA strategy, apply DCA between 21h00 and the end of the day(23h59), the worst hours is 20h. Best days are Monday, Tuesday, Wednesday and Thursday while the worst days are the week-end.
