@@ -15,14 +15,14 @@ absolute_path = os.path.abspath(__file__)[
 @dataclass
 class Dca_Args:
     exchange: str = "binance"
-    cryptocurrency: str = "ADAUSDT"
-    investment: float = 125
+    cryptocurrency: str = "BNBUSDT"
+    investment: float = 1
     investment_interval: str = "W"
-    begin_date: str = "2020-01-01 00:00:00"
+    begin_date: str = None
     end_date: str = "2024-05-20 00:00:00"
     fees: float = 0.1 / 100
-    day: int = 5
-    offset: int = 22
+    day: int = 19
+    offset: int = 6
 
 
 class Dca:
@@ -33,9 +33,14 @@ class Dca:
         self.args.time = "1h"
         self.df = self._open_dataframe()
         self.df.index = self.df.index + pd.Timedelta(hours=args.offset)
-        self.resampled_df = self.df.resample(
-            args.investment_interval + f"-{self.weekday_map[args.day % 7]}"
-        ).first()
+        if args.investment_interval == "W" or args.investment_interval == "D":
+            self.resampled_df = self.df.resample(
+                "W" + f"-{self.weekday_map[args.day % 7]}"
+            ).first()
+            if args.investment_interval == "D":
+                self.resampled_df = self.df.resample(args.investment_interval).first()
+        else:
+            self.resampled_df = self.df.resample(args.investment_interval).first()
         del self.df
 
     def _open_dataframe(self):
@@ -327,12 +332,52 @@ def run_multiprocessing():
 
 if __name__ == "__main__":
     import multiprocessing
+    import plotly.express as px
 
-    # Initialize the Dca_Args instance for DCA
-    dca_args = Dca_Args()
-    dca_element = Dca(dca_args)
-    dca_element.compute_dca_from_dataframe(output=False, plot=False)
+    for cryptocurrency in ["ADAUSDT", "BNBUSDT", "ETHUSDT", "BTCUSDT"]:
+        # Initialize the Dca_Args instance for DCA
+        liste = []
+        for day in range(0, 7):
+            for offset in range(0, 24):
+                for investment_interval in ["24h", "168h", "672h"]:
+                    dca_args = Dca_Args(
+                        investment_interval=investment_interval,
+                        offset=offset,
+                        day=day,
+                        cryptocurrency=cryptocurrency,
+                    )
+                    dca_element = Dca(dca_args)
+                    portfolio_values, total_invested, _, _, _ = dca_element._dca_loop()
+                    return_percentage = (
+                        (portfolio_values[-1] - total_invested) / total_invested
+                    ) * 100
+                    print(return_percentage)
+                    liste.append([day, offset, investment_interval, return_percentage])
+        df = pd.DataFrame(
+            liste,
+            columns=["weekday", "offset", "investment_interval", "return_percentage"],
+        )
+        fig = px.scatter(
+            df,
+            y="return_percentage",
+            x="weekday",
+            color="investment_interval",
+            title=f"Cryptocurrency_{cryptocurrency}",
+        )
+        fig.update_traces(marker_size=10)
+        fig.show()
 
+        fig1 = px.scatter(
+            df,
+            y="return_percentage",
+            x="offset",
+            color="investment_interval",
+            title=f"Cryptocurrency_{cryptocurrency}",
+        )
+        fig1.update_traces(marker_size=10)
+        fig1.show()
+
+    exit()
     # Initialize the Dca_Ema_Args instance with correct parameters
     dca_ema_args = Dca_Ema_Args()  # Create an instance of Dca_Ema_Args
     dca_ema_element = Dca_Ema(dca_ema_args)  # Pass it to the Dca_Ema class
@@ -341,6 +386,7 @@ if __name__ == "__main__":
     dca_pricevariation_args = Dca_PriceVariation_Args(
         increase_factor=3 / 100, decrease_threshold=0.03
     )
+
     dca_pricevariation_element = Dca_PriceVariation(dca_pricevariation_args)
     dca_pricevariation_element.compute_dca_from_dataframe(output=False, plot=False)
 
