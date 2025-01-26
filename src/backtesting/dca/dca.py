@@ -63,7 +63,6 @@ class Dca:
             & (df["open_date"] <= self.args.end_date)
         ]
         df.set_index("open_date", inplace=True)
-        print("Dataframe loaded")
         return df
 
     def _dca_loop(self):
@@ -263,7 +262,6 @@ def process(offset, weekday, investment_interval, cryptocurrency):
         dca_element._dca_loop()
     )
     return_percentage = ((portfolio_values[-1] - total_invested) / total_invested) * 100
-    print(return_percentage, offset, weekday, investment_interval)
     return weekday, offset, return_percentage, investment_interval
 
 
@@ -336,7 +334,7 @@ if __name__ == "__main__":
     import plotly.express as px
     import wandb
 
-    wandb.init(project="crypto", entity="corporate-manu-sureli", name="dca_strategy")
+    wandb.init(project="dca", entity="corporate-manu-sureli", name="dca_strategy")
     for cryptocurrency in ["ADAUSDT", "BNBUSDT", "ETHUSDT", "BTCUSDT"]:
         # Initialize the Dca_Args instance for DCA
         day_hour_investment_interval_combinations = [
