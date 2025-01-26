@@ -21,5 +21,4 @@
 ### **Code related to DCA**
 if you want to launch a [DCA](https://github.com/Trade-AI-Lab/MAD_BTC/blob/main/src/backtesting/dca/dca.py) strategy on your favorite cryptocurrency
 I have also done a threshold DCA when the price variation is higher(resp. lower) than a threshold you increase (resp. decrease) your investement given a factor.
-I found thanks to [DCA](https://github.com/Trade-AI-Lab/MAD_BTC/blob/main/src/backtesting/dca/dca.py), it is better to do a weekly investment compared to a monthly investment.
 Among different cyptocurrencies, buying each 672h is the most advantageous, [report](https://wandb.ai/corporate-manu-sureli/dca/reports/DCA-strategy-multiple-cryptocurriences--VmlldzoxMTA5NTgzMA?accessToken=eapuefhinnxj39xhhbl7x3itwnn3h51yn5xv0iqdyhx8i7843osr4912fvhugtb2). 
