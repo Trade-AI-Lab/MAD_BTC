@@ -250,21 +250,6 @@ class Dca_PriceVariation(Dca):
         )
 
 
-def process(offset, weekday, investment_interval, cryptocurrency):
-    dca_args = Dca_Args(
-        offset=offset,
-        day=weekday,
-        investment_interval=investment_interval,
-        cryptocurrency=cryptocurrency,
-    )
-    dca_element = Dca(dca_args)
-    portfolio_values, total_invested, _, not_invested_values, dates = (
-        dca_element._dca_loop()
-    )
-    return_percentage = ((portfolio_values[-1] - total_invested) / total_invested) * 100
-    return weekday, offset, return_percentage, investment_interval
-
-
 # Function to process a single date range
 def run_multiprocessing():
     def process_date_range(begin_date, end_date):
@@ -329,37 +314,53 @@ def run_multiprocessing():
         pool.starmap(process_date_range, date_ranges)
 
 
-if __name__ == "__main__":
-    import multiprocessing
-    import plotly.express as px
-    import wandb
+def process_dca(offset, weekday, investment_interval, cryptocurrency):
+    dca_args = Dca_Args(
+        offset=offset,
+        day=weekday,
+        investment_interval=investment_interval,
+        cryptocurrency=cryptocurrency,
+    )
+    dca_element = Dca(dca_args)
+    portfolio_values, total_invested, _, not_invested_values, dates = (
+        dca_element._dca_loop()
+    )
+    return_percentage = ((portfolio_values[-1] - total_invested) / total_invested) * 100
+    return weekday, offset, return_percentage, investment_interval
 
-    wandb.init(project="dca", entity="corporate-manu-sureli", name="dca_strategy")
-    for cryptocurrency in ["ADAUSDT", "BNBUSDT", "ETHUSDT", "BTCUSDT"]:
+
+def dca_multiprocessing(
+    project="dca",
+    entity="corporate-manu-sureli",
+    name="dca_strategy",
+    list_cryptos=["ADAUSDT", "BNBUSDT", "ETHUSDT", "BTCUSDT"],
+    list_investment_interval=["24h", "168h", "672h", "W", "ME", "D"],
+):
+    weekday_map = {
+        0: "Monday",
+        1: "Tuesday",
+        2: "Wednesday",
+        3: "Thursday",
+        4: "Friday",
+        5: "Saturday",
+        6: "Sunday",
+    }
+    wandb.init(project=project, entity=entity, name=name)
+    for cryptocurrency in list_cryptos:
         # Initialize the Dca_Args instance for DCA
         day_hour_investment_interval_combinations = [
             (day, hour, investment_interval, cryptocurrency)
             for day, hour, investment_interval in product(
-                range(0, 7), range(0, 24), ["24h", "168h", "672h", "W", "ME", "D"]
+                range(0, 7), range(0, 24), list_investment_interval
             )
         ]
-
         with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
-            results = pool.starmap(process, day_hour_investment_interval_combinations)
-
+            results = pool.starmap(process_dca, day_hour_investment_interval_combinations)
         df = pd.DataFrame(
             results,
             columns=["offset", "weekday", "return_percentage", "investment_interval"],
         )
-        weekday_map = {
-            0: "Monday",
-            1: "Tuesday",
-            2: "Wednesday",
-            3: "Thursday",
-            4: "Friday",
-            5: "Saturday",
-            6: "Sunday",
-        }
+
         df["weekday"] = df["weekday"].map(weekday_map)
 
         fig = px.scatter(
@@ -373,7 +374,16 @@ if __name__ == "__main__":
         # fig.show()
         wandb.log({"weekday_scatter_plot": fig})
         del results
+        print(f"Finished for {cryptocurrency}")
     wandb.finish()
+
+
+if __name__ == "__main__":
+    import multiprocessing
+    import plotly.express as px
+    import wandb
+
+    dca_multiprocessing()
 
     # Initialize the Dca_Ema_Args instance with correct parameters
     dca_ema_args = Dca_Ema_Args()  # Create an instance of Dca_Ema_Args
