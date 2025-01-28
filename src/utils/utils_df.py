@@ -51,6 +51,13 @@ def open_dataframe(PATH: str, light: bool = False) -> pd.DataFrame:
     return df
 
 
+def open_dataframe_backtesting(PATH: str, light: bool = False) -> pd.DataFrame:
+    df = open_dataframe(PATH, light)
+    df.set_index("open_date", inplace=True)
+    df.columns = [col.capitalize() for col in df.columns]
+    return df
+
+
 def y_build(df: pd.DataFrame, column: str) -> pd.DataFrame:
     """
     y_build _summary_

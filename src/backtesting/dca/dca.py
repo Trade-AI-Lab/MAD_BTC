@@ -151,12 +151,12 @@ class Dca:
 
 @dataclass
 class Dca_Ema_Args(Dca_Args):
-    increase_factor: float = 5 / 100  # Default value for increase factor
+    factor: float = 5 / 100  # Default value for increase factor
     window: int = 12  # Default window size for EMA
 
     def __init__(self, **kwargs):
         # Pass parent attributes to Dca_Args
-        self.increase_factor = kwargs.pop("increase_factor", self.increase_factor)
+        self.factor = kwargs.pop("factor", self.factor)
         self.window = kwargs.pop("window", self.window)
         super().__init__(**kwargs)
 
@@ -172,14 +172,14 @@ class Dca_Ema(Dca):
         not_invested_values = []
         investment = self.args.investment
         fees = self.args.fees
-        increase_factor = self.args.increase_factor
+        factor = self.args.increase_factor
         for index, row in self.resampled_df.iterrows():
             price = row["close"]
             indicator = row["indicator"]
             if price >= indicator:
-                current_investment = investment * (1 + increase_factor)
+                current_investment = investment * (1 + factor)
             elif price <= indicator:
-                current_investment = investment * (1 - increase_factor)
+                current_investment = investment * (1 -factor)
             else:
                 current_investment = investment
             shares_bought = current_investment * (1 - fees) / price
@@ -383,16 +383,17 @@ if __name__ == "__main__":
     import plotly.express as px
     import wandb
 
-    dca_multiprocessing()
-
     # Initialize the Dca_Ema_Args instance with correct parameters
     dca_ema_args = Dca_Ema_Args()  # Create an instance of Dca_Ema_Args
     dca_ema_element = Dca_Ema(dca_ema_args)  # Pass it to the Dca_Ema class
     dca_ema_element.compute_dca_from_dataframe(output=False, plot=False)
 
     dca_pricevariation_args = Dca_PriceVariation_Args(
-        increase_factor=3 / 100, decrease_threshold=0.03
+        factor=3 / 100, decrease_threshold=0.03
     )
 
     dca_pricevariation_element = Dca_PriceVariation(dca_pricevariation_args)
     dca_pricevariation_element.compute_dca_from_dataframe(output=False, plot=False)
+
+    dca_multiprocessing()
+
