@@ -10,3 +10,4 @@ plotly
 imageio
 toml
 wandb
+backtesting
