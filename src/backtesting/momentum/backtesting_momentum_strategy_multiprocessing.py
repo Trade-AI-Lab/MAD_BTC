@@ -15,6 +15,7 @@ from src.utils.utils_df import open_dataframe_backtesting
 from dataclasses import dataclass
 import multiprocessing
 from itertools import product
+from tqdm import tqdm
 
 
 @dataclass
@@ -83,16 +84,75 @@ def _backtest(config):
     bt = Backtest(DF, MaRatio, cash=1000, commission=0.1 / 100)
     stats = bt.run()
     filename_save = rf"experience/backtest/{config.exchange}-{config.crypto_currency}-{config.time}/method_{config.strategy.ratio_method}_x_{config.strategy.x}_y_{config.strategy.y}"
+    os.makedirs(os.path.dirname(filename_save), exist_ok=True)
     bt.plot(
         open_browser=False,
         plot_volume=False,
         plot_pl=False,
         filename=filename_save,
     )
-    # Log the HTML file to wandb
-    wandb.log({f"plot/": wandb.Html(open(filename_save).read())})
+    del bt
 
-    return stats
+    return stats, filename_save
+
+
+def _backtest_with_logging(config):
+    """
+    Run backtest for a given config and log results to W&B.
+    """
+    stats, filename_save = _backtest(config)  # Your original backtest logic
+
+    # Convert Timedelta values to seconds (if present)
+    def convert_timedelta_to_seconds(value):
+        if isinstance(value, pd.Timedelta):
+            return value.total_seconds()
+        return value
+
+    # Log backtest statistics to W&B
+    wandb.log(
+        {
+            "backtest_results/Exposure Time [%]": convert_timedelta_to_seconds(
+                stats.loc["Exposure Time [%]"]
+            ),
+            "backtest_results/Equity Final [$]": stats.loc["Equity Final [$]"],
+            "backtest_results/Equity Peak [$]": stats.loc["Equity Peak [$]"],
+            "backtest_results/Return [%]": stats.loc["Return [%]"],
+            "backtest_results/Buy & Hold Return [%]": stats.loc[
+                "Buy & Hold Return [%]"
+            ],
+            "backtest_results/Return (Ann.) [%]": stats.loc["Return (Ann.) [%]"],
+            "backtest_results/Volatility (Ann.) [%]": stats.loc[
+                "Volatility (Ann.) [%]"
+            ],
+            "backtest_results/CAGR [%]": stats.loc["CAGR [%]"],
+            "backtest_results/Sharpe Ratio": stats.loc["Sharpe Ratio"],
+            "backtest_results/Sortino Ratio": stats.loc["Sortino Ratio"],
+            "backtest_results/Calmar Ratio": stats.loc["Calmar Ratio"],
+            "backtest_results/Max. Drawdown [%]": stats.loc["Max. Drawdown [%]"],
+            "backtest_results/Avg. Drawdown [%]": stats.loc["Avg. Drawdown [%]"],
+            "backtest_results/Max. Drawdown Duration": convert_timedelta_to_seconds(
+                stats.loc["Max. Drawdown Duration"]
+            ),
+            "backtest_results/Avg. Drawdown Duration": convert_timedelta_to_seconds(
+                stats.loc["Avg. Drawdown Duration"]
+            ),
+            "backtest_results/# Trades": stats.loc["# Trades"],
+            "backtest_results/Win Rate [%]": stats.loc["Win Rate [%]"],
+            "backtest_results/Best Trade [%]": stats.loc["Best Trade [%]"],
+            "backtest_results/Worst Trade [%]": stats.loc["Worst Trade [%]"],
+            "backtest_results/Avg. Trade [%]": stats.loc["Avg. Trade [%]"],
+            "backtest_results/Max. Trade Duration": convert_timedelta_to_seconds(
+                stats.loc["Max. Trade Duration"]
+            ),
+            "backtest_results/Avg. Trade Duration": convert_timedelta_to_seconds(
+                stats.loc["Avg. Trade Duration"]
+            ),
+            "backtest_results/Profit Factor": stats.loc["Profit Factor"],
+            "backtest_results/Expectancy [%]": stats.loc["Expectancy [%]"],
+        }
+    )
+
+    return stats, filename_save
 
 
 def launcher_backtest(
@@ -101,25 +161,56 @@ def launcher_backtest(
     name=f"bt_{config.crypto_currency}_{config.time}",
     config=config,
 ):
+    # Initialize W&B
     wandb.init(project=project, entity=entity, name=name)
-    x_range = range(1, 34)
-    y_range = range(35, 120)
+
+    # Define parameter ranges
+    x_range = range(1, 5)
+    y_range = range(2, 5)
     ratio_method = ["ma_ratio", "ema_ratio", "zlema_ratio", "dema_ratio", "tema_ratio"]
+
+    # Generate configs for backtests
     configs = [
         Config(
             crypto_currency=config.crypto_currency,
             exchange=config.exchange,
             time=config.time,
             strategy=StrategyConfig(
-                ratio_method=ratio_method, x=x, y=y, name=config.strategy.name
+                ratio_method=method, x=x, y=y, name=config.strategy.name
             ),
         )
-        for x, y, ratio_method in product(x_range, y_range, ratio_method)
+        for x, y, method in product(x_range, y_range, ratio_method)
     ]
-    with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
-        results = pool.starmap(_backtest, configs)
+
+    # Define the tqdm_map function with a progress bar
+    def tqdm_map(func, iterable, num_processes=None, desc=None):
+        """
+        A wrapper for multiprocessing.Pool.map with tqdm progress bar.
+        """
+        num_processes = num_processes or multiprocessing.cpu_count()
+
+        with multiprocessing.Pool(processes=num_processes) as pool:
+            with tqdm(total=len(iterable), desc=desc) as progress_bar:
+
+                def update(*_):
+                    progress_bar.update()
+
+                # Update progress for each result
+                for result in pool.imap(func, iterable):
+                    update()
+                    yield result
+
+    # Run the backtests with tqdm progress bar
+    results = list(
+        tqdm_map(_backtest_with_logging, configs, desc="Backtesting Progress")
+    )
+    for stats, filename_save in results:
+        with open(filename_save + ".html", "r") as html_file:
+            wandb.log({f"plot/{filename_save}": wandb.Html(html_file.read())})
+
+    wandb.finish()
 
 
 if __name__ == "__main__":
     plot = _backtest(config)
-    print(plot)
+    launcher_backtest()
