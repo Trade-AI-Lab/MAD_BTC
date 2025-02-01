@@ -16,6 +16,7 @@ from dataclasses import dataclass
 import multiprocessing
 from itertools import product
 from tqdm import tqdm
+import plotly.express as px
 
 
 @dataclass
@@ -44,6 +45,7 @@ config = Config(
 DF = open_dataframe_backtesting(
     rf"data/{config.exchange}-{config.crypto_currency}-{config.time}.pkl"
 )
+DF["Buy and Hold Equity"] = (DF["Close"] - DF["Close"].iloc[0]) / DF["Close"].iloc[0]
 
 
 def function(df, config):
@@ -63,19 +65,19 @@ class MaRatio(Strategy):
         self.ratio = self.I(function, self.data._Data__df, self.config)
 
     def next(self):
-        if self.position.is_long or self.position.is_short:
+        if not self.position.is_long and not self.position.is_short:
+            if self.ratio >= 0:
+                self.buy()
+            elif self.ratio < 0:
+                self.sell()
+
+        elif self.position.is_long or self.position.is_short:
             if self.ratio >= 0 and self.position.is_short:
                 self.position.close()
                 self.buy()
 
-            elif self.ratio <= 0 and self.position.is_long:
+            elif self.ratio < 0 and self.position.is_long:
                 self.position.close()
-                self.sell()
-
-        elif not self.position.is_long and not self.position.is_short:
-            if self.ratio >= 0:
-                self.buy()
-            elif self.ratio <= 0:
                 self.sell()
 
 
@@ -83,6 +85,7 @@ def _backtest(config):
     MaRatio.config = config
     bt = Backtest(DF, MaRatio, cash=1000, commission=0.1 / 100)
     stats = bt.run()
+    """
     filename_save = rf"experience/backtest/{config.exchange}-{config.crypto_currency}-{config.time}/method_{config.strategy.ratio_method}_x_{config.strategy.x}_y_{config.strategy.y}"
     os.makedirs(os.path.dirname(filename_save), exist_ok=True)
     bt.plot(
@@ -91,16 +94,17 @@ def _backtest(config):
         plot_pl=False,
         filename=filename_save,
     )
+    """
     del bt
 
-    return stats, filename_save
+    return stats  # , filename_save
 
 
 def _backtest_with_logging(config):
     """
     Run backtest for a given config and log results to W&B.
     """
-    stats, filename_save = _backtest(config)  # Your original backtest logic
+    stats = _backtest(config)  # Your original backtest logic
 
     # Convert Timedelta values to seconds (if present)
     def convert_timedelta_to_seconds(value):
@@ -110,7 +114,7 @@ def _backtest_with_logging(config):
 
     # Log backtest statistics to W&B
     wandb.log(
-        {
+        data={
             "backtest_results/Exposure Time [%]": convert_timedelta_to_seconds(
                 stats.loc["Exposure Time [%]"]
             ),
@@ -138,21 +142,16 @@ def _backtest_with_logging(config):
             ),
             "backtest_results/# Trades": stats.loc["# Trades"],
             "backtest_results/Win Rate [%]": stats.loc["Win Rate [%]"],
-            "backtest_results/Best Trade [%]": stats.loc["Best Trade [%]"],
-            "backtest_results/Worst Trade [%]": stats.loc["Worst Trade [%]"],
-            "backtest_results/Avg. Trade [%]": stats.loc["Avg. Trade [%]"],
-            "backtest_results/Max. Trade Duration": convert_timedelta_to_seconds(
-                stats.loc["Max. Trade Duration"]
-            ),
-            "backtest_results/Avg. Trade Duration": convert_timedelta_to_seconds(
-                stats.loc["Avg. Trade Duration"]
-            ),
             "backtest_results/Profit Factor": stats.loc["Profit Factor"],
             "backtest_results/Expectancy [%]": stats.loc["Expectancy [%]"],
         }
     )
-
-    return stats, filename_save
+    df = stats["_equity_curve"]
+    df["Equity"] = (df["Equity"] - df["Equity"].iloc[0]) / df["Equity"].iloc[0]
+    df = df.drop(["DrawdownPct", "DrawdownDuration"], axis=1)
+    title = f"Method: {config.strategy.ratio_method}, x: {config.strategy.x}, y: {config.strategy.y} (equity)"
+    df = df.rename(columns={"Equity": title})
+    return df
 
 
 def launcher_backtest(
@@ -165,8 +164,8 @@ def launcher_backtest(
     wandb.init(project=project, entity=entity, name=name)
 
     # Define parameter ranges
-    x_range = range(1, 5)
-    y_range = range(2, 5)
+    x_range = range(1, 30)
+    y_range = range(30, 150)
     ratio_method = ["ma_ratio", "ema_ratio", "zlema_ratio", "dema_ratio", "tema_ratio"]
 
     # Generate configs for backtests
@@ -204,9 +203,16 @@ def launcher_backtest(
     results = list(
         tqdm_map(_backtest_with_logging, configs, desc="Backtesting Progress")
     )
-    for stats, filename_save in results:
-        with open(filename_save + ".html", "r") as html_file:
-            wandb.log({f"plot/{filename_save}": wandb.Html(html_file.read())})
+
+    results.append(DF["Buy and Hold Equity"])
+    df = pd.concat(results, axis=1)
+    fig = px.line(
+        df,
+        x=df.index,
+        y=df.columns,
+        title="Equity for different strategies",
+    )
+    wandb.log({"equity_chart": wandb.Plotly(fig)})
 
     wandb.finish()
 
