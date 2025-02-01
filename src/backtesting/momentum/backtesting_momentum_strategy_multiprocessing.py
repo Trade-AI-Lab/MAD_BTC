@@ -203,16 +203,28 @@ def launcher_backtest(
     results = list(
         tqdm_map(_backtest_with_logging, configs, desc="Backtesting Progress")
     )
+    step = 100
+    i = 0  # Track step index
 
-    results.append(DF["Buy and Hold Equity"])
-    df = pd.concat(results, axis=1)
-    fig = px.line(
-        df,
-        x=df.index,
-        y=df.columns,
-        title="Equity for different strategies",
-    )
-    wandb.log({"equity_chart": wandb.Plotly(fig)})
+    while len(results) > 0:
+        # Take the first 'step' elements and remove them
+        sub_results = results[:step]
+        results = results[step:]  # Remove used elements (pop from front)
+        sub_results.insert(DF["Buy and Hold Equity"])
+        # Concatenate and plot
+        df = pd.concat(sub_results, axis=1)  # Combine data into a DataFrame
+        fig = px.line(
+            df,
+            x=df.index,
+            y=df.columns,
+            title="Equity for different strategies",
+        )
+
+        # Log with a unique key to accumulate
+        wandb.log({f"equity_chart_{i}": wandb.Plotly(fig)})
+        del df  # Free memory
+
+        i += 1  # Increment step index
 
     wandb.finish()
 
