@@ -151,6 +151,7 @@ def _backtest_with_logging(config):
     df = df.drop(["DrawdownPct", "DrawdownDuration"], axis=1)
     title = f"Method: {config.strategy.ratio_method}, x: {config.strategy.x}, y: {config.strategy.y} (equity)"
     df = df.rename(columns={"Equity": title})
+    del stats
     return df
 
 
@@ -210,7 +211,7 @@ def launcher_backtest(
         # Take the first 'step' elements and remove them
         sub_results = results[:step]
         results = results[step:]  # Remove used elements (pop from front)
-        sub_results.insert(index=0, object=DF["Buy and Hold Equity"])
+        sub_results.append(DF["Buy and Hold Equity"])
         # Concatenate and plot
         df = pd.concat(sub_results, axis=1)  # Combine data into a DataFrame
         fig = px.line(
