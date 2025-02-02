@@ -210,7 +210,7 @@ def launcher_backtest(
         # Take the first 'step' elements and remove them
         sub_results = results[:step]
         results = results[step:]  # Remove used elements (pop from front)
-        sub_results.insert(DF["Buy and Hold Equity"])
+        sub_results.insert(index=0, object=DF["Buy and Hold Equity"])
         # Concatenate and plot
         df = pd.concat(sub_results, axis=1)  # Combine data into a DataFrame
         fig = px.line(
@@ -230,5 +230,5 @@ def launcher_backtest(
 
 
 if __name__ == "__main__":
-    plot = _backtest(config)
+    # plot = _backtest(config)
     launcher_backtest()
