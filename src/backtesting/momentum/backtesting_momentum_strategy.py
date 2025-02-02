@@ -54,7 +54,7 @@ def launcher_backtest(trial, df,config):
     GeneralEMaRatio.config = config
     bt = Backtest(df, GeneralEMaRatio, cash=100000, commission=0.1/100)
     stats = bt.run()
-    if stats.loc['Buy & Hold Return [%]']< stats.loc['Return [%]'] and stats.loc['Equity Final [$]']*2>stats.loc['Equity Peak [$]']:
+    if stats.loc['Buy & Hold Return [%]']< stats.loc['Return [%]'] and stats.loc['Equity Final [$]']==stats.loc['Equity Peak [$]']:
         bt.plot(open_browser=False,filename=rf"experience/backtest/{config['exchange']}-{config['crypto_currency']}-{config['time']}/method_{config['strategy']['ratio_method']}_x_{config['strategy']['x']}_y_{config['strategy']['y']}_orderx_{config['strategy']['order_x']}_ordery_{config['strategy']['order_y']}")
     return (stats.loc['Return [%]']-stats.loc['Buy & Hold Return [%]'])/stats.loc['Buy & Hold Return [%]']*100*1/(1+np.exp(-stats.loc['Max. Drawdown [%]']/100))
 

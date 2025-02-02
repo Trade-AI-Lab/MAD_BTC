@@ -39,7 +39,7 @@ class Config:
 config = Config(
     crypto_currency="ETHUSDT",
     exchange="binance",
-    time="1h",
+    time="1d",
     strategy=StrategyConfig(ratio_method="ema_ratio", x=4, y=100, name="momentum"),
 )
 DF = open_dataframe_backtesting(
@@ -148,7 +148,9 @@ def _backtest_with_logging(config):
     )
     if (
         stats.loc["Buy & Hold Return [%]"] < stats.loc["Return [%]"]
-        and stats.loc["Equity Final [$]"] * 2 > stats.loc["Equity Peak [$]"]
+        and stats.loc["Equity Final [$]"] == stats.loc["Equity Peak [$]"]
+        and stats.loc["Sharpe Ratio"] > 0
+        and stats.loc["Avg. Drawdown [%]"] < 25
     ):
         df = stats["_equity_curve"]
         df["Equity"] = (df["Equity"] - df["Equity"].iloc[0]) / df["Equity"].iloc[0]
@@ -171,10 +173,9 @@ def launcher_backtest(
     wandb.init(project=project, entity=entity, name=name)
 
     # Define parameter ranges
-    x_range = range(1, 30)
-    y_range = range(30, 150)
+    x_range = range(1, 100)
+    y_range = range(1, 150)
     ratio_method = ["ma_ratio", "ema_ratio", "zlema_ratio", "dema_ratio", "tema_ratio"]
-    ratio_method = ["zlema_ratio"]
 
     # Generate configs for backtests
     configs = [
@@ -183,7 +184,7 @@ def launcher_backtest(
             exchange=config.exchange,
             time=config.time,
             strategy=StrategyConfig(
-                ratio_method=method, x=x, y=y, name=config.strategy.name
+                ratio_method=method, x=x, y=y+x, name=config.strategy.name
             ),
         )
         for x, y, method in product(x_range, y_range, ratio_method)
@@ -212,10 +213,9 @@ def launcher_backtest(
         tqdm_map(_backtest_with_logging, configs, desc="Backtesting Progress")
     )
     results = list(filter(lambda x: x is not None, results))
-    step = 25
+    full_df = pd.concat(results, axis=1)
+    step = 100
     i = 0  # Track step index
-    charts = []
-    print(len(results))
     while len(results) > 0:
         # Take the first 'step' elements and remove them
         sub_results = results[:step]
@@ -229,13 +229,53 @@ def launcher_backtest(
             y=df.columns,
             title="Equity for different strategies",
         )
-
-        # Log with a unique key to accumulate
-        charts.append(wandb.Plotly(fig))
+        fig.show()
+        # wandb.log({f"charts/Equity Charts {i}": wandb.Plotly(fig)})
         del df  # Free memory
 
         i += 1  # Increment step index
-    wandb.log({"Equity Charts": charts})
+    # Step 2: Identify low-correlation strategies (threshold can be adjusted)
+    threshold = 0.75  # Adjust based on your needs (0.3 = weak correlation)
+    uncorrelated_strategies = set()
+    correlation_matrix = full_df.corr()
+    for col in correlation_matrix.columns:
+        # Keep only strategies that have low absolute correlation with others
+        if all(
+            abs(correlation_matrix[col][other]) < threshold
+            for other in uncorrelated_strategies
+        ):
+            uncorrelated_strategies.add(col)
+
+    # Step 3: Filter DataFrame to keep only the uncorrelated strategies
+    filtered_df = full_df[list(uncorrelated_strategies)]
+    filtered_df["Buy and Hold Equity"] = DF[
+        "Buy and Hold Equity"
+    ]  # Always keep buy & hold
+
+    # Step 4: Plot in batches (like your previous loop)
+    results = list(filtered_df.columns)  # Convert to list of columns
+    step = 10  # Adjust batch size
+    i = 0  # Step index
+
+    while len(results) > 0:
+        # Take the first 'step' strategies and remove them from the list
+        sub_results = results[:step]
+        results = results[step:]
+
+        # Create DataFrame with selected strategies
+        df = filtered_df[sub_results]
+
+        # Plot
+        fig = px.line(
+            df, x=df.index, y=df.columns, title="Uncorrelated Equity Strategies"
+        )
+        fig.show()
+
+        # Uncomment to log in wandb
+        wandb.log({f"charts/Uncorrelated Equity {i}": wandb.Plotly(fig)})
+
+        del df  # Free memory
+        i += 1
 
     wandb.finish()
 
