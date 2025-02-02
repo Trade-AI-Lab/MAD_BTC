@@ -146,13 +146,19 @@ def _backtest_with_logging(config):
             "backtest_results/Expectancy [%]": stats.loc["Expectancy [%]"],
         }
     )
-    df = stats["_equity_curve"]
-    df["Equity"] = (df["Equity"] - df["Equity"].iloc[0]) / df["Equity"].iloc[0]
-    df = df.drop(["DrawdownPct", "DrawdownDuration"], axis=1)
-    title = f"Method: {config.strategy.ratio_method}, x: {config.strategy.x}, y: {config.strategy.y} (equity)"
-    df = df.rename(columns={"Equity": title})
-    del stats
-    return df
+    if (
+        stats.loc["Buy & Hold Return [%]"] < stats.loc["Return [%]"]
+        and stats.loc["Equity Final [$]"] * 2 > stats.loc["Equity Peak [$]"]
+    ):
+        df = stats["_equity_curve"]
+        df["Equity"] = (df["Equity"] - df["Equity"].iloc[0]) / df["Equity"].iloc[0]
+        df = df.drop(["DrawdownPct", "DrawdownDuration"], axis=1)
+        title = f"Method: {config.strategy.ratio_method}, x: {config.strategy.x}, y: {config.strategy.y} (equity)"
+        df = df.rename(columns={"Equity": title})
+        del stats
+        return df
+    else:
+        return None
 
 
 def launcher_backtest(
@@ -168,6 +174,7 @@ def launcher_backtest(
     x_range = range(1, 30)
     y_range = range(30, 150)
     ratio_method = ["ma_ratio", "ema_ratio", "zlema_ratio", "dema_ratio", "tema_ratio"]
+    ratio_method = ["zlema_ratio"]
 
     # Generate configs for backtests
     configs = [
@@ -204,9 +211,11 @@ def launcher_backtest(
     results = list(
         tqdm_map(_backtest_with_logging, configs, desc="Backtesting Progress")
     )
-    step = 100
+    results = list(filter(lambda x: x is not None, results))
+    step = 25
     i = 0  # Track step index
-
+    charts = []
+    print(len(results))
     while len(results) > 0:
         # Take the first 'step' elements and remove them
         sub_results = results[:step]
@@ -222,10 +231,11 @@ def launcher_backtest(
         )
 
         # Log with a unique key to accumulate
-        wandb.log({f"equity_chart_{i}": wandb.Plotly(fig)})
+        charts.append(wandb.Plotly(fig))
         del df  # Free memory
 
         i += 1  # Increment step index
+    wandb.log({"Equity Charts": charts})
 
     wandb.finish()
 
