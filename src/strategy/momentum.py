@@ -4,7 +4,34 @@ import pandas as pd
 
 class indicator_momentum:
     @staticmethod
-    def ma_ratio(data: pd.DataFrame, x: int, y: int, column_name: str = "open") -> pd.Series:
+    def indicator(
+        data: pd.DataFrame,
+        x: int,
+        column_name: str = "open",
+        method: str = "ma",
+    ) -> pd.Series:
+        if method == "ma":
+            return SMAIndicator(data[column_name], window=x).sma_indicator()
+        elif method == "ema":
+            return EMAIndicator(data[column_name], window=x).ema_indicator()
+        elif method == "zlema":
+            ema_data = data + (data - data.shift((x - 1) // 2))
+            return EMAIndicator(ema_data, window=x).ema_indicator()
+        elif method == "dema":
+            ema_data = EMAIndicator(data, window=x).ema_indicator()
+            return 2 * ema_data - EMAIndicator(ema_data, window=x).ema_indicator()
+        elif method == "tema":
+            ema_data = EMAIndicator(data, window=x).ema_indicator()
+            ema_ema_data = EMAIndicator(ema_data, window=x).ema_indicator()
+            ema_ema_ema_data = EMAIndicator(ema_ema_data, window=x).ema_indicator()
+            return 3 * ema_ema_ema_data - 3 * ema_ema_data + ema_data
+        else:
+            raise "Not known method"
+
+    @staticmethod
+    def ma_ratio(
+        data: pd.DataFrame, x: int, y: int, column_name: str = "open"
+    ) -> pd.Series:
         """
         Moving Average Ratio
 
@@ -24,7 +51,9 @@ class indicator_momentum:
         return ma_x / ma_y
 
     @staticmethod
-    def ema_ratio(data: pd.DataFrame, x: int, y: int, column_name: str = "open") -> pd.Series:
+    def ema_ratio(
+        data: pd.DataFrame, x: int, y: int, column_name: str = "open"
+    ) -> pd.Series:
         """
         Exponential Moving Average Ratio
 
@@ -44,7 +73,9 @@ class indicator_momentum:
         return ema_x / ema_y
 
     @staticmethod
-    def zlema_ratio(data: pd.DataFrame, x: int, y: int, column_name: str = "open") -> pd.Series:
+    def zlema_ratio(
+        data: pd.DataFrame, x: int, y: int, column_name: str = "open"
+    ) -> pd.Series:
         """
         Zl Exponential Moving Average Ratio
 
@@ -69,7 +100,9 @@ class indicator_momentum:
         return zlema_x / zlema_y
 
     @staticmethod
-    def dema_ratio(data: pd.DataFrame, x: int, y: int, column_name: str = "open") -> pd.Series:
+    def dema_ratio(
+        data: pd.DataFrame, x: int, y: int, column_name: str = "open"
+    ) -> pd.Series:
         """
         Double Exponential Moving Average Ratio
 
@@ -94,7 +127,9 @@ class indicator_momentum:
         return dema_x / dema_y
 
     @staticmethod
-    def tema_ratio(data: pd.DataFrame, x: int, y: int, column_name: str = "open") -> pd.Series:
+    def tema_ratio(
+        data: pd.DataFrame, x: int, y: int, column_name: str = "open"
+    ) -> pd.Series:
         """
         Triple Exponential Moving Average Ratio
 
@@ -119,9 +154,16 @@ class indicator_momentum:
         dema_x = tema(data[column_name], period=x)
         dema_y = tema(data[column_name], period=y)
         return dema_x / dema_y
-    
+
     @staticmethod
-    def general_ema_ratio(data: pd.DataFrame, x: int, y: int, order_x =3, order_y=3, column_name: str = "open") -> pd.Series:
+    def general_ema_ratio(
+        data: pd.DataFrame,
+        x: int,
+        y: int,
+        order_x=3,
+        order_y=3,
+        column_name: str = "open",
+    ) -> pd.Series:
         def general_ema(data, order, period):
             list_ema = [data]
             final_ema = 0
@@ -133,19 +175,24 @@ class indicator_momentum:
                 elif i == order:
                     coeff = 1 if order % 2 == 1 else -1
                 else:
-                    coeff = (-2 * (order - i) - 1) if i % 2 == 0 else (2 * (order - i) + 1)
-                
+                    coeff = (
+                        (-2 * (order - i) - 1) if i % 2 == 0 else (2 * (order - i) + 1)
+                    )
+
                 # Calculate EMA and append to the list
                 ema_value = EMAIndicator(list_ema[-1], window=period).ema_indicator()
                 list_ema.append(ema_value)
-                
+
                 # Update final EMA
                 final_ema += coeff * ema_value
 
             return final_ema
+
         general_ema_x = general_ema(data[column_name], order=order_x, period=x)
         general_ema_y = general_ema(data[column_name], order=order_y, period=y)
         return general_ema_x / general_ema_y
+
+
 """  
 if __name__=="__main__":
     import pandas as pd
