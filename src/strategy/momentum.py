@@ -5,15 +5,14 @@ import pandas as pd
 class indicator_momentum:
     @staticmethod
     def indicator(
-        data: pd.DataFrame,
+        data: pd.Series,
         x: int,
-        column_name: str = "open",
         method: str = "ma",
     ) -> pd.Series:
         if method == "ma":
-            return SMAIndicator(data[column_name], window=x).sma_indicator()
+            return SMAIndicator(data, window=x).sma_indicator()
         elif method == "ema":
-            return EMAIndicator(data[column_name], window=x).ema_indicator()
+            return EMAIndicator(data, window=x).ema_indicator()
         elif method == "zlema":
             ema_data = data + (data - data.shift((x - 1) // 2))
             return EMAIndicator(ema_data, window=x).ema_indicator()

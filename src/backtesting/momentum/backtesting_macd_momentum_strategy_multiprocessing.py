@@ -1,0 +1,294 @@
+from backtesting import Strategy
+from backtesting import Backtest
+import pandas as pd
+import sys, os
+import wandb
+from bokeh.embed import file_html
+from bokeh.resources import CDN
+
+absolute_path = os.path.abspath(__file__)[
+    : os.path.abspath(__file__).find("MAD_BTC") + len("MAD_BTC")
+]
+sys.path.append(absolute_path)
+from src.strategy.momentum import indicator_momentum
+from src.utils.utils_df import open_dataframe_backtesting
+from dataclasses import dataclass
+import multiprocessing
+from itertools import product
+from tqdm import tqdm
+import plotly.express as px
+import ta.trend
+
+
+@dataclass
+class StrategyConfig:
+    ratio_method: str
+    x: int
+    y: int
+    name: str
+
+
+@dataclass
+class Config:
+    crypto_currency: str
+    exchange: str
+    time: str
+    strategy: StrategyConfig
+
+
+# Example of creating an instance of the Config dataclass
+config = Config(
+    crypto_currency="ETHUSDT",
+    exchange="binance",
+    time="1d",
+    strategy=StrategyConfig(ratio_method="ema_ratio", x=4, y=100, name="momentum"),
+)
+DF = open_dataframe_backtesting(
+    rf"data/{config.exchange}-{config.crypto_currency}-{config.time}.pkl"
+)
+DF["Buy and Hold Equity"] = (DF["Close"] - DF["Close"].iloc[0]) / DF["Close"].iloc[0]
+
+
+def function(df, config):
+    ratio = getattr(indicator_momentum, config.strategy.ratio_method)(
+        df, config.strategy.x, config.strategy.y, column_name="Open"
+    )
+
+    (
+        ratio
+        - getattr(
+            indicator_momentum.indicator,
+            data=ratio,
+            x=config.strategy.z,
+            method=config.ratio_method,
+        )
+    ).values
+    return (ratio - 1).values
+
+
+class MaRatio(Strategy):
+    config = {}
+
+    def init(self):
+        # Precompute the two moving averages
+        self.ratio = self.I(function, self.data._Data__df, self.config)
+
+    def next(self):
+        if not self.position.is_long and not self.position.is_short:
+            if self.ratio >= 0:
+                self.buy()
+            elif self.ratio < 0:
+                self.sell()
+
+        elif self.position.is_long or self.position.is_short:
+            if self.ratio >= 0 and self.position.is_short:
+                self.position.close()
+                self.buy()
+
+            elif self.ratio < 0 and self.position.is_long:
+                self.position.close()
+                self.sell()
+
+
+def _backtest(config):
+    MaRatio.config = config
+    bt = Backtest(DF, MaRatio, cash=1000, commission=0.1 / 100)
+    stats = bt.run()
+    """
+    filename_save = rf"experience/backtest/{config.exchange}-{config.crypto_currency}-{config.time}/method_{config.strategy.ratio_method}_x_{config.strategy.x}_y_{config.strategy.y}"
+    os.makedirs(os.path.dirname(filename_save), exist_ok=True)
+    bt.plot(
+        open_browser=False,
+        plot_volume=False,
+        plot_pl=False,
+        filename=filename_save,
+    )
+    """
+    del bt
+
+    return stats  # , filename_save
+
+
+def _backtest_with_logging(config):
+    """
+    Run backtest for a given config and log results to W&B.
+    """
+    stats = _backtest(config)  # Your original backtest logic
+
+    # Convert Timedelta values to seconds (if present)
+    def convert_timedelta_to_seconds(value):
+        if isinstance(value, pd.Timedelta):
+            return value.total_seconds()
+        return value
+
+    # Log backtest statistics to W&B
+    wandb.log(
+        data={
+            "backtest_results/Exposure Time [%]": convert_timedelta_to_seconds(
+                stats.loc["Exposure Time [%]"]
+            ),
+            "backtest_results/Equity Final [$]": stats.loc["Equity Final [$]"],
+            "backtest_results/Equity Peak [$]": stats.loc["Equity Peak [$]"],
+            "backtest_results/Return [%]": stats.loc["Return [%]"],
+            "backtest_results/Buy & Hold Return [%]": stats.loc[
+                "Buy & Hold Return [%]"
+            ],
+            "backtest_results/Return (Ann.) [%]": stats.loc["Return (Ann.) [%]"],
+            "backtest_results/Volatility (Ann.) [%]": stats.loc[
+                "Volatility (Ann.) [%]"
+            ],
+            "backtest_results/CAGR [%]": stats.loc["CAGR [%]"],
+            "backtest_results/Sharpe Ratio": stats.loc["Sharpe Ratio"],
+            "backtest_results/Sortino Ratio": stats.loc["Sortino Ratio"],
+            "backtest_results/Calmar Ratio": stats.loc["Calmar Ratio"],
+            "backtest_results/Max. Drawdown [%]": stats.loc["Max. Drawdown [%]"],
+            "backtest_results/Avg. Drawdown [%]": stats.loc["Avg. Drawdown [%]"],
+            "backtest_results/Max. Drawdown Duration": convert_timedelta_to_seconds(
+                stats.loc["Max. Drawdown Duration"]
+            ),
+            "backtest_results/Avg. Drawdown Duration": convert_timedelta_to_seconds(
+                stats.loc["Avg. Drawdown Duration"]
+            ),
+            "backtest_results/# Trades": stats.loc["# Trades"],
+            "backtest_results/Win Rate [%]": stats.loc["Win Rate [%]"],
+            "backtest_results/Profit Factor": stats.loc["Profit Factor"],
+            "backtest_results/Expectancy [%]": stats.loc["Expectancy [%]"],
+        }
+    )
+    if (
+        stats.loc["Buy & Hold Return [%]"] < stats.loc["Return [%]"]
+        and stats.loc["Equity Final [$]"] == stats.loc["Equity Peak [$]"]
+        and stats.loc["Sharpe Ratio"] > 0
+        and stats.loc["Avg. Drawdown [%]"] < 25
+    ):
+        df = stats["_equity_curve"]
+        df["Equity"] = (df["Equity"] - df["Equity"].iloc[0]) / df["Equity"].iloc[0]
+        df = df.drop(["DrawdownPct", "DrawdownDuration"], axis=1)
+        title = f"Method: {config.strategy.ratio_method}, x: {config.strategy.x}, y: {config.strategy.y} (equity)"
+        df = df.rename(columns={"Equity": title})
+        del stats
+        return df
+    else:
+        return None
+
+
+def launcher_backtest(
+    project="bt_momentum",
+    entity="corporate-manu-sureli",
+    name=f"bt_{config.crypto_currency}_{config.time}",
+    config=config,
+):
+    # Initialize W&B
+    wandb.init(project=project, entity=entity, name=name)
+
+    # Define parameter ranges
+    x_range = range(1, 100)
+    y_range = range(1, 150)
+    ratio_method = ["ma_ratio", "ema_ratio", "zlema_ratio", "dema_ratio", "tema_ratio"]
+
+    # Generate configs for backtests
+    configs = [
+        Config(
+            crypto_currency=config.crypto_currency,
+            exchange=config.exchange,
+            time=config.time,
+            strategy=StrategyConfig(
+                ratio_method=method, x=x, y=y + x, name=config.strategy.name
+            ),
+        )
+        for x, y, method in product(x_range, y_range, ratio_method)
+    ]
+
+    # Define the tqdm_map function with a progress bar
+    def tqdm_map(func, iterable, num_processes=None, desc=None):
+        """
+        A wrapper for multiprocessing.Pool.map with tqdm progress bar.
+        """
+        num_processes = num_processes or multiprocessing.cpu_count()
+
+        with multiprocessing.Pool(processes=num_processes) as pool:
+            with tqdm(total=len(iterable), desc=desc) as progress_bar:
+
+                def update(*_):
+                    progress_bar.update()
+
+                # Update progress for each result
+                for result in pool.imap(func, iterable):
+                    update()
+                    yield result
+
+    # Run the backtests with tqdm progress bar
+    results = list(
+        tqdm_map(_backtest_with_logging, configs, desc="Backtesting Progress")
+    )
+    results = list(filter(lambda x: x is not None, results))
+    full_df = pd.concat(results, axis=1)
+    step = 100
+    i = 0  # Track step index
+    while len(results) > 0:
+        # Take the first 'step' elements and remove them
+        sub_results = results[:step]
+        results = results[step:]  # Remove used elements (pop from front)
+        sub_results.append(DF["Buy and Hold Equity"])
+        # Concatenate and plot
+        df = pd.concat(sub_results, axis=1)  # Combine data into a DataFrame
+        fig = px.line(
+            df,
+            x=df.index,
+            y=df.columns,
+            title="Equity for different strategies",
+        )
+        fig.show()
+        # wandb.log({f"charts/Equity Charts {i}": wandb.Plotly(fig)})
+        del df  # Free memory
+
+        i += 1  # Increment step index
+    # Step 2: Identify low-correlation strategies (threshold can be adjusted)
+    threshold = 0.75  # Adjust based on your needs (0.3 = weak correlation)
+    uncorrelated_strategies = set()
+    correlation_matrix = full_df.corr()
+    for col in correlation_matrix.columns:
+        # Keep only strategies that have low absolute correlation with others
+        if all(
+            abs(correlation_matrix[col][other]) < threshold
+            for other in uncorrelated_strategies
+        ):
+            uncorrelated_strategies.add(col)
+
+    # Step 3: Filter DataFrame to keep only the uncorrelated strategies
+    filtered_df = full_df[list(uncorrelated_strategies)]
+    filtered_df["Buy and Hold Equity"] = DF[
+        "Buy and Hold Equity"
+    ]  # Always keep buy & hold
+
+    # Step 4: Plot in batches (like your previous loop)
+    results = list(filtered_df.columns)  # Convert to list of columns
+    step = 10  # Adjust batch size
+    i = 0  # Step index
+
+    while len(results) > 0:
+        # Take the first 'step' strategies and remove them from the list
+        sub_results = results[:step]
+        results = results[step:]
+
+        # Create DataFrame with selected strategies
+        df = filtered_df[sub_results]
+
+        # Plot
+        fig = px.line(
+            df, x=df.index, y=df.columns, title="Uncorrelated Equity Strategies"
+        )
+        fig.show()
+
+        # Uncomment to log in wandb
+        wandb.log({f"charts/Uncorrelated Equity {i}": wandb.Plotly(fig)})
+
+        del df  # Free memory
+        i += 1
+
+    wandb.finish()
+
+
+if __name__ == "__main__":
+    # plot = _backtest(config)
+    launcher_backtest()
