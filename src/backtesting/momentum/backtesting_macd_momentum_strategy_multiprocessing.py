@@ -25,6 +25,8 @@ class StrategyConfig:
     ratio_method: str
     x: int
     y: int
+    z: int
+    method: str
     name: str
 
 
@@ -41,7 +43,9 @@ config = Config(
     crypto_currency="ETHUSDT",
     exchange="binance",
     time="1d",
-    strategy=StrategyConfig(ratio_method="ema_ratio", x=4, y=100, name="momentum"),
+    strategy=StrategyConfig(
+        ratio_method="ema_ratio", x=4, y=100, name="momentum", z=5, method="ma"
+    ),
 )
 DF = open_dataframe_backtesting(
     rf"data/{config.exchange}-{config.crypto_currency}-{config.time}.pkl"
@@ -60,7 +64,7 @@ def function(df, config):
             indicator_momentum.indicator,
             data=ratio,
             x=config.strategy.z,
-            method=config.ratio_method,
+            method=config.strategy.method,
         )
     ).values
     return (ratio - 1).values
@@ -164,7 +168,7 @@ def _backtest_with_logging(config):
         df = stats["_equity_curve"]
         df["Equity"] = (df["Equity"] - df["Equity"].iloc[0]) / df["Equity"].iloc[0]
         df = df.drop(["DrawdownPct", "DrawdownDuration"], axis=1)
-        title = f"Method: {config.strategy.ratio_method}, x: {config.strategy.x}, y: {config.strategy.y} (equity)"
+        title = f"Method: {config.strategy.ratio_method}, x: {config.strategy.x}, y: {config.strategy.y}, z: {config.strategy.z}, method: {config.strategy.method}(equity)"
         df = df.rename(columns={"Equity": title})
         del stats
         return df
@@ -185,6 +189,8 @@ def launcher_backtest(
     x_range = range(1, 100)
     y_range = range(1, 150)
     ratio_method = ["ma_ratio", "ema_ratio", "zlema_ratio", "dema_ratio", "tema_ratio"]
+    method = ["ma", "ema", "zlema", "dema", "tema"]
+    z_range = range(2, 100)
 
     # Generate configs for backtests
     configs = [
@@ -193,10 +199,17 @@ def launcher_backtest(
             exchange=config.exchange,
             time=config.time,
             strategy=StrategyConfig(
-                ratio_method=method, x=x, y=y + x, name=config.strategy.name
+                ratio_method=ratio,
+                x=x,
+                y=y + x,
+                name=config.strategy.name,
+                method=methodi,
+                z=z,
             ),
         )
-        for x, y, method in product(x_range, y_range, ratio_method)
+        for x, y, ratio, methodi, z in product(
+            x_range, y_range, ratio_method, method, z_range
+        )
     ]
 
     # Define the tqdm_map function with a progress bar
