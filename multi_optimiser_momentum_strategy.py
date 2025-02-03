@@ -8,10 +8,14 @@ import pandas as pd
 from IPython.display import display
 from PIL import Image
 import imageio
-
+import multiprocessing
 from src.utils.utils_df import open_dataframe
 from itertools import product
-from src.strategy_utils.launcher_strategy import momentum_strategy, envelop_strategy
+from src.strategy_utils.launcher_strategy import (
+    momentum_strategy,
+    envelop_strategy,
+    signal_momentum_strategy,
+)
 from src.strategy_utils.strategy_comparator import evalutation
 from src.utils.utils_signature import create_signature
 from src.utils.data_checks import check_data_availability_in_folder
@@ -47,7 +51,7 @@ class trading_optimisation:
     def optimiser_multiple_currency(
         self,
         list_crypto_currency: str = ["BTCUSDT", "ETHUSDT", "ADAUSDT", "BNBUSDT"],
-        list_time: str = ["1h", "4h", "1d"],
+        list_time: str = ["1d", "4h", "1h"],
         list_brokers=["binance"],
     ):
         """
@@ -63,9 +67,15 @@ class trading_optimisation:
         :type list_brokers: list, optional
         """
         nested_list = list(product(list_crypto_currency, list_time, list_brokers))
+        # Use multiprocessing Pool to parallelize
+
+        with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
+            pool.starmap(self.loop_optimiser_multiple_currency, nested_list)
+        """
         for element in nested_list:
             crypto_currency, time, broker = element
             self.loop_optimiser_multiple_currency(crypto_currency, time, broker)
+        """
 
     def loop_optimiser_multiple_currency(self, crypto_currency, time, broker):
         """
@@ -93,33 +103,68 @@ class trading_optimisation:
         study = optuna.create_study(
             storage_name,
             sampler=optuna.samplers.TPESampler(
-                multivariate=True, group=True, constant_liar=True, n_startup_trials=150
+                multivariate=True, group=True, constant_liar=True, n_startup_trials=300
             ),
             study_name=study_name,
             direction="maximize",
             load_if_exists="True",
         )  # study created else we reload the past strategy
         study.optimize(
-            lambda trial: self.objective(trial=trial), n_trials=300
+            lambda trial: self.objective(trial=trial), n_trials=600
         )  # we call optuna to optimize it
         self.save_df()
         self.save_mp4()
 
     def save_df(self):
-        """
-        save_df
-
-        This method defines the save_df function for saving data into a dataframe.
-        """
-        raise "To be implemented"
+        df = pd.DataFrame(
+            self.liste,
+            columns=["config", "result", "result_portfolio", "rsi", "signature"],
+        )
+        self.dataframe_path = (
+            self.strategy.time_eccefpsn
+            + f"/{self.config['crypto_currency']}_{self.config['time']}_{self.config['strategy']['name']}.csv"
+        )
+        if os.path.exists(self.dataframe_path):
+            existing_df = pd.read_csv(self.dataframe_path)
+            df = pd.concat([df, existing_df], ignore_index=True)
+            del existing_df
+        df = df.drop_duplicates(subset=["result"])
+        self.df = df.drop_duplicates(subset=["signature"])
+        self.df.to_csv(self.dataframe_path, index=False)
+        self.liste = []
 
     def save_mp4(self):
-        """
-        save_mp4
+        mp4_file = (
+            self.strategy.time_eccefpsn
+            + f"_{self.config['crypto_currency']}_{self.config['time']}_output_video.mp4"
+        )
 
-        This method defines the save_mp4 function for saving data into a mp4.
-        """
-        raise "To be implemented"
+        # Create writer object to write the video
+        writer = imageio.get_writer(mp4_file, fps=2)  # Adjust the fps as needed
+        # Loop through each directory in self.strategy.time_eccefpsn
+        for dir_name in os.listdir(self.strategy.time_eccefpsn):
+            if not dir_name.endswith(".csv"):
+                dir_path = os.path.join(self.strategy.time_eccefpsn, dir_name)
+
+                # List files in the directory
+                files = os.listdir(dir_path)
+
+                # Filter out PNG files
+                png_files = [file for file in files if file.endswith(".png")]
+
+                # Loop through PNG files in the directory
+                for png_file in png_files:
+                    png_full_path = os.path.join(dir_path, png_file)
+
+                    # Read the PNG image
+                    image = imageio.imread(png_full_path)
+
+                    # Append the image to the video
+                    writer.append_data(image)
+
+        # Close the writer
+        writer.close()
+        print("MP4 Done")
 
     def objective(self, trial: optuna.trial):
         """
@@ -179,14 +224,6 @@ class optimiser_momentum_strategy(trading_optimisation):
         simulation_df = self.strategy.compute_simulation()  # compute the simulation
         result_portfolio = simulation_df["Portfolio"].iloc[-1]
         rsi = (simulation_df[f"RSI_Portfolio/Buy_and_Hold"]).mean()
-
-        # portfolio_value = simulation_df["Portfolio"]
-        # buy_and_hold_value = simulation_df["Buy_and_Hold"]
-        # relative_portfolio_value = portfolio_value.pct_change()
-        # relative_buy_and_hold_value = buy_and_hold_value.pct_change()
-        # diff = relative_portfolio_value - relative_buy_and_hold_value
-        # value = round((diff).mean() * 100, 4)
-        # normalized_value = (value + 10) / 20  # it is between 10% and -10%
         result = result_portfolio * rsi  # calculate a result
         # result = rsi * value
         config = copy.deepcopy(self.config)
@@ -196,56 +233,68 @@ class optimiser_momentum_strategy(trading_optimisation):
 
         return result
 
-    def save_df(self):
-        df = pd.DataFrame(
-            self.liste,
-            columns=["config", "result", "result_portfolio", "rsi", "signature"],
+
+class optimiser_signal_momentum_strategy(trading_optimisation):
+    """
+    Optimizer for Momentum Strategy
+
+    This class specializes in optimizing the Momentum strategy.
+
+    """
+
+    def __init__(self, config: dict) -> None:
+        """
+        Initialize Optimizer for Momentum Strategy
+
+        This method initializes the optimizer for the Momentum strategy.
+
+        :param config: Configuration parameters for optimization.
+        :type config: dict
+        """
+        super().__init__(config)
+        self.strategy = signal_momentum_strategy(
+            config
+        )  # initialize the momentum strategy
+
+    def objective(self, trial: optuna.trial) -> None:
+        """
+        Objective for Momentum Strategy Optimization
+
+        This method defines the objective function for optimizing the Momentum strategy.
+
+        :param trial: Optuna trial object.
+        :type trial: optuna.trial
+        :return: None
+        :rtype: None
+        """
+
+        self.config["strategy"]["x"] = trial.suggest_int("x", 1, 35)  # hyperparameters
+        self.config["strategy"]["y"] = self.config["strategy"]["x"] + trial.suggest_int(
+            "y", 1, 150
+        )  # hyperparameters
+        self.config["strategy"]["ratio_method"] = trial.suggest_categorical(
+            "ratio_method",
+            ["ma_ratio", "ema_ratio", "zlema_ratio", "dema_ratio", "tema_ratio"],
+        )  # hyperparameters
+        self.config["strategy"]["method"] = trial.suggest_categorical(
+            "method",
+            ["ma", "ema", "zlema", "dema", "tema"],
         )
-        self.dataframe_path = (
-            self.strategy.time_eccefpsn
-            + f"/{self.config['crypto_currency']}_{self.config['time']}_{self.config['strategy']['name']}.csv"
-        )
-        if os.path.exists(self.dataframe_path):
-            existing_df = pd.read_csv(self.dataframe_path)
-            df = pd.concat([df, existing_df], ignore_index=True)
-            del existing_df
-        df = df.drop_duplicates(subset=["result"])
-        self.df = df.drop_duplicates(subset=["signature"])
-        self.df.to_csv(self.dataframe_path, index=False)
-        self.liste = []
-
-    def save_mp4(self):
-        mp4_file = (
-            self.strategy.time_eccefpsn
-            + f"_{self.config['crypto_currency']}_{self.config['time']}_output_video.mp4"
+        self.config["strategy"]["z"] = trial.suggest_int("z", 1, 100)
+        self.strategy.change_config(
+            self.config
+        )  # essential change config wil reinitialize the object
+        simulation_df = self.strategy.compute_simulation()  # compute the simulation
+        result_portfolio = simulation_df["Portfolio"].iloc[-1]
+        rsi = (simulation_df[f"RSI_Portfolio/Buy_and_Hold"]).mean()
+        result = result_portfolio * rsi  # calculate a result
+        # result = rsi * value
+        config = copy.deepcopy(self.config)
+        self.liste.append(
+            [config, result, result_portfolio, rsi, create_signature(self.config)]
         )
 
-        # Create writer object to write the video
-        writer = imageio.get_writer(mp4_file, fps=2)  # Adjust the fps as needed
-        # Loop through each directory in self.strategy.time_eccefpsn
-        for dir_name in os.listdir(self.strategy.time_eccefpsn):
-            if not dir_name.endswith(".csv"):
-                dir_path = os.path.join(self.strategy.time_eccefpsn, dir_name)
-
-                # List files in the directory
-                files = os.listdir(dir_path)
-
-                # Filter out PNG files
-                png_files = [file for file in files if file.endswith(".png")]
-
-                # Loop through PNG files in the directory
-                for png_file in png_files:
-                    png_full_path = os.path.join(dir_path, png_file)
-
-                    # Read the PNG image
-                    image = imageio.imread(png_full_path)
-
-                    # Append the image to the video
-                    writer.append_data(image)
-
-        # Close the writer
-        writer.close()
-        print("MP4 Done")
+        return result
 
 
 class optimiser_envelop_strategy(trading_optimisation):
@@ -327,7 +376,7 @@ if __name__ == "__main__":
     ]
 
     # read the config file:
-    with open("src/configs/optimiser_momentum_config.toml", "r") as file:
+    with open("src/configs/optimiser_signal_momentum_config.toml", "r") as file:
         config = toml.load(file)
     missing_data = check_data_availability_in_folder(
         "data",
@@ -346,6 +395,6 @@ if __name__ == "__main__":
         loop.run_until_complete(downloader(data_config))
         print("Downloading finished")
 
-    optimiser_momentum_strategy(config=config).optimiser_multiple_currency(
+    optimiser_signal_momentum_strategy(config=config).optimiser_multiple_currency(
         **config["multi"]
     )
