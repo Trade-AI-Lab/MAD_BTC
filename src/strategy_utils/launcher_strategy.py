@@ -246,7 +246,7 @@ class momentum_strategy(trading_strategy):
 
         """
         super().compute_needed_features()
-        self.strategy_name = f'{self.config["strategy"]["ratio_method"]}_{self.config["strategy"]["x"]}_{self.config["strategy"]["y"]}'
+        self.strategy_name = f"{self.config['strategy']['ratio_method']}_{self.config['strategy']['x']}_{self.config['strategy']['y']}"
         self.title_image = f"{self.config['exchange']}-{self.config['crypto_currency']}-{self.config['time']}_portfolio_vs_buy_hold_{self.strategy_name}_{self.config['initial_capital']}$"
         self.child_df[self.strategy_name] = getattr(
             indicator_momentum, self.config["strategy"]["ratio_method"]
@@ -291,6 +291,85 @@ class momentum_strategy(trading_strategy):
             super(momentum_strategy, self).__init__(config)
 
 
+class signal_momentum_strategy(trading_strategy):
+    """
+    Momentum Trading Strategy
+
+    This class represents a momentum trading strategy based on the Moving Average Distance (MAD) concept.
+
+    :param trading_strategy: The base class for trading strategies.
+    :type trading_strategy: trading_strategy
+    """
+
+    def __init__(self, config) -> None:
+        """
+        Initialize the Momentum Trading Strategy.
+
+        :param config: Configuration parameters for the strategy.
+        :type config: dict
+        """
+        super().__init__(config)
+
+    def compute_needed_features(self):
+        """
+        Compute Needed Features for Momentum Strategy.
+
+        This method calculates the necessary features for the momentum strategy, including the MAD ratio.
+
+        """
+        super().compute_needed_features()
+        self.strategy_name = f"{self.config['strategy']['ratio_method']}_{self.config['strategy']['x']}_{self.config['strategy']['y']}_{self.config['strategy']['method']}_{self.config['strategy']['z']}"
+        self.title_image = f"{self.config['exchange']}-{self.config['crypto_currency']}-{self.config['time']}_portfolio_vs_buy_hold_{self.strategy_name}_{self.config['initial_capital']}$"
+        ratio = getattr(indicator_momentum, self.config["strategy"]["ratio_method"])(
+            self.child_df, self.config["strategy"]["x"], self.config["strategy"]["y"]
+        )
+        signal = indicator_momentum.indicator(
+            data=ratio,
+            x=self.config["strategy"]["z"],
+            method=self.config["strategy"]["method"],
+        )
+        self.child_df[self.strategy_name] = ratio / signal
+
+        self.child_df = self.child_df.dropna().reset_index(drop=True)
+
+    def strategy_rules(self):
+        """
+        Define Strategy Rules.
+
+        This method defines the rules for the momentum strategy, including buy and sell signals.
+
+        """
+        self.compute_needed_features() if self.child_df is None else None
+        self.child_df["buy_signal"] = (self.child_df[self.strategy_name] > 1) & (
+            self.child_df[self.strategy_name].shift(1) <= 1
+        )
+        self.child_df["sell_signal"] = (self.child_df[self.strategy_name] < 1) & (
+            self.child_df[self.strategy_name].shift(1) >= 1
+        )
+        self.df_filtered = self.child_df[
+            (self.child_df["buy_signal"] > 0) | (self.child_df["sell_signal"] > 0)
+        ].reset_index(drop=True)
+
+    def change_config(self, config):
+        """
+        Change Configuration.
+
+        This method allows the user to change the configuration, but the object needs to be reinitialized.
+
+        :param config: New configuration for the strategy.
+        :type config: dict
+        """
+        if (
+            self.PATH
+            == absolute_path
+            + rf"/data/{config['exchange']}-{config['crypto_currency']}-{config['time']}.pkl"
+        ):
+            if self.signature_strategy != create_signature(self.config["strategy"]):
+                self.child_df = None
+        else:
+            super(signal_momentum_strategy, self).__init__(config)
+
+
 class envelop_strategy(trading_strategy):
     """
     Envelop Trading Strategy
@@ -319,13 +398,11 @@ class envelop_strategy(trading_strategy):
         """
         super().compute_needed_features()
         envelop = self.config["strategy"]["envelop"]
-        self.strategy_name = f'{self.config["strategy"]["method"]}_{self.envelope_from_list_to_str(envelop)}'
+        self.strategy_name = f"{self.config['strategy']['method']}_{self.envelope_from_list_to_str(envelop)}"
         self.title_image = f"{self.config['exchange']}-{self.config['crypto_currency']}-{self.config['time']}_portfolio_vs_buy_hold_{self.strategy_name}_{self.config['initial_capital']}$"
         self.child_df[self.strategy_name] = getattr(
             indicator_envelop, self.config["strategy"]["method"]
-        )(
-            self.child_df, self.config["strategy"]["x"]
-        )  # refers to the MA or EMA
+        )(self.child_df, self.config["strategy"]["x"])  # refers to the MA or EMA
         (self.child_df, self.config["strategy"]["x"])  # refers to the MA or EMA
         self.child_df = self.child_df.dropna().reset_index(drop=True)
         self.child_df["alpha_date"] = self.compute_alpha_dates(self.child_df)
@@ -338,9 +415,7 @@ class envelop_strategy(trading_strategy):
             # Buy
             self.child_df[f"envelop_up_{percent_envelop}"] = self.child_df[
                 self.strategy_name
-            ] * (
-                1 + percent_envelop
-            )  # E and/or MA(1+x%)
+            ] * (1 + percent_envelop)  # E and/or MA(1+x%)
             buy_signal = f"buy_signal_{percent_envelop}"
             self.child_df[buy_signal] = (
                 self.child_df["high"] > self.child_df[f"envelop_up_{percent_envelop}"]
@@ -350,9 +425,7 @@ class envelop_strategy(trading_strategy):
             # Sell
             self.child_df[f"envelop_down_{percent_envelop}"] = self.child_df[
                 self.strategy_name
-            ] * (
-                1 - percent_envelop
-            )  # E and/or MA(1-x%)
+            ] * (1 - percent_envelop)  # E and/or MA(1-x%)
             sell_signal = f"sell_signal_{percent_envelop}"
             self.child_df[sell_signal] = (
                 self.child_df[f"envelop_down_{percent_envelop}"] > self.child_df["low"]

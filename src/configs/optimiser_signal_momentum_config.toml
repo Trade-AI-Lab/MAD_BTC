@@ -1,0 +1,19 @@
+# init config
+crypto_currency = "BTCUSDT"
+time = "4h"
+exchange = "binance"
+initial_capital = 1000
+broker = "binance"
+
+[strategy]
+name = "signal_momentum_strategy"
+x = 5
+y = 57
+ratio_method = "ma_ratio"
+method = "ma"
+z = 2
+
+[multi]
+list_brokers = ["binance"]
+list_crypto_currency = ["BTCUSDT", "ETHUSDT", "ADAUSDT", "BNBUSDT", "MATICUSDT", "DOTUSDT"]
+list_time = ["1h", "4h", "1d"]
