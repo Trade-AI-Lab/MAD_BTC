@@ -44,7 +44,7 @@ config = Config(
     exchange="binance",
     time="1d",
     strategy=StrategyConfig(
-        ratio_method="ema_ratio", x=4, y=100, name="momentum", z=5, method="ma"
+        ratio_method="ma_ratio", x=10, y=60, name="momentum", z=20, method="ema"
     ),
 )
 DF = open_dataframe_backtesting(
@@ -57,17 +57,17 @@ def function(df, config):
     ratio = getattr(indicator_momentum, config.strategy.ratio_method)(
         df, config.strategy.x, config.strategy.y, column_name="Open"
     )
+    signal = indicator_momentum.indicator(
+        data=ratio,
+        x=config.strategy.z,
+        method=config.strategy.method,
+    )
 
-    (
-        ratio
-        - getattr(
-            indicator_momentum.indicator,
-            data=ratio,
-            x=config.strategy.z,
-            method=config.strategy.method,
-        )
-    ).values
-    return (ratio - 1).values
+    ratio = ratio - signal
+    return (ratio).values
+
+
+values = function(DF, config)
 
 
 class MaRatio(Strategy):
@@ -303,5 +303,14 @@ def launcher_backtest(
 
 
 if __name__ == "__main__":
+    MaRatio.config = config
+    bt = Backtest(DF, MaRatio, cash=1000, commission=0.1 / 100)
+    stats = bt.run()
+    bt.plot(
+        open_browser=True,
+        plot_volume=False,
+        plot_pl=False,
+    )
+    exit()
     # plot = _backtest(config)
     launcher_backtest()
