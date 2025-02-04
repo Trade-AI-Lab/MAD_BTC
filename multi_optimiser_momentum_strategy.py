@@ -103,14 +103,14 @@ class trading_optimisation:
         study = optuna.create_study(
             storage_name,
             sampler=optuna.samplers.TPESampler(
-                multivariate=True, group=True, constant_liar=True, n_startup_trials=300
+                multivariate=True, group=True, constant_liar=True, n_startup_trials=10
             ),
             study_name=study_name,
             direction="maximize",
             load_if_exists="True",
         )  # study created else we reload the past strategy
         study.optimize(
-            lambda trial: self.objective(trial=trial), n_trials=600
+            lambda trial: self.objective(trial=trial), n_trials=10
         )  # we call optuna to optimize it
         self.save_df()
         self.save_mp4()
@@ -158,9 +158,11 @@ class trading_optimisation:
 
                     # Read the PNG image
                     image = imageio.imread(png_full_path)
-
-                    # Append the image to the video
-                    writer.append_data(image)
+                    try:
+                        # Append the image to the video
+                        writer.append_data(image)
+                    except:
+                        print("Image pb")
 
         # Close the writer
         writer.close()
