@@ -116,9 +116,11 @@ class trading_strategy:
             list_time.append(self.child_df.index[-1])
 
         elif crypto == 0:
-            list_portfolio.append(list_portfolio[-1])
+            list_portfolio.append(
+                list_portfolio[-1] if len(list_portfolio) > 0 else portfolio
+            )
             list_position.append(
-                list_position[-1]
+                list_position[-1] if len(list_position) > 0 else 0
             )  # Assuming you maintain the same position
             list_buy_hold.append(self.child_df["buy_and_hold"].iloc[-1])
             list_time.append(self.child_df.index[-1])
