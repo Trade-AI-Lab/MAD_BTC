@@ -197,7 +197,7 @@ if __name__ == "__main__":
         "x": 12,
         "y": 90,
         "ratio_method": "ema_ratio",
-        "initial_capital": 1000,
+        "initial_capital": 5000,
     }
     PATH = r"C:\Users\alexw\Documents\Git\MAD_BTC\experience\BNBUSDT\binance\4h\momentum_strategy\2a90a504e84d572a958dff33f59f8f26ba7cdb598f4c23d476439ecbd7fa1522\output_file.csv"
     a = pd.read_csv(PATH)
