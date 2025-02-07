@@ -11,3 +11,5 @@ imageio
 toml
 wandb
 backtesting
+imageio[ffmpeg]
+imageio[pyav]
