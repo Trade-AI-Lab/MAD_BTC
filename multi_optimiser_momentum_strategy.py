@@ -103,14 +103,14 @@ class trading_optimisation:
         study = optuna.create_study(
             storage_name,
             sampler=optuna.samplers.TPESampler(
-                multivariate=True, group=True, constant_liar=True, n_startup_trials=10
+                multivariate=True, group=True, constant_liar=True, n_startup_trials=300
             ),
             study_name=study_name,
             direction="maximize",
             load_if_exists="True",
         )  # study created else we reload the past strategy
         study.optimize(
-            lambda trial: self.objective(trial=trial), n_trials=10
+            lambda trial: self.objective(trial=trial), n_trials=300
         )  # we call optuna to optimize it
         self.save_df()
         self.save_mp4()
@@ -212,9 +212,9 @@ class optimiser_momentum_strategy(trading_optimisation):
         :rtype: None
         """
 
-        self.config["strategy"]["x"] = trial.suggest_int("x", 1, 34)  # hyperparameters
-        self.config["strategy"]["y"] = trial.suggest_int(
-            "y", 35, 120
+        self.config["strategy"]["x"] = trial.suggest_int("x", 1, 35)  # hyperparameters
+        self.config["strategy"]["y"] = self.config["strategy"]["x"] + trial.suggest_int(
+            "y", 1, 150
         )  # hyperparameters
         self.config["strategy"]["ratio_method"] = trial.suggest_categorical(
             "ratio_method",
@@ -378,7 +378,7 @@ if __name__ == "__main__":
     ]
 
     # read the config file:
-    with open("src/configs/optimiser_signal_momentum_config.toml", "r") as file:
+    with open("src/configs/optimiser_momentum_config.toml", "r") as file:
         config = toml.load(file)
     missing_data = check_data_availability_in_folder(
         "data",
@@ -397,6 +397,6 @@ if __name__ == "__main__":
         loop.run_until_complete(downloader(data_config))
         print("Downloading finished")
 
-    optimiser_signal_momentum_strategy(config=config).optimiser_multiple_currency(
+    optimiser_momentum_strategy(config=config).optimiser_multiple_currency(
         **config["multi"]
     )

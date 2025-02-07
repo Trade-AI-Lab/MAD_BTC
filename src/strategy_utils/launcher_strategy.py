@@ -405,7 +405,6 @@ class envelop_strategy(trading_strategy):
         self.child_df[self.strategy_name] = getattr(
             indicator_envelop, self.config["strategy"]["method"]
         )(self.child_df, self.config["strategy"]["x"])  # refers to the MA or EMA
-        (self.child_df, self.config["strategy"]["x"])  # refers to the MA or EMA
         self.child_df = self.child_df.dropna().reset_index(drop=True)
         self.child_df["alpha_date"] = self.compute_alpha_dates(self.child_df)
         self.list_col_buy_signal = []
