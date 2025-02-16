@@ -634,3 +634,23 @@ class envelop_strategy(trading_strategy):
             if self.title_image is None
             else save(self.title_image, self.strategy_folder_path, self.evolution_df)
         )
+
+
+if __name__ == "__main__":
+    config = {
+        "crypto_currency": "BNBUSDT",
+        "time": "4h",
+        "exchange": "binance",
+        "initial_capital": 1000,
+        "broker": "binance",
+        #"begin_date": "2020:"
+        "strategy": {
+            "name": "momentum_strategy",
+            "x": 10,
+            "y": 103,
+            "ratio_method": "tema_ratio",
+        },
+    }
+    obj = momentum_strategy(config)
+    obj.strategy_rules()
+    obj.loop_simulation()

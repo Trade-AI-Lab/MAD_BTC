@@ -88,6 +88,7 @@ def save(title_image: str, strategy_folder_path: str, evolution_df: dict):
     :param evolution_df: A dictionary containing time and portfolio values.
     :type evolution_df: dict
     """
+
     core_img(evolution_df, Title=title_image)
     evolution_df.to_csv(
         strategy_folder_path + "/" + "output_file.csv", index=False
