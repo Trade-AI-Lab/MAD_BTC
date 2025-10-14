@@ -145,9 +145,8 @@ BETTER PLOT
 <img src="robustness_plot\Ratio_method_x_y_study_momentum_strategy_XRPUSDT_binance_15m.png" width="1024"/>
 
 
-# Video MP4
-
 
 
 # New feature added 
 We recently added envelop strategy
+
