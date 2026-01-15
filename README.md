@@ -3,7 +3,7 @@
 This repository contains code and research findings related to the paper titled "Moving Average Distance as a Predictor of Equity Returns" by Doron Avramova, Guy Kaplanski, and Avanidhar Subrahmanyam. The research explores the predictive power of the distance between short- and long-run moving averages of prices (MAD) in the cross-section of equity returns.
 ## See cryptorobot
 ## Idea
-Imagine you have 10 stocks, how to create a strategy given this strategy, you can compute 10 different ratio mobing average and then to do the mean and use this mean ratio moving average to buy or to sell.
+Imagine you have 10 stocks, how to create a strategy given this strategy, you can compute 10 different ratio moving average and then to do the mean and use this mean ratio moving average to buy or to sell.
 This idea was implemented that does not work well that means for each stock there is a unique combinaison, it is mainly caused by the fact each asset has its own standard deviation. For instance, if the std variation of BTC is two times lower than MATIC that means the ratio of the same X,Y moving average is quite different, X,Y for each cryptocurrency is dependant from the std deviation. I compared it , and it seems also to be false.
 ## Abstract
 The MAD-based trading strategy demonstrates robust investment payoffs, with annualized value-weighted alphas around 9%. The predictability extends beyond other well-known anomalies, such as momentum, 52-week highs, and profitability. The strategy remains viable even after accounting for reasonable trading costs, and its effectiveness is stronger on the long side compared to the short side.
@@ -149,4 +149,5 @@ BETTER PLOT
 
 # New feature added 
 We recently added envelop strategy
+
 
