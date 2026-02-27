@@ -2,6 +2,20 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.subplots as sp
+import numpy as np
+
+
+def compute_sharpe_ratio(df, risk_free_rate=0.0, periods_per_year=365):
+    returns = df["Portfolio"].pct_change().dropna()
+
+    excess_returns = returns - risk_free_rate / periods_per_year
+
+    mean_excess_return = excess_returns.mean()
+    std_excess_return = excess_returns.std()
+
+    sharpe_ratio = np.sqrt(periods_per_year) * mean_excess_return / std_excess_return
+
+    return sharpe_ratio
 
 
 def core_img(evolution_df: dict, Title: str):
@@ -22,6 +36,7 @@ def core_img(evolution_df: dict, Title: str):
     relative_portfolio_value = portfolio_value.pct_change()
     relative_buy_and_hold_value = buy_and_hold_value.pct_change()
     diff = relative_portfolio_value - relative_buy_and_hold_value
+    sharpe = compute_sharpe_ratio(evolution_df)
     value = round((diff).mean() * 100, 4)
     # Plot absolute values on the left subplot
     ax1.plot(time, portfolio_value, label="Portfolio", marker="o", color="b")
@@ -70,7 +85,7 @@ def core_img(evolution_df: dict, Title: str):
     ax4.set_title(f"RSI: {RSI_Portfolio_Buy_and_Hold}")
     ax4.legend()
     ax4.grid(True)
-    fig.suptitle(Title)
+    fig.suptitle(Title + f"_Sharpe:{sharpe}")
     # Adjust layout
     plt.tight_layout()
 

@@ -5,11 +5,8 @@ import toml
 import asyncio
 import numpy as np
 import pandas as pd
-from IPython.display import display
-from PIL import Image
 import imageio
 import multiprocessing
-from src.utils.utils_df import open_dataframe
 from itertools import product
 from src.strategy_utils.launcher_strategy import (
     momentum_strategy,
@@ -24,6 +21,19 @@ from src.utils.downloader import downloader
 absolute_path = os.path.abspath(__file__)[
     : os.path.abspath(__file__).find("MAD_BTC") + len("MAD_BTC")
 ]
+
+
+def compute_sharpe_ratio(df, risk_free_rate=0.0, periods_per_year=365):
+    returns = df["Portfolio"].pct_change().dropna()
+
+    excess_returns = returns - risk_free_rate / periods_per_year
+
+    mean_excess_return = excess_returns.mean()
+    std_excess_return = excess_returns.std()
+
+    sharpe_ratio = np.sqrt(periods_per_year) * mean_excess_return / std_excess_return
+
+    return sharpe_ratio
 
 
 class trading_optimisation:
@@ -118,7 +128,7 @@ class trading_optimisation:
     def save_df(self):
         df = pd.DataFrame(
             self.liste,
-            columns=["config", "result", "result_portfolio", "rsi", "signature"],
+            columns=["config", "result", "result_portfolio", "sharpe", "signature"],
         )
         self.dataframe_path = (
             self.strategy.time_eccefpsn
@@ -225,12 +235,21 @@ class optimiser_momentum_strategy(trading_optimisation):
         )  # essential change config wil reinitialize the object
         simulation_df = self.strategy.compute_simulation()  # compute the simulation
         result_portfolio = simulation_df["Portfolio"].iloc[-1]
-        rsi = (simulation_df[f"RSI_Portfolio/Buy_and_Hold"]).mean()
-        result = result_portfolio * rsi  # calculate a result
+        final_value = simulation_df["Portfolio"].iloc[-1]
+        portfolio_value = simulation_df["Portfolio"]
+        buy_and_hold_value = simulation_df["Buy_and_Hold"]
+        relative_portfolio_value = portfolio_value.pct_change()
+        relative_buy_and_hold_value = buy_and_hold_value.pct_change()
+        diff = relative_portfolio_value - relative_buy_and_hold_value
+        value = round((diff).mean() * 100, 4)
+        sharpe = compute_sharpe_ratio(simulation_df)
+
+        # Weighted objective
+        result = final_value * sharpe * value
         # result = rsi * value
         config = copy.deepcopy(self.config)
         self.liste.append(
-            [config, result, result_portfolio, rsi, create_signature(self.config)]
+            [config, result, result_portfolio, sharpe, create_signature(self.config)]
         )
 
         return result
@@ -288,12 +307,18 @@ class optimiser_signal_momentum_strategy(trading_optimisation):
         )  # essential change config wil reinitialize the object
         simulation_df = self.strategy.compute_simulation()  # compute the simulation
         result_portfolio = simulation_df["Portfolio"].iloc[-1]
-        rsi = (simulation_df[f"RSI_Portfolio/Buy_and_Hold"]).mean()
-        result = result_portfolio * rsi  # calculate a result
+        sharpe = compute_sharpe_ratio(simulation_df)
+        portfolio_value = simulation_df["Portfolio"]
+        buy_and_hold_value = simulation_df["Buy_and_Hold"]
+        relative_portfolio_value = portfolio_value.pct_change()
+        relative_buy_and_hold_value = buy_and_hold_value.pct_change()
+        diff = relative_portfolio_value - relative_buy_and_hold_value
+        value = round((diff).mean() * 100, 4)
+        result = result_portfolio * sharpe * value  # calculate a result
         # result = rsi * value
         config = copy.deepcopy(self.config)
         self.liste.append(
-            [config, result, result_portfolio, rsi, create_signature(self.config)]
+            [config, result, result_portfolio, sharpe, create_signature(self.config)]
         )
 
         return result
