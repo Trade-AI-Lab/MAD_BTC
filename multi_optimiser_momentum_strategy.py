@@ -23,8 +23,10 @@ absolute_path = os.path.abspath(__file__)[
 ]
 
 
-def compute_sharpe_ratio(df, risk_free_rate=0.0, periods_per_year=365):
-    returns = df["Portfolio"].pct_change().dropna()
+def compute_sharpe_ratio(
+    df, column: str = "Portfolio", risk_free_rate=0.0, periods_per_year=365
+):
+    returns = df[column].pct_change().dropna()
 
     excess_returns = returns - risk_free_rate / periods_per_year
 
@@ -242,14 +244,21 @@ class optimiser_momentum_strategy(trading_optimisation):
         relative_buy_and_hold_value = buy_and_hold_value.pct_change()
         diff = relative_portfolio_value - relative_buy_and_hold_value
         value = round((diff).mean() * 100, 4)
-        sharpe = compute_sharpe_ratio(simulation_df)
+        sharpe_strat = compute_sharpe_ratio(simulation_df, "Portfolio")
+        sharpe_buy_hold = compute_sharpe_ratio(simulation_df, column="Buy_and_Hold")
 
         # Weighted objective
-        result = final_value * sharpe * value
+        result = sharpe_strat / sharpe_buy_hold * value
         # result = rsi * value
         config = copy.deepcopy(self.config)
         self.liste.append(
-            [config, result, result_portfolio, sharpe, create_signature(self.config)]
+            [
+                config,
+                result,
+                result_portfolio,
+                sharpe_strat / sharpe_buy_hold,
+                create_signature(self.config),
+            ]
         )
 
         return result
@@ -314,7 +323,7 @@ class optimiser_signal_momentum_strategy(trading_optimisation):
         relative_buy_and_hold_value = buy_and_hold_value.pct_change()
         diff = relative_portfolio_value - relative_buy_and_hold_value
         value = round((diff).mean() * 100, 4)
-        result = result_portfolio * sharpe * value  # calculate a result
+        result = sharpe * value  # calculate a result
         # result = rsi * value
         config = copy.deepcopy(self.config)
         self.liste.append(
