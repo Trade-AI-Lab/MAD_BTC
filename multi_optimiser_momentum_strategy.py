@@ -38,6 +38,21 @@ def compute_sharpe_ratio(
     return sharpe_ratio
 
 
+def compute_maximum_drawdown(df, column: str):
+
+    index_edge_pct_change = df[
+        (df[column] > df[column].shift(1) < 0) and (df[column] > df[column].shift(-1))
+    ].index()
+    index_edge_pct_change += [0]
+    list_dd = []
+    for index in index_edge_pct_change:
+        max = df[column].iloc[index]
+        df_2 = df[index:][column]
+        max_dd = round((max - df_2).max() / max * 100, 3)
+        list_dd.append(max_dd)
+    return np.max((list_dd))
+
+
 class trading_optimisation:
     """
     Trading Optimization
@@ -237,16 +252,13 @@ class optimiser_momentum_strategy(trading_optimisation):
         )  # essential change config wil reinitialize the object
         simulation_df = self.strategy.compute_simulation()  # compute the simulation
         result_portfolio = simulation_df["Portfolio"].iloc[-1]
-        final_value = simulation_df["Portfolio"].iloc[-1]
-        portfolio_value = simulation_df["Portfolio"]
-        buy_and_hold_value = simulation_df["Buy_and_Hold"]
-        relative_portfolio_value = portfolio_value.pct_change()
-        relative_buy_and_hold_value = buy_and_hold_value.pct_change()
-        diff = relative_portfolio_value - relative_buy_and_hold_value
-        value = round((diff).mean() * 100, 4)
+        value = round(
+            (simulation_df["Relative_Portfolio_VS_Relative_Buy&Hold"]).mean() * 100,
+            4,
+        )
         sharpe_strat = compute_sharpe_ratio(simulation_df, "Portfolio")
         sharpe_buy_hold = compute_sharpe_ratio(simulation_df, column="Buy_and_Hold")
-
+        max_dd = compute_maximum_drawdown(simulation_df, "Portfolio")
         # Weighted objective
         result = sharpe_strat / sharpe_buy_hold * value
         # result = rsi * value
@@ -317,12 +329,10 @@ class optimiser_signal_momentum_strategy(trading_optimisation):
         simulation_df = self.strategy.compute_simulation()  # compute the simulation
         result_portfolio = simulation_df["Portfolio"].iloc[-1]
         sharpe = compute_sharpe_ratio(simulation_df)
-        portfolio_value = simulation_df["Portfolio"]
-        buy_and_hold_value = simulation_df["Buy_and_Hold"]
-        relative_portfolio_value = portfolio_value.pct_change()
-        relative_buy_and_hold_value = buy_and_hold_value.pct_change()
-        diff = relative_portfolio_value - relative_buy_and_hold_value
-        value = round((diff).mean() * 100, 4)
+        value = round(
+            (simulation_df["Relative_Portfolio_VS_Relative_Buy&Hold"]).mean() * 100,
+            4,
+        )
         result = sharpe * value  # calculate a result
         # result = rsi * value
         config = copy.deepcopy(self.config)

@@ -137,9 +137,11 @@ class trading_strategy:
 
     def save_data(self):
         if self.evolution_df is not None:
+            relative_portfolio_value = self.evolution_df["Portfolio"].pct_change()
+            relative_buy_and_hold_value = self.evolution_df["Buy_and_Hold"].pct_change()
+
             self.evolution_df["Relative_Portfolio_VS_Relative_Buy&Hold"] = (
-                self.evolution_df["Portfolio"].pct_change()
-                - self.evolution_df["Buy_and_Hold"].pct_change()
+                relative_portfolio_value - relative_buy_and_hold_value
             )
             self.evolution_df[f"Portfolio/Buy_and_Hold"] = (
                 self.evolution_df["Portfolio"] / self.evolution_df["Buy_and_Hold"]
@@ -147,11 +149,13 @@ class trading_strategy:
             self.evolution_df[f"RSI_Portfolio/Buy_and_Hold"] = (
                 RSIIndicator(self.evolution_df[f"Portfolio/Buy_and_Hold"]).rsi() / 100
             )
+            value = round(
+                (self.evolution_df["Relative_Portfolio_VS_Relative_Buy&Hold"]).mean()
+                * 100,
+                4,
+            )
 
-            if (
-                self.evolution_df["Portfolio"].iloc[-1]
-                > self.evolution_df["Buy_and_Hold"].iloc[-1]
-            ):
+            if value > 0:
                 self.strategy_folder_path = create_save_one_experience(
                     self.config, self.time_eccefpsn
                 )
@@ -643,7 +647,7 @@ if __name__ == "__main__":
         "exchange": "binance",
         "initial_capital": 1000,
         "broker": "binance",
-        #"begin_date": "2020:"
+        # "begin_date": "2020:"
         "strategy": {
             "name": "momentum_strategy",
             "x": 10,

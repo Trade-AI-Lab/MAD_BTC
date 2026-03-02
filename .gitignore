@@ -3,6 +3,7 @@ lightning_logs/
 robustness_plot/*
 mp4_folder_experience/*
 wandb/
+study/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
