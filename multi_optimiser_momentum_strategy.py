@@ -39,18 +39,18 @@ def compute_sharpe_ratio(
 
 
 def compute_maximum_drawdown(df, column: str):
+    series = df[column]
 
-    index_edge_pct_change = df[
-        (df[column] > df[column].shift(1) < 0) and (df[column] > df[column].shift(-1))
-    ].index()
-    index_edge_pct_change += [0]
-    list_dd = []
-    for index in index_edge_pct_change:
-        max = df[column].iloc[index]
-        df_2 = df[index:][column]
-        max_dd = round((max - df_2).max() / max * 100, 3)
-        list_dd.append(max_dd)
-    return np.max((list_dd))
+    # Running maximum
+    running_max = series.cummax()
+
+    # Drawdown series (in percentage)
+    drawdown = (series - running_max) / running_max
+
+    # Maximum drawdown (positive percentage)
+    max_dd = drawdown.min()
+
+    return round(abs(max_dd) * 100, 3)
 
 
 class trading_optimisation:
