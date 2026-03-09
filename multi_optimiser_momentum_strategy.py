@@ -258,9 +258,10 @@ class optimiser_momentum_strategy(trading_optimisation):
         )
         sharpe_strat = compute_sharpe_ratio(simulation_df, "Portfolio")
         sharpe_buy_hold = compute_sharpe_ratio(simulation_df, column="Buy_and_Hold")
-        max_dd = compute_maximum_drawdown(simulation_df, "Portfolio")
+        max_dd_strat = compute_maximum_drawdown(simulation_df, "Portfolio")
+        max_dd_buy_hold = compute_maximum_drawdown(simulation_df, "Buy_and_Hold")
         # Weighted objective
-        result = sharpe_strat / sharpe_buy_hold * value
+        result = sharpe_strat / sharpe_buy_hold * value * max_dd_buy_hold / max_dd_strat
         # result = rsi * value
         config = copy.deepcopy(self.config)
         self.liste.append(
