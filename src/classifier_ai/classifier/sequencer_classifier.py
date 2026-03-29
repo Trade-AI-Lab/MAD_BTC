@@ -159,9 +159,9 @@ class DatasetCreator(Dataset):
         ]["ratio_method"]
             
         _x = self.data_df[self.features].loc[start - self.dt : end - self.dt]
-        _x[["open", "low", "high", "close"]] = (
+        _x[["low", "high", "close"]] = (
             self.normalizer_tool.log_division_normalization(
-                df=_x[["open", "low", "high", "close"]], row=0
+                df=_x[["low", "high", "close"]], row=0
             )
         )
         _x["ratio_method"] = ratio_method
@@ -182,7 +182,6 @@ if __name__ == "__main__":
         "nb_first_strats": 0.0,
         "nb_last_strats": 0.5,
         "features": [
-            "open",
             "high",
             "low",
             "close",

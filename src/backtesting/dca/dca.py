@@ -17,12 +17,12 @@ class Dca_Args:
     exchange: str = "binance"
     cryptocurrency: str = "BNBUSDT"
     investment: float = 1
-    investment_interval: str = "W"
+    investment_interval: str = "672h"
     begin_date: str = None
     end_date: str = "2024-05-20 00:00:00"
     fees: float = 0.1 / 100
-    day: int = 19
-    offset: int = 6
+    day: int = 12
+    offset: int = 3
 
 
 class Dca:
@@ -172,16 +172,14 @@ class Dca_Ema(Dca):
         not_invested_values = []
         investment = self.args.investment
         fees = self.args.fees
-        factor = self.args.increase_factor
-        for index, row in self.resampled_df.iterrows():
+        factor = self.args.factor
+        for _, row in self.resampled_df.iterrows():
             price = row["close"]
             indicator = row["indicator"]
             if price >= indicator:
                 current_investment = investment * (1 + factor)
-            elif price <= indicator:
-                current_investment = investment * (1 -factor)
             else:
-                current_investment = investment
+                current_investment = investment * (1 - factor)
             shares_bought = current_investment * (1 - fees) / price
             total_shares += shares_bought
             total_invested += current_investment
@@ -201,7 +199,7 @@ class Dca_Ema(Dca):
 class Dca_PriceVariation_Args(Dca_Args):
     increase_factor: float = 5 / 100  # Default value for increase factor
     decrease_threshold: float = (
-        0.01 / 100
+        0.05 / 100
     )  # Default value for price variation threshold
 
     def __init__(self, **kwargs):
@@ -250,70 +248,6 @@ class Dca_PriceVariation(Dca):
         )
 
 
-# Function to process a single date range
-def run_multiprocessing():
-    def process_date_range(begin_date, end_date):
-        print(f"Processing date range: {begin_date} to {end_date}")
-        liste = []
-        for i in range(0, 7):  # Days of the week
-            for j in range(0, 24):  # Hours of the day
-                dca_args = Dca_Args(
-                    offset=j, day=i, begin_date=begin_date, end_date=end_date
-                )
-                dca_element = Dca(dca_args)
-                portfolio_values, total_invested, _, _, _ = dca_element._dca_loop()
-                return_percentage = (
-                    (portfolio_values[-1] - total_invested) / total_invested
-                ) * 100
-                liste.append([i, j, return_percentage])
-
-        # Create a DataFrame and generate the heatmap
-        df = pd.DataFrame(liste, columns=["day", "hour", "return_percentage"])
-        heatmap_data = df.pivot(index="day", columns="hour", values="return_percentage")
-        fig = go.Figure(
-            data=go.Heatmap(
-                z=heatmap_data.values
-                / heatmap_data.values.min(),  # Normalized ROI data
-                x=heatmap_data.columns,  # Hours (columns)
-                y=[
-                    "Monday",
-                    "Tuesday",
-                    "Wednesday",
-                    "Thursday",
-                    "Friday",
-                    "Saturday",
-                    "Sunday",
-                ],  # Days (rows)
-                colorscale="Viridis",  # Choose a color scale
-                colorbar_title="ROI (%)",
-            )
-        )
-        fig.update_layout(
-            title=f"Return on Investment by Day and Hour\nBegin Date: {begin_date}, End Date: {end_date}",
-            xaxis_title="Hour of Day",
-            yaxis_title="Day of Week",
-            xaxis=dict(tickmode="linear"),
-            yaxis=dict(tickmode="array", tickvals=list(range(7))),
-        )
-
-        # Save or display the plot
-        fig.show()
-        print(f"Finished processing date range: {begin_date} to {end_date}")
-
-    begin_date = pd.to_datetime("2020-01-01 00:00:00")
-    end_date = begin_date + pd.Timedelta(weeks=int(52 * 1.5))
-    final_date = pd.to_datetime("2024-05-26 00:00:00")
-    date_ranges = []
-    while end_date < final_date:
-        date_ranges.append((begin_date, end_date))
-        begin_date += pd.Timedelta(weeks=int(4))
-        end_date += pd.Timedelta(weeks=int(4))
-
-    # Use multiprocessing to process each date range
-    with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
-        pool.starmap(process_date_range, date_ranges)
-
-
 def process_dca(offset, weekday, investment_interval, cryptocurrency):
     dca_args = Dca_Args(
         offset=offset,
@@ -329,53 +263,70 @@ def process_dca(offset, weekday, investment_interval, cryptocurrency):
     return weekday, offset, return_percentage, investment_interval
 
 
-def dca_multiprocessing(
-    project="dca",
-    entity="corporate-manu-sureli",
-    name="dca_strategy",
-    list_cryptos=["ADAUSDT", "BNBUSDT", "ETHUSDT", "BTCUSDT"],
-    list_investment_interval=["24h", "168h", "672h", "W", "ME", "D"],
-):
-    weekday_map = {
-        0: "Monday",
-        1: "Tuesday",
-        2: "Wednesday",
-        3: "Thursday",
-        4: "Friday",
-        5: "Saturday",
-        6: "Sunday",
-    }
-    wandb.init(project=project, entity=entity, name=name)
-    for cryptocurrency in list_cryptos:
-        # Initialize the Dca_Args instance for DCA
-        day_hour_investment_interval_combinations = [
-            (day, hour, investment_interval, cryptocurrency)
-            for day, hour, investment_interval in product(
-                range(0, 7), range(0, 24), list_investment_interval
+class DcaComputeMultiprocessing:
+    def __int__(self, cfg):
+        self.cfg = cfg
+
+    def compute_dca_multiprocessing(
+        self,
+        project="dca",
+        entity="corporate-manu-sureli",
+        name="dca_strategy",
+        list_cryptos=["ADAUSDT", "BNBUSDT", "ETHUSDT", "BTCUSDT"],
+        list_investment_interval=["24h", "168h", "672h", "W", "ME", "D"],
+        columns=["offset", "weekday", "return_percentage", "investment_interval"],
+        name_csv="dca_multiprocessing",
+        wandb_active=False,
+        plot_figure=False,
+    ):
+        from tqdm import tqdm
+
+        weekday_map = {
+            0: "Monday",
+            1: "Tuesday",
+            2: "Wednesday",
+            3: "Thursday",
+            4: "Friday",
+            5: "Saturday",
+            6: "Sunday",
+        }
+        if wandb_active:
+            wandb.init(project=project, entity=entity, name=name)
+        for cryptocurrency in tqdm(list_cryptos):
+            # Initialize the Dca_Args instance for DCA
+            day_hour_investment_interval_combinations = [
+                (day, hour, investment_interval, cryptocurrency)
+                for day, hour, investment_interval in product(
+                    range(0, 7), range(0, 24), list_investment_interval
+                )
+            ]
+            with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
+                results = pool.starmap(
+                    process_dca, day_hour_investment_interval_combinations
+                )
+            df = pd.DataFrame(
+                results,
+                columns=columns,
             )
-        ]
-        with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
-            results = pool.starmap(process_dca, day_hour_investment_interval_combinations)
-        df = pd.DataFrame(
-            results,
-            columns=["offset", "weekday", "return_percentage", "investment_interval"],
-        )
 
-        df["weekday"] = df["weekday"].map(weekday_map)
-
-        fig = px.scatter(
-            df,
-            y="return_percentage",
-            x="weekday",
-            color="investment_interval",
-            title=f"Cryptocurrency_{cryptocurrency}",
-        )
-        fig.update_traces(marker_size=10)
-        # fig.show()
-        wandb.log({"weekday_scatter_plot": fig})
-        del results
-        print(f"Finished for {cryptocurrency}")
-    wandb.finish()
+            df["weekday"] = df["weekday"].map(weekday_map)
+            df.to_csv(path_or_buf=f"./{cryptocurrency}_{name_csv}.csv")
+            fig = px.scatter(
+                df,
+                y="return_percentage",
+                x="weekday",
+                color="investment_interval",
+                title=f"Cryptocurrency_{cryptocurrency}",
+            )
+            fig.update_traces(marker_size=10)
+            if plot_figure:
+                fig.show()
+            if wandb_active:
+                wandb.log({"weekday_scatter_plot": fig})
+            del results
+            print(f"Finished for {cryptocurrency}")
+        if wandb_active:
+            wandb.finish()
 
 
 if __name__ == "__main__":
@@ -386,14 +337,12 @@ if __name__ == "__main__":
     # Initialize the Dca_Ema_Args instance with correct parameters
     dca_ema_args = Dca_Ema_Args()  # Create an instance of Dca_Ema_Args
     dca_ema_element = Dca_Ema(dca_ema_args)  # Pass it to the Dca_Ema class
-    dca_ema_element.compute_dca_from_dataframe(output=False, plot=False)
+    dca_ema_element.compute_dca_from_dataframe(output=True, plot=True)
 
     dca_pricevariation_args = Dca_PriceVariation_Args(
-        factor=3 / 100, decrease_threshold=0.03
+        increase_factor=3 / 100, decrease_threshold=0.03
     )
 
     dca_pricevariation_element = Dca_PriceVariation(dca_pricevariation_args)
-    dca_pricevariation_element.compute_dca_from_dataframe(output=False, plot=False)
-
-    dca_multiprocessing()
-
+    dca_pricevariation_element.compute_dca_from_dataframe(output=True, plot=True)
+    DcaComputeMultiprocessing.compute_dca_multiprocessing()
