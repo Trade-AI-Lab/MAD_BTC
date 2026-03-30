@@ -1,10 +1,12 @@
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
+import plotly.express as px
 from ta.trend import SMAIndicator, EMAIndicator
 from dataclasses import dataclass
 from src.utils.utils_df import open_dataframe
 from itertools import product
+import multiprocessing
 import sys, os
 
 absolute_path = os.path.abspath(__file__)[
@@ -21,26 +23,17 @@ class Dca_Args:
     begin_date: str = None
     end_date: str = "2024-05-20 00:00:00"
     fees: float = 0.1 / 100
-    day: int = 12
-    offset: int = 3
+    # Removed day and offset
 
 
 class Dca:
-    weekday_map = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
-
     def __init__(self, args):
         self.args = args
         self.args.time = "1h"
         self.df = self._open_dataframe()
-        self.df.index = self.df.index + pd.Timedelta(hours=args.offset)
-        if args.investment_interval == "W" or args.investment_interval == "D":
-            self.resampled_df = self.df.resample(
-                "W" + f"-{self.weekday_map[args.day % 7]}"
-            ).first()
-            if args.investment_interval == "D":
-                self.resampled_df = self.df.resample(args.investment_interval).first()
-        else:
-            self.resampled_df = self.df.resample(args.investment_interval).first()
+
+        # Simply resample by the investment interval (no weekday offset needed)
+        self.resampled_df = self.df.resample(args.investment_interval).first()
         del self.df
 
     def _open_dataframe(self):
@@ -88,7 +81,6 @@ class Dca:
 
     @staticmethod
     def _plot(resampled_dates, not_invested_values, portfolio_values):
-        # Plot results with Plotly
         fig = go.Figure()
         fig.add_trace(
             go.Scatter(
@@ -122,7 +114,7 @@ class Dca:
 
         fig.show()
 
-    def compute_dca_from_dataframe(self, output: float = False, plot: float = False):
+    def compute_dca_from_dataframe(self, output: bool = False, plot: bool = False):
         (
             portfolio_values,
             total_invested,
@@ -151,14 +143,8 @@ class Dca:
 
 @dataclass
 class Dca_Ema_Args(Dca_Args):
-    factor: float = 5 / 100  # Default value for increase factor
-    window: int = 12  # Default window size for EMA
-
-    def __init__(self, **kwargs):
-        # Pass parent attributes to Dca_Args
-        self.factor = kwargs.pop("factor", self.factor)
-        self.window = kwargs.pop("window", self.window)
-        super().__init__(**kwargs)
+    factor: float = 1 / 100
+    window: int = 12
 
 
 class Dca_Ema(Dca):
@@ -176,7 +162,9 @@ class Dca_Ema(Dca):
         for _, row in self.resampled_df.iterrows():
             price = row["close"]
             indicator = row["indicator"]
-            if price >= indicator:
+            if pd.isna(indicator):  # Handle initial NaN from SMA window
+                current_investment = investment
+            elif price >= indicator:
                 current_investment = investment * (1 + factor)
             else:
                 current_investment = investment * (1 - factor)
@@ -197,17 +185,8 @@ class Dca_Ema(Dca):
 
 @dataclass
 class Dca_PriceVariation_Args(Dca_Args):
-    increase_factor: float = 5 / 100  # Default value for increase factor
-    decrease_threshold: float = (
-        0.05 / 100
-    )  # Default value for price variation threshold
-
-    def __init__(self, **kwargs):
-        self.increase_factor = kwargs.pop("increase_factor", self.increase_factor)
-        self.decrease_threshold = kwargs.pop(
-            "decrease_threshold", self.decrease_threshold
-        )
-        super().__init__(**kwargs)
+    increase_factor: float = 1 / 100
+    decrease_threshold: float = 1 / 100
 
 
 class Dca_PriceVariation(Dca):
@@ -248,23 +227,31 @@ class Dca_PriceVariation(Dca):
         )
 
 
-def process_dca(offset, weekday, investment_interval, cryptocurrency):
-    dca_args = Dca_Args(
-        offset=offset,
-        day=weekday,
-        investment_interval=investment_interval,
-        cryptocurrency=cryptocurrency,
+# Multiprocessing Worker Function
+def process_dca(strategy_class, args_instance):
+    """
+    Executes a DCA strategy loop given the strategy class and its arguments.
+    """
+    dca_element = strategy_class(args_instance)
+    try:
+        portfolio_values, total_invested, _, _, _ = dca_element._dca_loop()
+        return_percentage = (
+            (portfolio_values[-1] - total_invested) / total_invested
+        ) * 100
+    except Exception as e:
+        # Failsafe for missing data or calculation errors to not break the multiprocessing pool
+        return_percentage = 0.0
+
+    return (
+        strategy_class.__name__,
+        args_instance.cryptocurrency,
+        args_instance.investment_interval,
+        return_percentage,
     )
-    dca_element = Dca(dca_args)
-    portfolio_values, total_invested, _, not_invested_values, dates = (
-        dca_element._dca_loop()
-    )
-    return_percentage = ((portfolio_values[-1] - total_invested) / total_invested) * 100
-    return weekday, offset, return_percentage, investment_interval
 
 
 class DcaComputeMultiprocessing:
-    def __int__(self, cfg):
+    def __init__(self, cfg=None):  # Fixed __int__ typo
         self.cfg = cfg
 
     def compute_dca_multiprocessing(
@@ -273,76 +260,90 @@ class DcaComputeMultiprocessing:
         entity="corporate-manu-sureli",
         name="dca_strategy",
         list_cryptos=["ADAUSDT", "BNBUSDT", "ETHUSDT", "BTCUSDT"],
-        list_investment_interval=["24h", "168h", "672h", "W", "ME", "D"],
-        columns=["offset", "weekday", "return_percentage", "investment_interval"],
+        list_investment_interval=["24h", "48h", "72h", "168h", "672h", "W", "ME", "D"],
+        # Provide the strategies you want to compare
+        strategies=[
+            (Dca, Dca_Args),
+            (Dca_Ema, Dca_Ema_Args),
+            (Dca_PriceVariation, Dca_PriceVariation_Args),
+        ],
+        columns=[
+            "strategy",
+            "cryptocurrency",
+            "investment_interval",
+            "return_percentage",
+        ],
         name_csv="dca_multiprocessing",
         wandb_active=False,
         plot_figure=False,
     ):
         from tqdm import tqdm
 
-        weekday_map = {
-            0: "Monday",
-            1: "Tuesday",
-            2: "Wednesday",
-            3: "Thursday",
-            4: "Friday",
-            5: "Saturday",
-            6: "Sunday",
-        }
         if wandb_active:
-            wandb.init(project=project, entity=entity, name=name)
-        for cryptocurrency in tqdm(list_cryptos):
-            # Initialize the Dca_Args instance for DCA
-            day_hour_investment_interval_combinations = [
-                (day, hour, investment_interval, cryptocurrency)
-                for day, hour, investment_interval in product(
-                    range(0, 7), range(0, 24), list_investment_interval
-                )
-            ]
-            with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
-                results = pool.starmap(
-                    process_dca, day_hour_investment_interval_combinations
-                )
-            df = pd.DataFrame(
-                results,
-                columns=columns,
-            )
+            import wandb
 
-            df["weekday"] = df["weekday"].map(weekday_map)
-            df.to_csv(path_or_buf=f"./{cryptocurrency}_{name_csv}.csv")
-            fig = px.scatter(
-                df,
-                y="return_percentage",
-                x="weekday",
-                color="investment_interval",
-                title=f"Cryptocurrency_{cryptocurrency}",
+            wandb.init(project=project, entity=entity, name=name)
+
+        # Build list of configurations to run
+        combinations = []
+        for crypto, interval, (strat_class, strat_args_class) in product(
+            list_cryptos, list_investment_interval, strategies
+        ):
+            args_instance = strat_args_class(
+                cryptocurrency=crypto, investment_interval=interval
             )
-            fig.update_traces(marker_size=10)
+            combinations.append((strat_class, args_instance))
+
+        print(
+            f"Running {len(combinations)} combinations across {multiprocessing.cpu_count()} CPU cores..."
+        )
+
+        with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
+            # starmap applies the process_dca function to all elements in combinations
+            results = pool.starmap(process_dca, combinations)
+
+        # Consolidate results into a single DataFrame
+        df = pd.DataFrame(results, columns=columns)
+        df.to_csv(path_or_buf=f"./{name_csv}.csv", index=False)
+
+        # Plotly chart: X-axis is interval, colored by Strategy
+        for crypto in list_cryptos:
+            df_crypto = df[df["cryptocurrency"] == crypto]
+
+            fig = px.scatter(
+                df_crypto,
+                y="return_percentage",
+                x="investment_interval",
+                color="strategy",
+                title=f"Strategy Comparison for {crypto}",
+                labels={
+                    "return_percentage": "Return (%)",
+                    "investment_interval": "Investment Interval",
+                },
+            )
+            fig.update_traces(marker_size=12)
+
             if plot_figure:
                 fig.show()
             if wandb_active:
-                wandb.log({"weekday_scatter_plot": fig})
-            del results
-            print(f"Finished for {cryptocurrency}")
+                wandb.log({f"{crypto}_scatter_plot": fig})
+
         if wandb_active:
             wandb.finish()
 
 
 if __name__ == "__main__":
-    import multiprocessing
-    import plotly.express as px
-    import wandb
-
-    # Initialize the Dca_Ema_Args instance with correct parameters
-    dca_ema_args = Dca_Ema_Args()  # Create an instance of Dca_Ema_Args
-    dca_ema_element = Dca_Ema(dca_ema_args)  # Pass it to the Dca_Ema class
+    # Test Individual Run
+    dca_ema_args = Dca_Ema_Args()
+    dca_ema_element = Dca_Ema(dca_ema_args)
     dca_ema_element.compute_dca_from_dataframe(output=True, plot=True)
 
     dca_pricevariation_args = Dca_PriceVariation_Args(
         increase_factor=3 / 100, decrease_threshold=0.03
     )
-
     dca_pricevariation_element = Dca_PriceVariation(dca_pricevariation_args)
     dca_pricevariation_element.compute_dca_from_dataframe(output=True, plot=True)
-    DcaComputeMultiprocessing.compute_dca_multiprocessing()
+
+    # Test Multiprocessing
+    multi_compute = DcaComputeMultiprocessing()
+    multi_compute.compute_dca_multiprocessing(plot_figure=True)
