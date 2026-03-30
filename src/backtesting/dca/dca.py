@@ -260,7 +260,18 @@ class DcaComputeMultiprocessing:
         entity="corporate-manu-sureli",
         name="dca_strategy",
         list_cryptos=["ADAUSDT", "BNBUSDT", "ETHUSDT", "BTCUSDT"],
-        list_investment_interval=["24h", "48h", "72h", "168h", "672h", "W", "ME", "D"],
+        list_investment_interval=[
+            "24h",
+            "48h",
+            "72h",
+            "168h",
+            "671h",
+            "672h",
+            "673h",
+            "W",
+            "ME",
+            "D",
+        ],
         # Provide the strategies you want to compare
         strategies=[
             (Dca, Dca_Args),
@@ -332,7 +343,115 @@ class DcaComputeMultiprocessing:
             wandb.finish()
 
 
+# ---------------------------------------------------------
+# Worker Function for Grid Search
+# ---------------------------------------------------------
+def process_dca_grid(strategy_class, args_class, crypto, interval, hyperparams):
+    """
+    Worker function executed by multiprocessing pool.
+    Unpacks the specific hyperparameter combination into the strategy's Args class.
+    """
+    # Initialize args with **hyperparams to dynamically assign grid values
+    args_instance = args_class(
+        cryptocurrency=crypto, investment_interval=interval, **hyperparams
+    )
+    dca_element = strategy_class(args_instance)
+
+    try:
+        portfolio_values, total_invested, _, _, _ = dca_element._dca_loop()
+        return_percentage = (
+            (portfolio_values[-1] - total_invested) / total_invested
+        ) * 100
+    except Exception as e:
+        # Failsafe for calculation errors
+        return_percentage = 0.0
+
+    # Build the result dictionary
+    result = {
+        "strategy": strategy_class.__name__,
+        "cryptocurrency": crypto,
+        "investment_interval": interval,
+        "return_percentage": return_percentage,
+    }
+    # Inject the specific hyperparams used into the row for the DataFrame
+    result.update(hyperparams)
+    return result
+
+
+# ---------------------------------------------------------
+# Grid Search & Plotting Class
+# ---------------------------------------------------------
+class DcaHyperparameterSearch:
+    def __init__(
+        self,
+        list_cryptos=["BTCUSDT", "ETHUSDT"],
+        list_intervals=["24h", "168h", "W", "ME"],
+    ):
+        self.list_cryptos = list_cryptos
+        self.list_intervals = list_intervals
+
+    def run_grid_search(self, strategy_class, args_class, param_grid):
+        """
+        Executes a multiprocessing grid search.
+        param_grid: dict of lists, e.g., {'window': [10, 12, 14], 'factor': [0.01, 0.05]}
+        """
+        print(f"Starting Grid Search for {strategy_class.__name__}...")
+
+        # Generate all possible combinations of the provided hyperparameters
+        keys, values = zip(*param_grid.items())
+        hyperparam_combinations = [dict(zip(keys, v)) for v in product(*values)]
+
+        # Build the full list of tasks for the multiprocessing pool
+        tasks = []
+        for crypto, interval, h_params in product(
+            self.list_cryptos, self.list_intervals, hyperparam_combinations
+        ):
+            tasks.append((strategy_class, args_class, crypto, interval, h_params))
+
+        print(f"Running {len(tasks)} total simulations...")
+
+        with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
+            results = pool.starmap(process_dca_grid, tasks)
+
+        df_results = pd.DataFrame(results)
+        print(f"Completed grid search for {strategy_class.__name__}.")
+        return df_results
+
+    def plot_3d_results(self, df, param_x, param_y, title_suffix=""):
+        """
+        Plots a 3D scatter:
+        X = param_1, Y = param_2, Z = investment_interval, Color = return_percentage
+        """
+        for crypto in df["cryptocurrency"].unique():
+            df_crypto = df[df["cryptocurrency"] == crypto]
+
+            fig = px.scatter_3d(
+                df_crypto,
+                x=param_x,
+                y=param_y,
+                z="investment_interval",
+                color="return_percentage",
+                title=f"{crypto} {title_suffix} Optimization",
+                labels={
+                    param_x: param_x.replace("_", " ").title(),
+                    param_y: param_y.replace("_", " ").title(),
+                    "investment_interval": "Interval",
+                    "return_percentage": "Return (%)",
+                },
+                color_continuous_scale="RdYlGn",  # Red (bad) to Green (good)
+            )
+
+            # Make markers slightly transparent to see overlapping points in 3D space
+            fig.update_traces(
+                marker=dict(
+                    size=8, opacity=0.8, line=dict(width=0.5, color="DarkSlateGrey")
+                )
+            )
+            fig.show()
+
+
 if __name__ == "__main__":
+    """
     # Test Individual Run
     dca_ema_args = Dca_Ema_Args()
     dca_ema_element = Dca_Ema(dca_ema_args)
@@ -347,3 +466,34 @@ if __name__ == "__main__":
     # Test Multiprocessing
     multi_compute = DcaComputeMultiprocessing()
     multi_compute.compute_dca_multiprocessing(plot_figure=True)
+    """
+    # Initialize the search class
+    grid_searcher = DcaHyperparameterSearch(
+        list_cryptos=["BTCUSDT", "ETHUSDT"], list_intervals=["24h", "168h", "W", "ME"]
+    )
+
+    # 1. Grid Search for Dca_PriceVariation
+    pv_grid = {
+        "increase_factor": [0.01, 0.03, 0.05],
+        "decrease_threshold": [0.01, 0.03, 0.05],
+    }
+    df_pv = grid_searcher.run_grid_search(
+        Dca_PriceVariation, Dca_PriceVariation_Args, pv_grid
+    )
+
+    # Plot Dca_PriceVariation
+    grid_searcher.plot_3d_results(
+        df_pv,
+        param_x="increase_factor",
+        param_y="decrease_threshold",
+        title_suffix="(Price Variation)",
+    )
+
+    # 2. Grid Search for Dca_Ema
+    ema_grid = {"factor": [0.01, 0.03, 0.05], "window": [7, 12, 21, 30]}
+    df_ema = grid_searcher.run_grid_search(Dca_Ema, Dca_Ema_Args, ema_grid)
+
+    # Plot Dca_Ema
+    grid_searcher.plot_3d_results(
+        df_ema, param_x="factor", param_y="window", title_suffix="(EMA Strategy)"
+    )
