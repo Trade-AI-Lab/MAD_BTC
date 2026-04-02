@@ -231,6 +231,90 @@ def process_dca_grid(
     return result
 
 
+@dataclass
+class Dca_Ensemble_Args(Dca_Args):
+    window: int = 200
+    rsi_window: int = 14
+    # Conditions
+    crash_drawdown: float = 0.40  # Price must be down 40% from ATH
+    cheap_ma_ratio: float = 0.80  # AND price must be 20% below 200-SMA
+    # Multipliers
+    confluence_multiplier: float = 5.0  # 5x buy when BOTH are met
+    bubble_ma_ratio: float = 1.50  # Stop buying if in a bubble
+    bubble_multiplier: float = 0.0
+
+
+class Dca_Ensemble(Dca):
+    def _compute_multipliers(self):
+        # 1. Calculate MA Ratio
+        sma = SMAIndicator(
+            self.resampled_df["close"], window=self.args.window
+        ).sma_indicator()
+        ma_ratio = self.resampled_df["close"] / sma
+
+        # 2. Calculate Drawdown
+        cummax = self.resampled_df["close"].cummax()
+        drawdown = (cummax - self.resampled_df["close"]) / cummax
+
+        # 3. Build Confluence Conditions
+        is_generational_bottom = (drawdown >= self.args.crash_drawdown) & (
+            ma_ratio <= self.args.cheap_ma_ratio
+        )
+        is_bubble_top = ma_ratio >= self.args.bubble_ma_ratio
+
+        # 4. Apply Multipliers Vector-style
+        conditions = [is_generational_bottom, is_bubble_top]
+        choices = [self.args.confluence_multiplier, self.args.bubble_multiplier]
+
+        return pd.Series(
+            np.select(conditions, choices, default=1.0), index=self.resampled_df.index
+        )
+
+
+# ==========================================
+# Strategy 4: Adaptive Volatility (Z-Score)
+# ==========================================
+@dataclass
+class Dca_AdaptiveZScore_Args(Dca_Args):
+    vol_window: int = 20  # How many periods to look back to gauge current volatility
+    z_buy_threshold: float = (
+        -2.0
+    )  # Buy when price is 2 Standard Deviations BELOW the mean
+    buy_multiplier: float = 3.0  # Triple investment when statistically cheap
+    z_pause_threshold: float = (
+        2.0  # (Optional) Pause buying if 2 StdDevs ABOVE the mean
+    )
+    pause_multiplier: float = (
+        0.0  # Set to 0.5 to just buy half, or 0.0 to pause entirely
+    )
+
+
+class Dca_AdaptiveZScore(Dca):
+    def _compute_multipliers(self):
+        # 1. Calculate Rolling Mean and Rolling Standard Deviation
+        rolling_mean = (
+            self.resampled_df["close"].rolling(window=self.args.vol_window).mean()
+        )
+        rolling_std = (
+            self.resampled_df["close"].rolling(window=self.args.vol_window).std()
+        )
+
+        # 2. Calculate the Z-Score (How many standard deviations are we from the mean?)
+        z_score = (self.resampled_df["close"] - rolling_mean) / rolling_std
+
+        # 3. Dynamic Conditions based purely on current volatility
+        is_statistically_cheap = z_score <= self.args.z_buy_threshold
+        is_statistically_expensive = z_score >= self.args.z_pause_threshold
+
+        # 4. Apply Multipliers Vector-style
+        conditions = [is_statistically_cheap, is_statistically_expensive]
+        choices = [self.args.buy_multiplier, self.args.pause_multiplier]
+
+        return pd.Series(
+            np.select(conditions, choices, default=1.0), index=self.resampled_df.index
+        )
+
+
 class DcaComputeMultiprocessing:
     def __init__(self, cfg=None):
         self.cfg = cfg
@@ -247,6 +331,7 @@ class DcaComputeMultiprocessing:
             (Dca_Drawdown, Dca_Drawdown_Args),
             (Dca_RSI, Dca_RSI_Args),
             (Dca_MARatio, Dca_MARatio_Args),
+            (Dca_Ensemble, Dca_Ensemble_Args),
         ],
         columns=[
             "strategy",
@@ -362,50 +447,10 @@ class DcaHyperparameterSearch:
             fig.show()
 
 
-@dataclass
-class Dca_Ensemble_Args(Dca_Args):
-    window: int = 200
-    rsi_window: int = 14
-    # Conditions
-    crash_drawdown: float = 0.40  # Price must be down 40% from ATH
-    cheap_ma_ratio: float = 0.80  # AND price must be 20% below 200-SMA
-    # Multipliers
-    confluence_multiplier: float = 5.0  # 5x buy when BOTH are met
-    bubble_ma_ratio: float = 1.50  # Stop buying if in a bubble
-    bubble_multiplier: float = 0.0
-
-
-class Dca_Ensemble(Dca):
-    def _compute_multipliers(self):
-        # 1. Calculate MA Ratio
-        sma = SMAIndicator(
-            self.resampled_df["close"], window=self.args.window
-        ).sma_indicator()
-        ma_ratio = self.resampled_df["close"] / sma
-
-        # 2. Calculate Drawdown
-        cummax = self.resampled_df["close"].cummax()
-        drawdown = (cummax - self.resampled_df["close"]) / cummax
-
-        # 3. Build Confluence Conditions
-        is_generational_bottom = (drawdown >= self.args.crash_drawdown) & (
-            ma_ratio <= self.args.cheap_ma_ratio
-        )
-        is_bubble_top = ma_ratio >= self.args.bubble_ma_ratio
-
-        # 4. Apply Multipliers Vector-style
-        conditions = [is_generational_bottom, is_bubble_top]
-        choices = [self.args.confluence_multiplier, self.args.bubble_multiplier]
-
-        return pd.Series(
-            np.select(conditions, choices, default=1.0), index=self.resampled_df.index
-        )
-
-
 if __name__ == "__main__":
     multi_compute = DcaComputeMultiprocessing()
     multi_compute.compute_dca_multiprocessing(
-        plot_figure=False
+        plot_figure=True
     )  # Turned off by default to jump to grid search
 
     grid_searcher = DcaHyperparameterSearch(
@@ -477,4 +522,20 @@ if __name__ == "__main__":
         param_x="crash_drawdown",
         param_y="confluence_multiplier",
         title_suffix="(Ensemble Confluence)",
+    )
+
+    ensemble_grid = {
+        "z_buy_threshold": [-1.5, -2.0, -2.5, -3.0],
+        "vol_window": [20, 50, 100],
+    }
+    df_ensemble = grid_searcher.run_grid_search(
+        Dca_AdaptiveZScore, Dca_AdaptiveZScore_Args, ensemble_grid
+    )
+
+    # Plot the 3D Results
+    grid_searcher.plot_3d_results(
+        df_ensemble,
+        param_x="z_buy_threshold",
+        param_y="vol_window",
+        title_suffix="(Dca_AdaptiveZScore)",
     )
