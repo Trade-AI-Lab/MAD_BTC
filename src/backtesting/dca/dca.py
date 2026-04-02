@@ -362,6 +362,46 @@ class DcaHyperparameterSearch:
             fig.show()
 
 
+@dataclass
+class Dca_Ensemble_Args(Dca_Args):
+    window: int = 200
+    rsi_window: int = 14
+    # Conditions
+    crash_drawdown: float = 0.40  # Price must be down 40% from ATH
+    cheap_ma_ratio: float = 0.80  # AND price must be 20% below 200-SMA
+    # Multipliers
+    confluence_multiplier: float = 5.0  # 5x buy when BOTH are met
+    bubble_ma_ratio: float = 1.50  # Stop buying if in a bubble
+    bubble_multiplier: float = 0.0
+
+
+class Dca_Ensemble(Dca):
+    def _compute_multipliers(self):
+        # 1. Calculate MA Ratio
+        sma = SMAIndicator(
+            self.resampled_df["close"], window=self.args.window
+        ).sma_indicator()
+        ma_ratio = self.resampled_df["close"] / sma
+
+        # 2. Calculate Drawdown
+        cummax = self.resampled_df["close"].cummax()
+        drawdown = (cummax - self.resampled_df["close"]) / cummax
+
+        # 3. Build Confluence Conditions
+        is_generational_bottom = (drawdown >= self.args.crash_drawdown) & (
+            ma_ratio <= self.args.cheap_ma_ratio
+        )
+        is_bubble_top = ma_ratio >= self.args.bubble_ma_ratio
+
+        # 4. Apply Multipliers Vector-style
+        conditions = [is_generational_bottom, is_bubble_top]
+        choices = [self.args.confluence_multiplier, self.args.bubble_multiplier]
+
+        return pd.Series(
+            np.select(conditions, choices, default=1.0), index=self.resampled_df.index
+        )
+
+
 if __name__ == "__main__":
     multi_compute = DcaComputeMultiprocessing()
     multi_compute.compute_dca_multiprocessing(
@@ -412,4 +452,29 @@ if __name__ == "__main__":
         param_x="cheap_threshold",
         param_y="window",
         title_suffix="(MA Ratio)",
+    )
+    # Grid Search the Ensemble Strategy
+    ensemble_grid = {
+        "crash_drawdown": [
+            0.30,
+            0.40,
+            0.50,
+        ],  # Test waiting for 30%, 40%, and 50% crashes
+        "confluence_multiplier": [
+            3.0,
+            5.0,
+            7.0,
+        ],  # Test how aggressive to buy the bottom
+    }
+
+    df_ensemble = grid_searcher.run_grid_search(
+        Dca_Ensemble, Dca_Ensemble_Args, ensemble_grid
+    )
+
+    # Plot the 3D Results
+    grid_searcher.plot_3d_results(
+        df_ensemble,
+        param_x="crash_drawdown",
+        param_y="confluence_multiplier",
+        title_suffix="(Ensemble Confluence)",
     )
