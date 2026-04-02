@@ -163,6 +163,31 @@ class Dca_Drawdown(Dca):
 
 
 # ==========================================
+# Continuous Strategy 2: Proportional MA Ratio
+# ==========================================
+@dataclass
+class Dca_ContinuousMARatio_Args(Dca_Args):
+    window: int = 200
+    aggression: float = 2.0  # Squaring the inverse ratio punishes buying tops and rewards buying bottoms
+
+
+class Dca_ContinuousMARatio(Dca):
+    def _compute_multipliers(self):
+        sma = SMAIndicator(
+            self.resampled_df["close"], window=self.args.window
+        ).sma_indicator()
+        ma_ratio = self.resampled_df["close"] / sma
+
+        safe_ratio = ma_ratio.clip(lower=0.01)
+
+        # If Ratio is 0.5 (Price is 50% below MA), 1/0.5 = 2.
+        # With aggression=2, multiplier becomes 4x.
+        multipliers = (1.0 / safe_ratio) ** self.args.aggression
+
+        return multipliers.clip(upper=10.0).fillna(1.0)
+
+
+# ==========================================
 # Strategy 3: Moving Average Ratio
 # ==========================================
 @dataclass
@@ -287,6 +312,37 @@ class Dca_AdaptiveZScore_Args(Dca_Args):
     pause_multiplier: float = (
         0.0  # Set to 0.5 to just buy half, or 0.0 to pause entirely
     )
+
+
+# ==========================================
+# Continuous Strategy 3: Exponential Z-Score
+# ==========================================
+@dataclass
+class Dca_ContinuousZScore_Args(Dca_Args):
+    vol_window: int = 20
+    aggression: float = (
+        1.0  # 1.0 is standard exponential decay. Lower this to be more conservative.
+    )
+
+
+class Dca_ContinuousZScore(Dca):
+    def _compute_multipliers(self):
+        rolling_mean = (
+            self.resampled_df["close"].rolling(window=self.args.vol_window).mean()
+        )
+        rolling_std = (
+            self.resampled_df["close"].rolling(window=self.args.vol_window).std()
+        )
+
+        z_score = (self.resampled_df["close"] - rolling_mean) / rolling_std
+
+        # np.exp(-z_score) naturally inverts the Z-score.
+        # Negative Z (Crashes) become massive positive multipliers.
+        # Positive Z (Pumps) become fractions near 0.
+        multipliers = np.exp(-z_score * self.args.aggression)
+
+        # We must clip this because np.exp can get astronomically high during black swan crashes
+        return multipliers.clip(lower=0.0, upper=10.0).fillna(1.0)
 
 
 class Dca_AdaptiveZScore(Dca):
@@ -538,4 +594,22 @@ if __name__ == "__main__":
         param_x="z_buy_threshold",
         param_y="vol_window",
         title_suffix="(Dca_AdaptiveZScore)",
+    )
+
+    continuous_z_grid = {
+        "vol_window": [20, 50, 100],
+        "aggression": np.round(
+            np.arange(0.5, 2.5, 0.25), 2
+        ).tolist(),  # Testing curve steepness
+    }
+
+    df_cont_z = grid_searcher.run_grid_search(
+        Dca_ContinuousZScore, Dca_ContinuousZScore_Args, continuous_z_grid
+    )
+
+    grid_searcher.plot_3d_results(
+        df_cont_z,
+        param_x="vol_window",
+        param_y="aggression",
+        title_suffix="(Continuous Z-Score)",
     )
