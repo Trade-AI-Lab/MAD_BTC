@@ -3,16 +3,11 @@ import optuna
 import copy
 import toml
 import asyncio
-import numpy as np
 import pandas as pd
-from IPython.display import display
-from PIL import Image
 import imageio
 
-from src.utils.utils_df import open_dataframe
 from itertools import product
 from src.strategy_utils.launcher_multi_strategy import multi_trading_strategy
-from src.strategy_utils.strategy_comparator import evalutation
 from src.utils.utils_signature import create_signature
 from src.utils.data_checks import check_data_availability_in_folder
 from src.utils.downloader import downloader
