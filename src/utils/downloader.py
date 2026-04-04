@@ -4,143 +4,179 @@ import pandas as pd
 import datetime
 import nest_asyncio
 import toml
-
 import os
+
+from tqdm.asyncio import tqdm_asyncio
 
 nest_asyncio.apply()
 
 
-async def _ohlcv(exchange, symbol, timeframe, limit, step_since, timedelta):
-    result = await exchange.fetch_ohlcv(
-        symbol=symbol, timeframe=timeframe, limit=limit, since=step_since
-    )
-    result_df = pd.DataFrame(
-        result, columns=["timestamp_open", "open", "high", "low", "close", "volume"]
-    )
-    for col in ["open", "high", "low", "close", "volume"]:
-        result_df[col] = pd.to_numeric(result_df[col])
-    result_df["open_date"] = pd.to_datetime(result_df["timestamp_open"], unit="ms")
-    # result_df["date_close"] = pd.to_datetime(result_df["timestamp_open"] + timedelta, unit="ms")
+# -----------------------------
+# FETCH OHLCV
+# -----------------------------
+async def _ohlcv(exchange, symbol, timeframe, since, limit, retries=3):
+    for attempt in range(retries):
+        try:
+            result = await exchange.fetch_ohlcv(
+                symbol=symbol,
+                timeframe=timeframe,
+                since=since,
+                limit=limit,
+            )
 
-    return result_df
+            if not result:
+                return pd.DataFrame()
+
+            df = pd.DataFrame(
+                result,
+                columns=["timestamp_open", "open", "high", "low", "close", "volume"],
+            )
+
+            df[["open", "high", "low", "close", "volume"]] = df[
+                ["open", "high", "low", "close", "volume"]
+            ].apply(pd.to_numeric)
+
+            df["open_date"] = pd.to_datetime(df["timestamp_open"], unit="ms")
+
+            return df
+
+        except Exception as e:
+            if attempt == retries - 1:
+                print(f"❌ Failed {symbol} @ {since}: {e}")
+                return pd.DataFrame()
+            await asyncio.sleep(1)
 
 
+# -----------------------------
+# DOWNLOAD SINGLE SYMBOL
+# -----------------------------
 async def _download_symbol(
     exchange,
     symbol,
-    timeframe="5m",
-    since=int(datetime.datetime(year=2020, month=1, day=1).timestamp() * 1e3),
-    until=int(datetime.datetime.now().timestamp() * 1e3),
-    limit=1000,
-    pause_every=10,
-    pause=1,
+    timeframe,
+    since,
+    until,
+    limit,
+    semaphore,
 ):
-    timedelta = int(pd.Timedelta(timeframe).to_timedelta64() / 1e6)
+    delta = int(pd.Timedelta(timeframe).total_seconds() * 1000)
+    step = limit * delta
+
     tasks = []
-    results = []
-    for step_since in range(since, until, limit * timedelta):
-        tasks.append(
-            asyncio.create_task(
-                _ohlcv(exchange, symbol, timeframe, limit, step_since, timedelta)
-            )
-        )
-        if len(tasks) >= pause_every:
-            results.extend(await asyncio.gather(*tasks))
-            await asyncio.sleep(pause)
-            tasks = []
-    if len(tasks) > 0:
-        results.extend(await asyncio.gather(*tasks))
-    final_df = pd.concat(results, ignore_index=True)
-    final_df = final_df.loc[
-        (since < final_df["timestamp_open"]) & (final_df["timestamp_open"] < until), :
-    ]
-    final_df.drop_duplicates(inplace=True)
-    return final_df
+
+    for step_since in range(since, until, step):
+
+        async def bound_fetch(s=step_since):
+            async with semaphore:
+                return await _ohlcv(exchange, symbol, timeframe, s, limit)
+
+        tasks.append(bound_fetch())
+
+    results = await tqdm_asyncio.gather(
+        *tasks,
+        desc=f"{symbol}-{timeframe}",
+        leave=False,
+    )
+
+    # Filter + concat safely
+    dfs = [r for r in results if not r.empty]
+
+    if not dfs:
+        return pd.DataFrame()
+
+    df = pd.concat(dfs, ignore_index=True)
+
+    df = df[
+        (df["timestamp_open"] > since) & (df["timestamp_open"] < until)
+    ].drop_duplicates()
+
+    return df
 
 
-async def _download_symbols(exchange_name, symbols, dir, timeframes, **kwargs):
+# -----------------------------
+# DOWNLOAD MULTIPLE SYMBOLS
+# -----------------------------
+async def _download_symbols(exchange_name, symbols, folder, timeframes, **kwargs):
     exchange = getattr(ccxt, exchange_name)({"enableRateLimit": True})
+
+    semaphore = asyncio.Semaphore(5)  # 🔥 tune this (3–10)
+
     for symbol in symbols:
         for timeframe in timeframes:
+            print(f"⬇️ Downloading {symbol} [{timeframe}] from {exchange_name}")
+
             df = await _download_symbol(
-                exchange=exchange, symbol=symbol, timeframe=timeframe, **kwargs
+                exchange=exchange,
+                symbol=symbol,
+                timeframe=timeframe,
+                semaphore=semaphore,
+                **kwargs,
             )
+
+            if df.empty:
+                print(f"⚠️ No data for {symbol} {timeframe}")
+                continue
+
             save_file = (
-                f"{dir}/{exchange_name}-{symbol.replace('/', '')}-{timeframe}.pkl"
+                f"{folder}/{exchange_name}-{symbol.replace('/', '')}-{timeframe}.pkl"
             )
-            print(
-                f"{symbol} for {timeframe} downloaded from {exchange_name} and stored at {save_file}"
-            )
+
             df.to_pickle(save_file)
+
+            print(f"✅ Saved -> {save_file}")
+
     await exchange.close()
 
 
-async def _download(
-    config,
-):
+# -----------------------------
+# MAIN DOWNLOAD
+# -----------------------------
+async def _download(config):
+    since = int(datetime.datetime.fromisoformat(config["since"]).timestamp() * 1e3)
+    until = int(datetime.datetime.fromisoformat(config["until"]).timestamp() * 1e3)
+
     tasks = []
-    since = datetime.datetime.fromisoformat(config["since"])
-    until = datetime.datetime.fromisoformat(config["until"])
+
     for exchange_name in config["exchange"]:
-        limit = config[exchange_name]["limit"]
-        pause_every = config[exchange_name]["pause_every"]
-        pause = config[exchange_name]["pause"]
         tasks.append(
             _download_symbols(
                 exchange_name=exchange_name,
                 symbols=config["symbols"],
                 timeframes=config["time_frame"],
-                dir=config["folder"],
-                limit=limit,
-                pause_every=pause_every,
-                pause=pause,
-                since=int(since.timestamp() * 1e3),
-                until=int(until.timestamp() * 1e3),
+                folder=config["folder"],
+                since=since,
+                until=until,
+                limit=config[exchange_name]["limit"],
             )
         )
+
     await asyncio.gather(*tasks)
 
 
-def download(*args, **kwargs):
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(_download(*args, **kwargs))
-
-
-# Downloader function do modify
+# -----------------------------
+# ENTRY POINT
+# -----------------------------
 async def downloader(config: dict):
-    """
-    Downloader function for downloading symbols
+    base_path = os.path.abspath(__file__)
+    root = base_path[: base_path.find("MAD_BTC") + len("MAD_BTC")]
 
-    :param config: Configuration parameters for optimization.
-    :type config: dict
+    folder = os.path.join(root, config["folder"])
+    config["folder"] = folder
 
-    For the required keys, see download_config.toml
+    os.makedirs(folder, exist_ok=True)
 
-    """
-    absolute_path = os.path.abspath(__file__)[
-        : os.path.abspath(__file__).find("MAD_BTC") + len("MAD_BTC")
-    ]
-    # check if data folder exists
-    dir = os.path.join(absolute_path, config["folder"])
-    config["folder"] = dir
-    if not os.path.exists(dir):
-        # Create the folder
-        os.makedirs(dir)
-        created_or_exists = "was created"
-    else:
-        created_or_exists = "already exists"
-    # Get the name of the folder
-    folder_name = os.path.basename(dir)
-    print(f"The folder '{folder_name}' {created_or_exists}.")
+    print(f"📁 Data folder ready: {folder}")
 
     await _download(config)
 
 
+# -----------------------------
+# RUN SCRIPT
+# -----------------------------
 if __name__ == "__main__":
-    with open("src/configs/download_config.toml", "r") as file:
-        config = toml.load(file)
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(downloader(config))
-    print("Done ")
-    # asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-    # asyncio.run(downloader())
+    with open("src/configs/download_config.toml", "r") as f:
+        config = toml.load(f)
+
+    asyncio.run(downloader(config))
+
+    print("🎉 Done")
