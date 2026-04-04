@@ -371,72 +371,67 @@ class Dca_AdaptiveZScore(Dca):
         )
 
 
-class DcaComputeMultiprocessing:
-    def __init__(self, cfg=None):
-        self.cfg = cfg
+def compute_dca_multiprocessing(
+    project="dca",
+    entity="corporate-manu-sureli",
+    name="dca_strategy",
+    list_cryptos=["ETHUSDT", "BTCUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT", "LINKUSDT"],
+    list_investment_interval=["24h", "48h", "168h", "W", "ME"],
+    strategies=[
+        (Dca, Dca_Args),
+        (Dca_Drawdown, Dca_Drawdown_Args),
+        (Dca_RSI, Dca_RSI_Args),
+        (Dca_MARatio, Dca_MARatio_Args),
+        (Dca_Ensemble, Dca_Ensemble_Args),
+    ],
+    columns=[
+        "strategy",
+        "cryptocurrency",
+        "investment_interval",
+        "return_percentage",
+    ],
+    name_csv="dca_multiprocessing",
+    wandb_active=False,
+    plot_figure=False,
+    save_csv=False,
+):
 
-    def compute_dca_multiprocessing(
-        self,
-        project="dca",
-        entity="corporate-manu-sureli",
-        name="dca_strategy",
-        list_cryptos=["ETHUSDT", "BTCUSDT"],
-        list_investment_interval=["24h", "48h", "168h", "W", "ME"],
-        strategies=[
-            (Dca, Dca_Args),
-            (Dca_Drawdown, Dca_Drawdown_Args),
-            (Dca_RSI, Dca_RSI_Args),
-            (Dca_MARatio, Dca_MARatio_Args),
-            (Dca_Ensemble, Dca_Ensemble_Args),
-        ],
-        columns=[
-            "strategy",
-            "cryptocurrency",
-            "investment_interval",
-            "return_percentage",
-        ],
-        name_csv="dca_multiprocessing",
-        wandb_active=False,
-        plot_figure=False,
-        save_csv=False,
-    ):
+    if wandb_active:
+        import wandb
 
-        if wandb_active:
-            import wandb
+        wandb.init(project=project, entity=entity, name=name)
 
-            wandb.init(project=project, entity=entity, name=name)
-
-        combinations = [
-            (cls, args(cryptocurrency=c, investment_interval=i))
-            for c, i, (cls, args) in product(
-                list_cryptos, list_investment_interval, strategies
-            )
-        ]
-
-        print(
-            f"Running {len(combinations)} baseline combinations across {multiprocessing.cpu_count()} CPU cores..."
+    combinations = [
+        (cls, args(cryptocurrency=c, investment_interval=i))
+        for c, i, (cls, args) in product(
+            list_cryptos, list_investment_interval, strategies
         )
-        with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
-            df = pd.DataFrame(pool.starmap(process_dca, combinations), columns=columns)
+    ]
 
-        for crypto in list_cryptos:
-            fig = px.scatter(
-                df[df["cryptocurrency"] == crypto],
-                y="return_percentage",
-                x="investment_interval",
-                color="strategy",
-                title=f"Strategy Comparison for {crypto}",
-            )
-            fig.update_traces(marker_size=12)
-            if plot_figure:
-                fig.show()
-            if wandb_active:
-                wandb.log({f"{crypto}_scatter_plot": fig})
+    print(
+        f"Running {len(combinations)} baseline combinations across {multiprocessing.cpu_count()} CPU cores..."
+    )
+    with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
+        df = pd.DataFrame(pool.starmap(process_dca, combinations), columns=columns)
 
+    for crypto in list_cryptos:
+        fig = px.scatter(
+            df[df["cryptocurrency"] == crypto],
+            y="return_percentage",
+            x="investment_interval",
+            color="strategy",
+            title=f"Strategy Comparison for {crypto}",
+        )
+        fig.update_traces(marker_size=12)
+        if plot_figure:
+            fig.show()
         if wandb_active:
-            wandb.finish()
-        if save_csv:
-            df.to_csv(path_or_buf=f"./{name_csv}.csv", index=False)
+            wandb.log({f"{crypto}_scatter_plot": fig})
+
+    if wandb_active:
+        wandb.finish()
+    if save_csv:
+        df.to_csv(path_or_buf=f"./{name_csv}.csv", index=False)
 
 
 class DcaHyperparameterSearch:
@@ -449,7 +444,6 @@ class DcaHyperparameterSearch:
         self.baselines = self._compute_baselines()
 
     def _compute_baselines(self):
-        print("Computing Standard DCA Baselines...")
         baselines = {}
         for c, i in product(self.list_cryptos, self.list_intervals):
             try:
@@ -459,7 +453,6 @@ class DcaHyperparameterSearch:
                 baselines[(c, i)] = ((p_vals[-1] - t_inv) / t_inv) * 100
             except Exception:
                 baselines[(c, i)] = 0.0
-            print(f"  Benchmark {c} ({i}): {baselines[(c, i)]:.2f}%")
         return baselines
 
     def run_grid_search(self, strategy_class, args_class, param_grid):
@@ -483,6 +476,42 @@ class DcaHyperparameterSearch:
         with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
             return pd.DataFrame(pool.starmap(process_dca_grid, tasks))
 
+    def get_robust_results(self, df_results):
+        """
+        Aggregates results across all cryptocurrencies to find the most robust parameters.
+        """
+        # Identify columns that are hyperparameters (not metadata or results)
+        meta_cols = [
+            "strategy",
+            "cryptocurrency",
+            "investment_interval",
+            "raw_return_percentage",
+            "normalized_return",
+        ]
+        param_cols = [c for c in df_results.columns if c not in meta_cols]
+
+        # Group by params and calculate Mean, Min, and Std of the performance
+        summary = (
+            df_results.groupby(param_cols)["normalized_return"]
+            .agg(
+                [
+                    ("mean_improvement", "mean"),
+                    ("min_improvement", "min"),
+                    ("std_dev", "std"),
+                    ("count", "count"),  # Ensure it ran on all assets
+                ]
+            )
+            .reset_index()
+        )
+
+        # Filter for strategies where the mean improvement is > 1.1 (10% over DCA)
+        # and where it didn't underperform on ANY asset (min > 1.0)
+        robust_winners = summary[
+            (summary["mean_improvement"] > 1.1) & (summary["min_improvement"] >= 1.0)
+        ].sort_values(by="mean_improvement", ascending=False)
+
+        return robust_winners
+
     def plot_3d_results(self, df, param_x, param_y, title_suffix=""):
         for crypto in df["cryptocurrency"].unique():
             fig = px.scatter_3d(
@@ -504,8 +533,7 @@ class DcaHyperparameterSearch:
 
 
 if __name__ == "__main__":
-    multi_compute = DcaComputeMultiprocessing()
-    multi_compute.compute_dca_multiprocessing(
+    compute_dca_multiprocessing(
         plot_figure=True
     )  # Turned off by default to jump to grid search
 

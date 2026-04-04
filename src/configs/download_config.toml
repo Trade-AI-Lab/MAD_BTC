@@ -1,16 +1,16 @@
 #Specify the desired exchange here
 exchange = ["binance"]
 
-#list of strings. Ex: ["ADAUSDT","ETHUSDT","BNBUSDT","BTCUSDT"]
-symbols = ["BNBUSDT"]
+#list of strings. Ex: ["ETHUSDT", "BTCUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT", "LINKUSDT"]
+symbols = ["ETHUSDC", "BTCUSDC", "BNBUSDC", "SOLUSDC", "XRPUSDC", "LINKUSDC"]
 
-time_frame = ["4h", "1d"]
+time_frame = ["1h"]
 
 folder = "data"
 
 #must be in isoformat
 since = "2018-04-01T00:00:00"
-until = "2024-05-28T00:00:00"
+until = "2026-02-28T00:00:00"
 
 # EXCHANGE_LIMIT_RATES
 [bitget]
