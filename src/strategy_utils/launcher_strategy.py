@@ -36,6 +36,7 @@ class trading_strategy:
         :type config: dict
         """
         self.config = config
+        self._suppress_save = False
         # TODO this should be passed as parameter from somewhere in case the path changes at some point. We should also check somewhere if it exists
         self.PATH = (
             absolute_path
@@ -155,7 +156,7 @@ class trading_strategy:
                 4,
             )
 
-            if value > 0:
+            if value > 0 and not self._suppress_save:
                 self.strategy_folder_path = create_save_one_experience(
                     self.config, self.time_eccefpsn
                 )
