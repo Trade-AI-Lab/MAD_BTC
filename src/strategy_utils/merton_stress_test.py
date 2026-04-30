@@ -177,18 +177,14 @@ def _merton_path_worker(args: tuple) -> float:
     if sim_df is None or len(sim_df) < 3:
         return -np.inf
 
-    from multi_optimiser_momentum_strategy import compute_sharpe_ratio, compute_maximum_drawdown
+    portfolio_returns = sim_df["Portfolio"].pct_change().dropna()
+    bh_returns = sim_df["Buy_and_Hold"].pct_change().dropna()
+    excess = portfolio_returns - bh_returns
 
-    sharpe_strat = compute_sharpe_ratio(sim_df, "Portfolio")
-    sharpe_bh = compute_sharpe_ratio(sim_df, "Buy_and_Hold")
-    mdd_strat = compute_maximum_drawdown(sim_df, "Portfolio")
-    mdd_bh = compute_maximum_drawdown(sim_df, "Buy_and_Hold")
-    value = sim_df["Relative_Portfolio_VS_Relative_Buy&Hold"].mean() * 100
-
-    if sharpe_bh == 0 or mdd_strat == 0 or np.isnan(sharpe_strat):
+    if len(excess) < 2 or excess.std() == 0 or np.isnan(excess.std()):
         return -np.inf
 
-    return sharpe_strat / sharpe_bh * value * mdd_bh / mdd_strat
+    return (excess.mean() / excess.std()) * np.sqrt(365)
 
 
 # ---------------------------------------------------------------------------

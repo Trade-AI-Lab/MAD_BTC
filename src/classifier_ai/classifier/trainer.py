@@ -34,8 +34,8 @@ class ModuleModel(pl.LightningModule):
         loss = self.loss(z, y)
         self.log("train_loss", loss)
         # GET AND SAVE OUTPUTS AND TARGETS PER BATCH
-        y_pred = z.argmax(dim=1).cpu().numpy()
-        y_true = y.cpu().numpy()
+        y_pred = (z > 0.5).long().squeeze(-1).cpu().numpy()
+        y_true = y.long().squeeze(-1).cpu().numpy()
 
         # --> HERE STEP 2 <--
         self.training_step_outputs.extend(y_pred)

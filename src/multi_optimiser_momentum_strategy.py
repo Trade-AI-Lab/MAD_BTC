@@ -113,29 +113,25 @@ class trading_optimisation:
 
     def _score_simulation(self, simulation_df: pd.DataFrame) -> float:
         """
-        Compute the scalar objective from a simulation DataFrame.
-        Returns -inf when the result is undefined (too few trades, zero std, etc.).
+        Information ratio of the strategy vs buy-and-hold.
+
+        IR = mean(excess_returns) / std(excess_returns) * sqrt(365)
+
+        Excess returns are computed trade-to-trade (the natural frequency of
+        evolution_df). Annualisation uses 365 consistently with compute_sharpe_ratio.
+        Range is roughly [-3, 3]; IR > 0.5 is good, > 1 is exceptional.
         """
         if simulation_df is None or len(simulation_df) < 3:
             return -np.inf
 
-        sharpe_strat = compute_sharpe_ratio(simulation_df, "Portfolio")
-        sharpe_buy_hold = compute_sharpe_ratio(simulation_df, column="Buy_and_Hold")
-        max_dd_strat = compute_maximum_drawdown(simulation_df, "Portfolio")
-        max_dd_buy_hold = compute_maximum_drawdown(simulation_df, "Buy_and_Hold")
-        value = round(
-            simulation_df["Relative_Portfolio_VS_Relative_Buy&Hold"].mean() * 100, 4
-        )
+        portfolio_returns = simulation_df["Portfolio"].pct_change().dropna()
+        bh_returns = simulation_df["Buy_and_Hold"].pct_change().dropna()
+        excess = portfolio_returns - bh_returns
 
-        if (
-            sharpe_buy_hold == 0
-            or max_dd_strat == 0
-            or np.isnan(sharpe_strat)
-            or np.isnan(sharpe_buy_hold)
-        ):
+        if len(excess) < 2 or excess.std() == 0 or np.isnan(excess.std()):
             return -np.inf
 
-        return sharpe_strat / sharpe_buy_hold * value * max_dd_buy_hold / max_dd_strat
+        return (excess.mean() / excess.std()) * np.sqrt(365)
 
     def _make_fold_strategy(self, val_start, val_end):
         """
@@ -372,14 +368,8 @@ class optimiser_momentum_strategy(trading_optimisation):
         else:
             simulation_df = self.strategy.compute_simulation()
             result_portfolio = simulation_df["Portfolio"].iloc[-1]
-            sharpe_strat = compute_sharpe_ratio(simulation_df, "Portfolio")
-            sharpe_buy_hold = compute_sharpe_ratio(simulation_df, column="Buy_and_Hold")
-            max_dd_strat = compute_maximum_drawdown(simulation_df, "Portfolio")
-            max_dd_buy_hold = compute_maximum_drawdown(simulation_df, "Buy_and_Hold")
-            result = sharpe_strat / sharpe_buy_hold * (
-                simulation_df["Relative_Portfolio_VS_Relative_Buy&Hold"].mean() * 100
-            ) * max_dd_buy_hold / max_dd_strat
-            sharpe_ratio = sharpe_strat / sharpe_buy_hold
+            result = self._score_simulation(simulation_df)
+            sharpe_ratio = np.nan
 
         config = copy.deepcopy(self.config)
         self.liste.append(
