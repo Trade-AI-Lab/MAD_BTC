@@ -5,6 +5,40 @@ codebase: what was added/fixed, what we learned, and what to try next.
 
 ---
 
+## PROJECT CLOSED — 2026-06-06
+
+**Status: closed. Negative result, fully documented.**
+
+**Question:** can MAD (Moving Average Distance) be a wealthy/robust standalone
+crypto trading strategy?
+
+**Answer: No.** Every variant tried — plain MAD, neutral-band (hysteresis),
+ADX-regime-gated, and a volatility-normalised single-parameter version designed
+specifically to minimise overfitting — failed proper out-of-sample validation.
+The Deflated Sharpe Ratio (Bailey & López de Prado) of the best configuration in
+each study was < 0.36 everywhere (significance bar 0.95): after correcting for
+the number of parameter searches, the returns are indistinguishable from noise.
+
+**Why it's a *successful* project despite the negative result:**
+- The research question is now answered rigorously, not abandoned ambiguously.
+- It produced a reusable, honest validation stack: full-span walk-forward
+  (2019–2026), consistency-penalised objective, trade-spacing-corrected Sharpe,
+  and a Deflated Sharpe gate. (`deflated_sharpe_ratio` in
+  `multi_optimiser_momentum_strategy.py` is the one piece worth porting
+  elsewhere.)
+- It confirmed the right *form* for any future momentum signal
+  (volatility-normalisation), even though MAD itself is too weak to use it.
+
+**What NOT to do next:** do not fold MAD into the `quant_crypto` HRP+PAMR
+pipeline as a sleeve — the DSR evidence says it adds noise, not decorrelated
+signal. The robust-portfolio direction (HRP + mean-reversion ensemble) already
+exists in `quant_crypto` and should be pursued there, not rebuilt here.
+
+This repository is archived. The dated entries below are the chronology of how
+the verdict was reached.
+
+---
+
 ## 2026-06-06 (late) — Vol-normalised 1-param MAD + Deflated Sharpe verdict
 
 ### Motivation (literature)

@@ -1,4 +1,24 @@
 # Moving Average Distance as a Predictor of Cryptocurrency Returns [article](https://deliverypdf.ssrn.com/delivery.php?ID=017096020116090003008025004027089098015051021063079059125002022095123124109009068127006055125009047120052112024114022099020070052085021064086098089091093103003064028045087117116007001084102003115127025085064011116083072069031126083102065085098071027&EXT=pdf&INDEX=TRUE)
+
+> ## ⛔ Project status: CLOSED (2026-06-06) — negative result
+>
+> **Research question:** can the Moving Average Distance (MAD) signal produce a
+> wealthy/robust standalone trading strategy on cryptocurrencies?
+>
+> **Answer: No.** Under rigorous out-of-sample validation (full-span walk-forward
+> 2019–2026, consistency-penalised objective, trade-spacing-corrected Sharpe, and
+> the Deflated Sharpe Ratio of Bailey & López de Prado), **every MAD variant
+> tested — plain, neutral-band, ADX-regime-gated, and a volatility-normalised
+> single-parameter version — failed.** No configuration's Deflated Sharpe came
+> close to significance (all < 0.36, vs the 0.95 bar): the observed returns are
+> statistically indistinguishable from noise after correcting for the number of
+> parameter searches. MAD has no standalone edge in this universe.
+>
+> See [RESEARCH_LOG.md](RESEARCH_LOG.md) for the full chronology, methodology, and
+> results. The robust-portfolio direction this points to (HRP + mean-reversion
+> ensemble) is pursued in a separate project (`quant_crypto`), not here. This repo
+> is archived as a documented negative result; the sections below are kept for
+> historical context.
 ## Overview
 This repository contains code and research findings related to the paper titled "Moving Average Distance as a Predictor of Equity Returns" by Doron Avramova, Guy Kaplanski, and Avanidhar Subrahmanyam. The research explores the predictive power of the distance between short- and long-run moving averages of prices (MAD) in the cross-section of equity returns.
 ## See cryptorobot
@@ -12,7 +32,12 @@ The MAD-based trading strategy demonstrates robust investment payoffs, with annu
 
 This repository contains code specifically tailored for applying the MAD strategy to cryptocurrency datasets. The code includes calculations of MAD, implementation of cryptocurrency trading strategies, and an examination of MAD's predictive power in the cryptocurrency market.
 
-# Answer : It may possible to establish a wealthy strategy for cryptocurrencies.
+# Answer (final, 2026-06-06): No — MAD is not a viable standalone strategy.
+The original optimistic answer below ("it may be possible") was based on
+in-sample-flattering metrics. Proper out-of-sample validation overturned it; see
+the CLOSED banner at the top and RESEARCH_LOG.md.
+
+## Original (superseded) answer : It may possible to establish a wealthy strategy for cryptocurrencies.
 ## Example 1 :
 <img src="img\example_1.jpg" width="1024"/>
 
