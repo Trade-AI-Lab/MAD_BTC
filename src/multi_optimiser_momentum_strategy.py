@@ -62,6 +62,13 @@ class trading_optimisation:
 
     """
 
+    # A fold with too few trades has near-zero return variance, which inflates
+    # the information ratio to absurd values (e.g. "IR=26946" on daily folds
+    # with 2-3 trades). Such folds are degenerate and rejected. The IR is also
+    # hard-capped so a single lucky fold cannot dominate the mean.
+    MIN_TRADES_PER_FOLD = 5
+    IR_CAP = 3.0
+
     def __init__(self, config: dict) -> None:
         """
         Initialize Trading Optimization
@@ -78,18 +85,21 @@ class trading_optimisation:
         self.wfo_windows = []  # list of (val_start, val_end) tuples
 
     def generate_wfo_windows(
-        self, train_months: int = 12, val_months: int = 3, n_splits: int = 5
+        self, train_months: int = 12, val_months: int = 3, n_splits: int = None
     ) -> None:
         """
-        Generate rolling walk-forward windows from the loaded data.
+        Generate rolling walk-forward windows spanning the loaded data.
 
         Each fold covers val_months of out-of-sample data. The first val window
         starts after train_months from the dataset start, and slides forward by
-        val_months each step.
+        val_months each step until the data is exhausted. With ~8 years of data
+        this yields ~25+ folds (2019 -> 2026) rather than only the first few,
+        so the OOS evaluation is representative of the whole history.
 
         :param train_months: Minimum history required before the first val window.
         :param val_months: Length of each OOS validation window.
-        :param n_splits: Maximum number of folds to generate.
+        :param n_splits: Optional cap on the number of folds. None (default)
+            generates as many folds as fit the dataset.
         """
         dates = self.strategy.parent_df["open_date"]
         data_start = dates.min()
@@ -100,7 +110,9 @@ class trading_optimisation:
 
         val_start = data_start + train_delta
         windows = []
-        for _ in range(n_splits):
+        while True:
+            if n_splits is not None and len(windows) >= n_splits:
+                break
             val_end = val_start + val_delta
             if val_end > data_end:
                 break
@@ -121,8 +133,13 @@ class trading_optimisation:
         Excess returns are computed trade-to-trade (the natural frequency of
         evolution_df). Annualisation uses 365 consistently with compute_sharpe_ratio.
         Range is roughly [-3, 3]; IR > 0.5 is good, > 1 is exceptional.
+
+        Folds with fewer than MIN_TRADES_PER_FOLD return rows are rejected
+        (-inf): with so few trades the excess-return std collapses toward 0 and
+        the IR explodes to meaningless values. The final IR is clipped to
+        +/- IR_CAP so no single fold can dominate the cross-fold mean.
         """
-        if simulation_df is None or len(simulation_df) < 3:
+        if simulation_df is None or len(simulation_df) < self.MIN_TRADES_PER_FOLD:
             return -np.inf
 
         portfolio_returns = simulation_df["Portfolio"].pct_change().dropna()
@@ -132,7 +149,8 @@ class trading_optimisation:
         if len(excess) < 2 or excess.std() == 0 or np.isnan(excess.std()):
             return -np.inf
 
-        return (excess.mean() / excess.std()) * np.sqrt(365)
+        ir = (excess.mean() / excess.std()) * np.sqrt(365)
+        return float(np.clip(ir, -self.IR_CAP, self.IR_CAP))
 
     def _make_fold_strategy(self, val_start, val_end):
         """
@@ -175,7 +193,7 @@ class trading_optimisation:
                 sim_df = s.compute_simulation()
             except Exception:
                 return (-np.inf, np.nan, np.nan)
-            if sim_df is None or len(sim_df) < 3:
+            if sim_df is None or len(sim_df) < self.MIN_TRADES_PER_FOLD:
                 return (-np.inf, np.nan, np.nan)
             return (
                 self._score_simulation(sim_df),
@@ -262,10 +280,18 @@ class trading_optimisation:
             load_if_exists="True",
         )  # study created else we reload the past strategy
         wfo_cfg = self.config.get("wfo", {})
+        # Per-timeframe overrides take precedence over the base wfo settings:
+        # higher timeframes need longer val windows to contain enough trades.
+        tf_cfg = wfo_cfg.get("per_timeframe", {}).get(self.config["time"], {})
+        train_months = tf_cfg.get("train_months", wfo_cfg.get("train_months", 12))
+        val_months = tf_cfg.get("val_months", wfo_cfg.get("val_months", 3))
+        # n_splits of 0/None spans the entire dataset (~25+ folds over
+        # 2019-2026) instead of only the first few windows.
+        n_splits = tf_cfg.get("n_splits", wfo_cfg.get("n_splits", None)) or None
         self.generate_wfo_windows(
-            train_months=wfo_cfg.get("train_months", 12),
-            val_months=wfo_cfg.get("val_months", 3),
-            n_splits=wfo_cfg.get("n_splits", 5),
+            train_months=train_months,
+            val_months=val_months,
+            n_splits=n_splits,
         )
 
         study.optimize(
@@ -586,13 +612,29 @@ class optimiser_envelop_strategy(trading_optimisation):
 
 
 if __name__ == "__main__":
+    import sys
+
     absolute_path = os.path.abspath(__file__)[
         : os.path.abspath(__file__).find("MAD_BTC") + len("MAD_BTC")
     ]
 
+    # Optional CLI arg selects the strategy variant to optimise:
+    #   python multi_optimiser_momentum_strategy.py [plain|regime]
+    # default: plain. The regime variant runs under its own study name
+    # (strategy.name = "regime_momentum_strategy") so its studies and saved
+    # results never collide with the plain-MAD ones.
+    variant = sys.argv[1] if len(sys.argv) > 1 else "plain"
+    optimiser_class = {
+        "plain": optimiser_momentum_strategy,
+        "regime": optimiser_regime_momentum_strategy,
+    }[variant]
+
     # read the config file:
     with open("src/configs/optimiser_momentum_config.toml", "r") as file:
         config = toml.load(file)
+    if variant == "regime":
+        config["strategy"]["name"] = "regime_momentum_strategy"
+
     missing_data = check_data_availability_in_folder(
         "data",
         config["multi"]["list_brokers"],
@@ -610,6 +652,5 @@ if __name__ == "__main__":
         loop.run_until_complete(downloader(data_config))
         print("Downloading finished")
 
-    optimiser_momentum_strategy(config=config).optimiser_multiple_currency(
-        **config["multi"]
-    )
+    print(f"Running {variant} optimiser across full grid")
+    optimiser_class(config=config).optimiser_multiple_currency(**config["multi"])

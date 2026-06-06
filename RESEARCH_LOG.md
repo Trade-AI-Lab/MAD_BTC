@@ -5,6 +5,111 @@ codebase: what was added/fixed, what we learned, and what to try next.
 
 ---
 
+## 2026-06-06 (pm) — Full-span walk-forward, objective hardening, regime vs plain
+
+### Walk-forward now spans the entire dataset (2019–2026)
+
+The previous WFO was badly under-using the data: it started the first
+validation window at `data_start + 12 months` and then took only `n_splits=5`
+windows of `val_months=3`, covering just **15 months** (2019-04 → 2020-07) of an
+**~8-year** dataset (2018-04 → 2026-02). All evaluation happened in the early,
+thin-data period.
+
+Fix: `generate_wfo_windows` no longer hardcodes a fold count. `n_splits=0/None`
+(now the default) generates as many rolling folds as fit, so the WFO runs from
+~2019 right up to 2026 (**27 folds** on 1h).
+- Files: `src/multi_optimiser_momentum_strategy.py`,
+  `src/configs/optimiser_momentum_config.toml`
+
+### Per-timeframe windows + 1d dropped
+
+Spanning all data exposed a deeper issue: **a 3-month validation window is too
+short on higher timeframes** — the MAD long-MA (`y≈80`) needs ~80 bars just to
+warm up, so short folds get consumed by NaN dropping and produce too few trades.
+Measured fraction of folds with ≥5 trades (BTCUSDT, `x=10 y=80 tema`):
+
+| Timeframe | Windows                 | Folds | Folds ≥5 trades | Median trades |
+|-----------|-------------------------|------:|----------------:|--------------:|
+| 1h        | train 12 / val 3        |    27 |          26 ✅  |            16 |
+| 4h        | train 18 / val 6        |    12 |           8 ✅  |             5 |
+| 1d        | any window size         |   ≤27 |           0 ❌  |             0 |
+
+- **1h** is the only timeframe with robust statistics out of the box.
+- **4h** became evaluable only after widening to train 18 / val 6 (was 3/27
+  folds, now 8/12).
+- **1d is structurally hopeless**: daily MAD generates ~0–1 crossovers per fold
+  *regardless of window size* (even a 12-month daily window gave ~1 trade) — the
+  long MA is too smooth to cross often. **Daily was dropped from the grid.**
+
+Added `[wfo.per_timeframe.<tf>]` config overrides (1h: 12/3, 4h: 18/6) wired
+into the optimiser so each timeframe gets an appropriately sized window.
+
+### Objective hardening (kills the degenerate "winners")
+
+The morning relaunch produced absurd top scores (e.g. DOTUSDT_1d "IR≈26,946")
+from folds with 2–3 trades whose excess-return std collapses toward zero. Added
+to `trading_optimisation`:
+- `MIN_TRADES_PER_FOLD = 5` — folds with fewer return rows are rejected (`-inf`).
+- `IR_CAP = 3.0` — the information ratio is clipped to ±3 so a single lucky fold
+  cannot dominate the cross-fold mean.
+
+Verified: capped values now sit at exactly 3.0 on 4h; the degenerate daily
+"winners" are gone.
+- Files: `src/multi_optimiser_momentum_strategy.py`
+
+### Merton stress test wired for the regime strategy
+
+`_merton_path_worker` now applies *all* Optuna params generically (handling the
+`y = x + offset`), so it works for both plain and regime strategies (the latter
+adds `adx_window` / `adx_threshold`). The Merton CLI takes a `plain|regime` arg.
+- Files: `src/strategy_utils/merton_stress_test.py`
+
+### Result — Regime-gated MAD vs plain MAD (fresh full-span WFO)
+
+Both variants re-run fresh (stale studies deleted) across 6 coins × {1h, 4h} ×
+300 trials, scored on the full-span per-timeframe WFO. Single "best trial"
+comparison is unreliable (it cherry-picks the luckiest trial and the IR cap
+flattens the top), so the comparison below is **distributional across all
+finite trials** — median and 90th-percentile out-of-sample Sharpe.
+
+| study        | plain ShMed | regime ShMed | plain ShP90 | regime ShP90 |
+|--------------|------------:|-------------:|------------:|-------------:|
+| BTCUSDT_1h   |       −0.46 |       −0.19  |        0.00 |        1.35  |
+| BTCUSDT_4h   |        0.22 |        0.62  |        1.37 |        2.45  |
+| ETHUSDT_1h   |       −0.04 |        0.20  |        0.37 |        1.84  |
+| ETHUSDT_4h   |        1.26 |        1.30  |        2.12 |        4.08  |
+| ADAUSDT_1h   |       −0.85 |       −0.95  |        0.06 |        0.44  |
+| ADAUSDT_4h   |        0.35 |        0.21  |        1.91 |        2.98  |
+| BNBUSDT_1h   |       −0.24 |        0.12  |        0.34 |        1.70  |
+| BNBUSDT_4h   |        0.10 |        1.38  |        1.76 |        3.98  |
+| MATICUSDT_1h |        0.38 |        0.32  |        0.93 |        1.96  |
+| MATICUSDT_4h |        0.87 |        1.30  |        2.29 |        4.55  |
+| DOTUSDT_1h   |       −1.02 |       −0.96  |       −0.40 |        0.14  |
+| DOTUSDT_4h   |       −0.35 |       −0.55  |        1.33 |        2.17  |
+
+**Takeaways:**
+- **Median OOS Sharpe: regime > plain in 8/12 studies.**
+- **Top-decile (p90) OOS Sharpe: regime > plain in 12/12 studies.** The gate
+  shifts the *entire upper distribution* up, not just one lucky config — the
+  signature of a genuine filter rather than overfitting.
+- The effect is **strongest on 4h** (e.g. BNBUSDT_4h median 0.10 → 1.38;
+  ETHUSDT_4h p90 2.12 → 4.08).
+- Caveat: many studies still have negative *median* Sharpe — plain MAD on its
+  own is not a money-maker; the regime gate improves it but does not by itself
+  produce a robustly profitable strategy. The realistic framing remains
+  "higher risk-adjusted return / smaller drawdown," not "beats buy-and-hold on
+  raw return."
+
+### Next
+- [ ] Run the Merton stress test on the regime study
+      (`python src/strategy_utils/merton_stress_test.py regime`) to confirm the
+      4h regime edge survives synthetic paths, not just historical OOS.
+- [ ] Select final params by a robust statistic (e.g. mean of top-decile OOS
+      Sharpe), not the single best trial.
+- [ ] Proceed to the equal-weight signal vote (next combination step).
+
+---
+
 ## 2026-06-06 — Bug fixes, full WFO relaunch, and regime-gated MAD
 
 ### Context

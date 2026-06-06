@@ -160,9 +160,15 @@ def _merton_path_worker(args: tuple) -> float:
     synthetic_df = path_to_ohlc(prices, start_date=start_date, freq=freq, seed=path_seed)
 
     # Swap strategy state for this task — no pkl re-read needed.
-    _worker_strategy.config["strategy"]["x"] = trial_params["x"]
-    _worker_strategy.config["strategy"]["y"] = trial_params["x"] + trial_params["y"]
-    _worker_strategy.config["strategy"]["ratio_method"] = trial_params["ratio_method"]
+    # Apply every Optuna param generically so this worker handles both plain
+    # MAD and regime-gated MAD (which adds adx_window / adx_threshold). The only
+    # special case is y, which the objective stores as an offset from x.
+    for key, value in trial_params.items():
+        _worker_strategy.config["strategy"][key] = value
+    if "y" in trial_params:
+        _worker_strategy.config["strategy"]["y"] = (
+            trial_params["x"] + trial_params["y"]
+        )
     _worker_strategy.parent_df = synthetic_df
     _worker_strategy.child_df = None
     _worker_strategy.evolution_df = None
@@ -362,8 +368,20 @@ class MertonStressTest:
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
+    import sys
     import toml
-    from strategy_utils.launcher_strategy import momentum_strategy
+    from strategy_utils.launcher_strategy import (
+        momentum_strategy,
+        regime_momentum_strategy,
+    )
+
+    # Optional CLI arg selects which strategy/study to stress-test:
+    #   python merton_stress_test.py [plain|regime]   (default: plain)
+    variant = sys.argv[1] if len(sys.argv) > 1 else "plain"
+    strategy_class = {
+        "plain": momentum_strategy,
+        "regime": regime_momentum_strategy,
+    }[variant]
 
     with open("src/configs/optimiser_momentum_config.toml", "r") as f:
         config = toml.load(f)
@@ -371,7 +389,10 @@ if __name__ == "__main__":
     crypto = config["crypto_currency"]
     timeframe = config["time"]
     exchange = config["exchange"]
-    strategy_name = config["strategy"]["name"]
+    # The regime variant runs under its own study name (see the optimiser).
+    strategy_name = (
+        "regime_momentum_strategy" if variant == "regime" else config["strategy"]["name"]
+    )
 
     study_name = f"study_{strategy_name}_{crypto}_{exchange}_{timeframe}"
     storage = f"sqlite:///{os.path.join(absolute_path, 'study', study_name)}.db"
@@ -382,7 +403,7 @@ if __name__ == "__main__":
     hist_df = open_dataframe(data_path)
 
     stress = MertonStressTest(
-        strategy_class=momentum_strategy,
+        strategy_class=strategy_class,
         base_config=config,
         study=study,
         freq=timeframe,
