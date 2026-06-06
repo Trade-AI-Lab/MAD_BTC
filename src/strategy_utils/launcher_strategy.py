@@ -309,6 +309,38 @@ class momentum_strategy(trading_strategy):
             super(momentum_strategy, self).__init__(config)
 
 
+class band_momentum_strategy(momentum_strategy):
+    """
+    Neutral-band (hysteresis) MAD strategy.
+
+    Plain MAD flips on every crossing of ratio == 1, which produces whipsaw
+    trades when the ratio wobbles right on the threshold. This subclass adds a
+    single dead-band parameter `band` (delta): a long is only opened when the
+    ratio rises *above* 1 + delta, and only closed when it falls *below*
+    1 - delta. Between those bounds the position is held. This targets the exact
+    threshold-whipsaw weakness with one extra parameter (vs the two ADX params
+    of regime_momentum_strategy).
+
+    Extra config under config['strategy']:
+        band:  half-width of the neutral zone around 1.0 (float, default 0.0,
+               which reduces to plain momentum_strategy).
+    """
+
+    def strategy_rules(self):
+        self.compute_needed_features() if self.child_df is None else None
+        band = self.config["strategy"].get("band", 0.0)
+        ratio = self.child_df[self.strategy_name]
+        self.child_df["buy_signal"] = (ratio > 1 + band) & (
+            ratio.shift(1) <= 1 + band
+        )
+        self.child_df["sell_signal"] = (ratio < 1 - band) & (
+            ratio.shift(1) >= 1 - band
+        )
+        self.df_filtered = self.child_df[
+            (self.child_df["buy_signal"] > 0) | (self.child_df["sell_signal"] > 0)
+        ].reset_index(drop=True)
+
+
 class regime_momentum_strategy(momentum_strategy):
     """
     Regime-Gated Momentum (MAD) Strategy.

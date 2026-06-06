@@ -5,6 +5,71 @@ codebase: what was added/fixed, what we learned, and what to try next.
 
 ---
 
+## 2026-06-06 (evening) — Neutral-band MAD + verdict on MAD as a strategy
+
+### Neutral-band (hysteresis) variant
+
+Added `band_momentum_strategy` (+ `optimiser_band_momentum_strategy`, `band`
+CLI variant) to attack plain MAD's one clear flaw — threshold whipsaw, where the
+ratio wobbling around 1.0 triggers rapid buy/sell flips (visible in the plain
+ETH 4h 2025 zoom: ~93 signals vs ~39 for the ADX variant). The band adds a
+single dead-band δ: buy at ratio > 1+δ, sell at ratio < 1−δ, hold in between.
+One extra parameter vs the regime variant's two. `band=0` reduces to plain MAD,
+so the optimiser only adopts a band if it helps out-of-sample.
+
+Mechanically it does what it should (full-history ETH 4h, fixed MAD params):
+trades 93 → 51–65, max drawdown 41.5% → ~36%, but final return *falls*
+(32k → 23–32k). It trades return for stability — no free lunch.
+
+### Three-way verdict — plain vs band vs regime (BTC/ETH/BNB, full-span WFO)
+
+Distributional OOS Sharpe (median / 90th-pct across all finite trials):
+
+| study      | plain med/p90 | band med/p90 | regime med/p90 |
+|------------|--------------:|-------------:|---------------:|
+| BTCUSDT_1h |  −0.50 / −0.13 | −0.33 / +0.11 |  −0.26 / +0.47 |
+| BTCUSDT_4h |  −0.01 / +0.54 | −0.14 / +0.39 |  +0.13 / +0.58 |
+| ETHUSDT_1h |  −0.25 / +0.17 | −0.13 / +0.38 |  +0.00 / +0.49 |
+| ETHUSDT_4h |  +0.39 / +0.79 | +0.37 / +0.60 |  +0.33 / +0.92 |
+| BNBUSDT_1h |  −0.28 / +0.12 | −0.17 / +0.37 |  −0.01 / +0.52 |
+| BNBUSDT_4h |  −0.08 / +0.55 | +0.48 / +0.93 |  +0.30 / +1.10 |
+
+Tally vs plain MAD:
+- median-Sharpe wins: band 4/6, regime 5/6
+- p90-Sharpe wins:    band 4/6, regime 6/6
+- studies with *positive* median Sharpe: plain 1/6, band 2/6, regime 4/6
+- best median Sharpe overall: plain 0.39, band 0.48, regime 0.33
+
+### Verdict: MAD is (nearly) dead as a standalone crypto strategy
+
+The evidence across this whole session points one way:
+
+1. **Plain MAD has positive median OOS Sharpe in only 1 of 6 studies.** On its
+   own it is essentially a coin flip vs buy-and-hold — not a money-maker. This
+   matches the user's intuition that "MAD is a dead strategy."
+2. **Both filters (band, regime) help — but marginally, and at a cost.** They
+   lift more studies into positive territory (band 2/6, regime 4/6) and improve
+   the tails, but the median Sharpes remain small (≤ ~0.5) and the filters
+   roughly *halve* the number of evaluable configs (more fragile selection).
+3. **Even the best configs do not survive Merton stress testing** (robustness
+   0.17–0.49, earlier section) and the top-WFO trials are the least robust.
+
+So: MAD + a filter is a mild *risk-reducer* (smaller drawdowns, slightly better
+risk-adjusted tails), not an alpha source. As a standalone edge it is dead. Its
+only credible future is as **one weak, decorrelated component inside an ensemble**
+(equal-weight signal vote / portfolio of sleeves), where its trend-following
+behaviour can complement mean-reversion and other signals — never as the
+strategy itself.
+
+### Next
+- [ ] Stop tuning MAD variants. Treat MAD as a fixed, low-weight component.
+- [ ] Build the equal-weight signal vote (MAD + TSMOM + mean-reversion), the
+      first genuine *combination* rather than another MAD filter.
+- [ ] Bring in a structurally different signal family (mean-reversion) — the
+      diversification, not the MAD tuning, is where any real edge will come from.
+
+---
+
 ## 2026-06-06 (pm) — Full-span walk-forward, objective hardening, regime vs plain
 
 ### Walk-forward now spans the entire dataset (2019–2026)
@@ -135,9 +200,38 @@ Two clear conclusions:
 but neither is a finished edge. This motivates the next combination steps
 (equal-weight signal vote, portfolio of sleeves) rather than shipping MAD+ADX.
 
+### Merton demoted from selection gate → optional tail-risk tool
+
+On reflection, Merton is the wrong tool for *param selection* of a momentum
+strategy, for two reasons:
+
+1. **Model mismatch.** Merton paths are jump-diffusion: increments are
+   essentially independent (no trend persistence, no regime structure). MAD is a
+   *trend* strategy that exploits serial correlation — which Merton paths do not
+   have by construction. A momentum strategy on a near-random-walk *should* score
+   ~0.5, so the low robustness (0.17–0.49) is partly a model artifact, not pure
+   overfitting. This weakens Merton as selection evidence here.
+2. **Cost vs. value.** The one genuine signal it gave (best-WFO ≠ most-robust)
+   can be obtained more cheaply and more credibly from the WFO folds themselves,
+   on *real* data.
+
+**Replacement — consistency-penalised WFO objective.** `_score_on_windows` now
+returns `mean_OOS_IR * consistency`, where `consistency` is the fraction of
+valid folds that beat buy-and-hold. A spiky "one lucky fold" config is scaled
+down by its low consistency; a config positive across most folds keeps its
+score. This bakes the overfitting guard directly into the objective, on real
+data, for free. Added `MIN_VALID_FOLDS = 3` so a config that only trades in one
+or two folds is rejected outright. Verified: best objective dropped from a spiky
+3.0 (IR cap) to a modest ~0.0–0.5, reflecting MAD's true (weak) consistency.
+
+**Merton's remaining role:** optional crash / tail-risk scenario tool (the
+`crash`, `high_vol` scenarios answer "does this blow up in a jump?", which WFO
+cannot if the history lacks a big crash). It is no longer part of the
+param-selection loop.
+
 ### Next
-- [ ] Select params by a robustness-aware criterion (e.g. WFO score × Merton
-      robustness), not WFO score alone.
+- [ ] (done) Replace Merton-as-gate with the consistency-penalised WFO
+      objective; keep Merton optional for tail-risk only.
 - [ ] Equal-weight signal vote: MAD + time-series momentum + a mean-reversion
       signal (zero fitted weights).
 - [ ] Portfolio of sleeves (generalize `launcher_multi_strategy`).

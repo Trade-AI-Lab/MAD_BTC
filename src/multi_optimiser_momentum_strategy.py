@@ -10,6 +10,7 @@ import multiprocessing
 from itertools import product
 from strategy_utils.launcher_strategy import (
     momentum_strategy,
+    band_momentum_strategy,
     regime_momentum_strategy,
     envelop_strategy,
     signal_momentum_strategy,
@@ -96,6 +97,9 @@ class trading_optimisation:
     # hard-capped so a single lucky fold cannot dominate the mean.
     MIN_TRADES_PER_FOLD = 5
     IR_CAP = 3.0
+    # A config evaluated on fewer than this many valid folds cannot be judged
+    # for cross-fold consistency, so it is rejected (overfitting guard).
+    MIN_VALID_FOLDS = 3
 
     def __init__(self, config: dict) -> None:
         """
@@ -208,9 +212,20 @@ class trading_optimisation:
         ProcessPoolExecutor to avoid serialising the (potentially large)
         parent_df across process boundaries.
 
-        :return: (mean_ir, mean_sharpe, mean_final_portfolio) averaged over the
-            valid OOS folds. The first element is the objective to maximise; the
-            other two are recorded for reporting. All NaN/inf folds are excluded.
+        Overfitting guard (replaces the Merton stress test as the param-selection
+        gate — see RESEARCH_LOG): a robust config is *consistently* positive
+        across folds, not carried by one lucky fold. We therefore return a
+        consistency-penalised score:
+
+            objective = mean_OOS_IR * consistency
+
+        where consistency = fraction of valid folds that beat buy-and-hold
+        (IR > 0). This is the cheap, real-data analogue of Merton robustness and
+        directly discourages the "one huge fold, rest near zero" overfit pattern.
+
+        :return: (objective, mean_sharpe, mean_final_portfolio). The objective is
+            maximised; the other two are recorded for reporting. NaN/inf folds
+            are excluded.
         """
         from concurrent.futures import ThreadPoolExecutor
 
@@ -234,14 +249,23 @@ class trading_optimisation:
             fold_results = list(executor.map(_score_fold, self.wfo_windows))
 
         valid = [r for r in fold_results if not np.isinf(r[0])]
-        if not valid:
+        # Require a minimum number of valid folds: a config that only trades in
+        # one or two folds cannot be judged for consistency.
+        if len(valid) < self.MIN_VALID_FOLDS:
             return (-np.inf, np.nan, np.nan)
 
         irs, sharpes, portfolios = zip(*valid)
+        mean_ir = float(np.mean(irs))
+        consistency = float(np.mean([ir > 0 for ir in irs]))
+        # Penalise spiky configs: only a config that is positive in most folds
+        # keeps most of its mean IR. A negative mean IR is left unscaled so it
+        # stays clearly bad (scaling a negative by <1 would flatter it).
+        objective = mean_ir * consistency if mean_ir > 0 else mean_ir
+
         mean_sharpe = np.nanmean(sharpes)
         mean_portfolio = np.nanmean(portfolios)
         return (
-            float(np.mean(irs)),
+            objective,
             float(mean_sharpe) if not np.isnan(mean_sharpe) else np.nan,
             float(mean_portfolio) if not np.isnan(mean_portfolio) else np.nan,
         )
@@ -502,6 +526,49 @@ class optimiser_regime_momentum_strategy(trading_optimisation):
         return result
 
 
+class optimiser_band_momentum_strategy(trading_optimisation):
+    """
+    Optimizer for the Neutral-Band (hysteresis) MAD Strategy.
+
+    Same MAD hyperparameters as optimiser_momentum_strategy plus a single
+    dead-band width `band`. This is the minimal anti-whipsaw addition (one
+    parameter, vs the two ADX params of the regime variant). Scored through the
+    same WFO / consistency machinery, so band=0 (plain MAD) is always a
+    candidate and the optimiser only adopts a band if it genuinely helps OOS.
+    """
+
+    def __init__(self, config: dict) -> None:
+        super().__init__(config)
+        self.strategy = band_momentum_strategy(config)
+
+    def objective(self, trial: optuna.trial) -> float:
+        self.config["strategy"]["x"] = trial.suggest_int("x", 1, 35)
+        self.config["strategy"]["y"] = self.config["strategy"]["x"] + trial.suggest_int(
+            "y", 1, 150
+        )
+        self.config["strategy"]["ratio_method"] = trial.suggest_categorical(
+            "ratio_method",
+            ["ma_ratio", "ema_ratio", "zlema_ratio", "dema_ratio", "tema_ratio"],
+        )
+        # Neutral-band half-width: 0 reduces to plain MAD, up to +/-5% around 1.
+        self.config["strategy"]["band"] = trial.suggest_float("band", 0.0, 0.05)
+        self.strategy.change_config(self.config)
+
+        if self.wfo_windows:
+            result, sharpe_ratio, result_portfolio = self._score_on_windows()
+        else:
+            simulation_df = self.strategy.compute_simulation()
+            result_portfolio = simulation_df["Portfolio"].iloc[-1]
+            result = self._score_simulation(simulation_df)
+            sharpe_ratio = compute_sharpe_ratio(simulation_df)
+
+        config = copy.deepcopy(self.config)
+        self.liste.append(
+            [config, result, result_portfolio, sharpe_ratio, create_signature(self.config)]
+        )
+        return result
+
+
 class optimiser_signal_momentum_strategy(trading_optimisation):
     """
     Optimizer for Momentum Strategy
@@ -662,14 +729,21 @@ if __name__ == "__main__":
     )
     optimiser_class = {
         "plain": optimiser_momentum_strategy,
+        "band": optimiser_band_momentum_strategy,
         "regime": optimiser_regime_momentum_strategy,
     }[variant]
+    # Each non-plain variant runs under its own study name so studies/results
+    # never collide.
+    variant_strategy_name = {
+        "band": "band_momentum_strategy",
+        "regime": "regime_momentum_strategy",
+    }
 
     # read the config file:
     with open(config_path, "r") as file:
         config = toml.load(file)
-    if variant == "regime":
-        config["strategy"]["name"] = "regime_momentum_strategy"
+    if variant in variant_strategy_name:
+        config["strategy"]["name"] = variant_strategy_name[variant]
 
     missing_data = check_data_availability_in_folder(
         "data",
