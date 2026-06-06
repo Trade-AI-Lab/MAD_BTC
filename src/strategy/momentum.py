@@ -1,8 +1,57 @@
 from ta.trend import SMAIndicator, EMAIndicator, ADXIndicator
+import numpy as np
 import pandas as pd
 
 
 class indicator_momentum:
+    @staticmethod
+    def vol_normalized_mad(
+        data: pd.DataFrame,
+        lookback: int,
+        k: int = 4,
+        vol_window: int = None,
+        column_name: str = "open",
+    ) -> pd.Series:
+        """
+        Volatility-normalised Moving Average Distance — a scale-invariant MAD.
+
+        Classic MAD (MA_x / MA_y) lives on a per-asset scale: the same (x, y)
+        means different things on BTC vs a high-vol altcoin, which is exactly
+        why the optimiser had to refit (x, y) per market (overfitting). Here the
+        MA distance is expressed in *units of realised volatility*:
+
+            z = (EMA_x / EMA_y - 1) / sigma
+
+        where sigma is the rolling std of log-returns. z is dimensionless and
+        comparable across assets, so a single threshold (e.g. z > 1 = "one vol
+        unit of trend") has the same meaning everywhere.
+
+        This collapses three hyperparameters (x, y, ratio_method) to ONE
+        (lookback), with the long window fixed at y = k * lookback and the vol
+        window tied to it. Fewer free parameters -> lower probability of
+        backtest overfitting (Bailey & Lopez de Prado).
+
+        :param data: DataFrame with the price column and (implicitly) returns.
+        :param lookback: Short EMA window x; long window is k * lookback.
+        :param k: Fixed short/long ratio (default 4, the classic family).
+        :param vol_window: Realised-vol window; defaults to k * lookback.
+        :param column_name: Price column to use.
+        :return: Dimensionless vol-normalised MAD series z.
+        """
+        x = lookback
+        y = k * lookback
+        vw = vol_window if vol_window is not None else y
+
+        price = data[column_name]
+        ema_x = EMAIndicator(price, window=x).ema_indicator()
+        ema_y = EMAIndicator(price, window=y).ema_indicator()
+        mad = ema_x / ema_y - 1.0
+
+        log_ret = np.log(price / price.shift(1))
+        sigma = log_ret.rolling(vw).std()
+        # Guard the division: never divide by ~0 vol.
+        return mad / sigma.clip(lower=1e-8)
+
     @staticmethod
     def adx(data: pd.DataFrame, window: int = 14) -> pd.Series:
         """

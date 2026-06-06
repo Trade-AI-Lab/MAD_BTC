@@ -5,6 +5,86 @@ codebase: what was added/fixed, what we learned, and what to try next.
 
 ---
 
+## 2026-06-06 (late) — Vol-normalised 1-param MAD + Deflated Sharpe verdict
+
+### Motivation (literature)
+
+The recurring failure mode is that classic MAD needs a *different* (x, y,
+ratio_method) per asset — the raw ratio is not scale-invariant, so the optimiser
+refits noise per market. Two well-known remedies (López de Prado; Bailey;
+Moskowitz/Ooi/Pedersen 2012; Harvey et al. 2018):
+
+1. **Volatility-normalise the signal** so one rule transfers across assets.
+2. **Reduce free parameters** — the False Strategy Theorem says the expected max
+   Sharpe of N noise strategies grows like sqrt(2 ln N); fewer params/trials =
+   smaller selection bias.
+
+### What was built
+
+- `indicator_momentum.vol_normalized_mad`: `z = (EMA_x/EMA_y - 1)/sigma`, a
+  dimensionless MAD in volatility units.
+- `vol_momentum_strategy` (+ optimiser, `vol` CLI variant): collapses 3
+  hyperparameters to **ONE** (`lookback`; long window fixed at `4*lookback`,
+  EMA fixed, threshold theta=1.0 fixed). Buy when z crosses +theta, sell at
+  -theta — a built-in neutral zone.
+- `deflated_sharpe_ratio` (Bailey & López de Prado 2014): converts an observed
+  Sharpe + trial count into the probability the true Sharpe > 0. The honest
+  "is this multiple-testing luck?" gate.
+
+### Promising in-sample, but it does NOT survive proper validation
+
+A single full-history backtest looked good (same lookback=15 on all coins gave
+consistent Sharpe 0.60–0.78) — the scale-invariance *mechanically* works. But on
+the proper walk-forward distribution it is middle-of-the-pack, not better:
+
+| variant | studies with positive median OOS Sharpe | best median |
+|---------|----------------------------------------:|------------:|
+| plain   | 1/6 | 0.39 |
+| band    | 2/6 | 0.48 |
+| **vol** | **2/6** | **0.32** |
+| regime  | 4/6 | 0.33 |
+
+**Deflated Sharpe Ratio (best vol config per study, n_trials=100):**
+
+| study      | lookback | trades | SR/trade | DSR |
+|------------|---------:|-------:|---------:|----:|
+| BTCUSDT_1h |       59 |    223 |    0.134 | 0.247 |
+| BTCUSDT_4h |       19 |    139 |    0.172 | 0.238 |
+| ETHUSDT_1h |       40 |    304 |    0.129 | 0.359 |
+| ETHUSDT_4h |       45 |     63 |    0.229 | 0.084 |
+| BNBUSDT_1h |       25 |    434 |    0.078 | 0.013 |
+| BNBUSDT_4h |       18 |    110 |    0.142 | 0.007 |
+
+**Every DSR is far below the 0.95 bar** (max 0.36). And the winning lookback
+still varies 18–59 across studies — vol-normalisation made the *signal* more
+comparable but did not produce a stable optimal *lookback*.
+
+### Definitive verdict: MAD has no standalone edge in crypto
+
+This is the rigorous confirmation of the earlier intuition. Across plain, band,
+regime, AND the vol-normalised 1-parameter version — the variant specifically
+designed to minimise overfitting — **no configuration passes the Deflated Sharpe
+test.** The observed Sharpes are within what pure noise would produce given the
+search. MAD is not a tradeable standalone alpha in this universe.
+
+What the exercise *did* establish (worth keeping):
+- The methodology now catches overfitting honestly (full-span WFO +
+  consistency-penalised objective + trade-spacing Sharpe + DSR). Any future
+  signal can be judged on the same bar.
+- Vol-normalisation is the right *form* for any future momentum component, even
+  though MAD itself is too weak.
+
+### Next — stop tuning MAD; change the question
+- [ ] Move from "find alpha in one signal" to **portfolio construction over many
+      weak, decorrelated signals** — where the robustness lives.
+- [ ] Hierarchical Risk Parity (de Prado 2016): no return forecasts, no
+      per-asset tuning, allocates on correlation structure alone.
+- [ ] Add a structurally different signal family (mean-reversion: OLMAR / PAMR,
+      Li & Hoi) so the ensemble is genuinely decorrelated.
+- [ ] Keep DSR + (eventually) CPCV as the standing acceptance gate.
+
+---
+
 ## 2026-06-06 (evening) — Neutral-band MAD + verdict on MAD as a strategy
 
 ### Neutral-band (hysteresis) variant

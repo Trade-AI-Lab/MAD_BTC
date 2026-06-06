@@ -309,6 +309,65 @@ class momentum_strategy(trading_strategy):
             super(momentum_strategy, self).__init__(config)
 
 
+class vol_momentum_strategy(momentum_strategy):
+    """
+    Volatility-normalised, single-parameter MAD strategy.
+
+    Addresses the central overfitting problem found in this project: classic MAD
+    requires a different (x, y, ratio_method) per asset because the raw ratio is
+    not scale-invariant. This strategy instead trades a dimensionless,
+    vol-normalised signal z = (EMA_x/EMA_y - 1)/sigma (see
+    indicator_momentum.vol_normalized_mad), collapsing the search space to a
+    SINGLE hyperparameter (lookback) with the long window fixed at k*lookback.
+
+    Trading rule (threshold theta in volatility units, default 1.0):
+        buy  when z crosses above +theta
+        sell when z crosses below -theta
+    A neutral zone in [-theta, +theta] suppresses threshold whipsaw for free.
+
+    Extra config under config['strategy']:
+        lookback:   short EMA window (the only tuned parameter).
+        k:          fixed short/long ratio (default 4).
+        vol_window: realised-vol window (default k*lookback).
+        theta:      entry/exit threshold in vol units (default 1.0).
+    """
+
+    def compute_needed_features(self):
+        # Bypass momentum_strategy.compute_needed_features (which expects x/y/
+        # ratio_method); build the vol-normalised signal directly.
+        trading_strategy.compute_needed_features(self)
+        cfg = self.config["strategy"]
+        lookback = cfg["lookback"]
+        k = cfg.get("k", 4)
+        vol_window = cfg.get("vol_window", None)
+        price_column = cfg.get("price_column", "open")
+
+        self.strategy_name = f"volmad_{lookback}_k{k}"
+        self.title_image = (
+            f"{self.config['exchange']}-{self.config['crypto_currency']}-"
+            f"{self.config['time']}_portfolio_vs_buy_hold_{self.strategy_name}_"
+            f"{self.config['initial_capital']}$"
+        )
+        self.child_df[self.strategy_name] = indicator_momentum.vol_normalized_mad(
+            self.child_df,
+            lookback=lookback,
+            k=k,
+            vol_window=vol_window,
+            column_name=price_column,
+        )
+        self.child_df = self.child_df.dropna().reset_index(drop=True)
+
+    def strategy_rules(self):
+        self.compute_needed_features() if self.child_df is None else None
+        theta = self.config["strategy"].get("theta", 1.0)
+        z = self.child_df[self.strategy_name]
+        self.child_df["buy_signal"] = (z > theta) & (z.shift(1) <= theta)
+        self.child_df["sell_signal"] = (z < -theta) & (z.shift(1) >= -theta)
+        self.df_filtered = self.child_df[
+            (self.child_df["buy_signal"] > 0) | (self.child_df["sell_signal"] > 0)
+        ].reset_index(drop=True)
+
+
 class band_momentum_strategy(momentum_strategy):
     """
     Neutral-band (hysteresis) MAD strategy.

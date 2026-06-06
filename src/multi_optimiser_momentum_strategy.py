@@ -11,6 +11,7 @@ from itertools import product
 from strategy_utils.launcher_strategy import (
     momentum_strategy,
     band_momentum_strategy,
+    vol_momentum_strategy,
     regime_momentum_strategy,
     envelop_strategy,
     signal_momentum_strategy,
@@ -81,6 +82,66 @@ def compute_maximum_drawdown(df, column: str):
     max_dd = drawdown.min()
 
     return round(abs(max_dd) * 100, 3)
+
+
+def deflated_sharpe_ratio(
+    observed_sharpe: float,
+    n_trials: int,
+    n_obs: int,
+    skew: float = 0.0,
+    kurtosis: float = 3.0,
+) -> float:
+    """
+    Deflated Sharpe Ratio (Bailey & Lopez de Prado, 2014).
+
+    Adjusts an observed (annualised) Sharpe for selection bias from trying
+    n_trials configurations. Returns the probability that the TRUE Sharpe is
+    positive given that we picked the best of n_trials. A value > ~0.95 is the
+    usual bar for "this is not a fluke of multiple testing".
+
+    The benchmark Sharpe (the level the max of n_trials noise strategies would
+    reach by luck) is, per the False Strategy Theorem:
+
+        SR_0 = sqrt(Var_SR) * ( (1-gamma) * Z^-1(1 - 1/N)
+                                + gamma * Z^-1(1 - 1/(N e)) )
+
+    with Var_SR ~ 1/n_obs under the i.i.d. null and gamma the Euler-Mascheroni
+    constant. DSR is the probability that the (variance-adjusted) observed SR
+    exceeds this benchmark.
+
+    NOTE: Sharpe and observations here should be on the SAME frequency. We pass
+    the per-trade (non-annualised) Sharpe and the number of trades for n_obs.
+
+    :param observed_sharpe: Best per-period (non-annualised) Sharpe found.
+    :param n_trials: Number of configurations tried (Optuna trials).
+    :param n_obs: Number of return observations (trades).
+    :param skew: Sample skew of the return series.
+    :param kurtosis: Sample kurtosis (3 = normal).
+    :return: Probability the true Sharpe > 0 (in [0, 1]).
+    """
+    from scipy.stats import norm
+
+    if n_obs < 2 or n_trials < 1:
+        return np.nan
+
+    gamma = 0.5772156649  # Euler-Mascheroni
+    emc = np.e
+    # Expected max of n_trials standard-normal Sharpes (variance of SR ~ 1).
+    z1 = norm.ppf(1.0 - 1.0 / n_trials)
+    z2 = norm.ppf(1.0 - 1.0 / (n_trials * emc))
+    expected_max_z = (1 - gamma) * z1 + gamma * z2
+    var_sr = 1.0 / n_obs
+    sr0 = np.sqrt(var_sr) * expected_max_z
+
+    # Variance-adjusted standard error of the Sharpe (Lo 2002, with higher
+    # moments), then the DSR as a normal CDF.
+    denom = np.sqrt(
+        1.0 - skew * observed_sharpe + (kurtosis - 1.0) / 4.0 * observed_sharpe**2
+    )
+    if denom == 0 or np.isnan(denom):
+        return np.nan
+    dsr = norm.cdf((observed_sharpe - sr0) * np.sqrt(n_obs - 1) / denom)
+    return float(dsr)
 
 
 class trading_optimisation:
@@ -569,6 +630,47 @@ class optimiser_band_momentum_strategy(trading_optimisation):
         return result
 
 
+class optimiser_vol_momentum_strategy(trading_optimisation):
+    """
+    Optimizer for the Volatility-Normalised, single-parameter MAD strategy.
+
+    The whole point of this variant is to MINIMISE the search space: the signal
+    is scale-invariant, so a single `lookback` is tuned (long window fixed at
+    k*lookback, ratio fixed to EMA, threshold theta fixed at 1.0). One free
+    parameter -> the lowest probability of backtest overfitting of any variant
+    here (Bailey & Lopez de Prado false-strategy theorem: expected max noise
+    Sharpe grows with sqrt(2 ln N), so small N is the defence).
+
+    `theta` and `k` are deliberately NOT searched by default to keep N minimal;
+    they can be enabled later if the 1-param version shows promise.
+    """
+
+    def __init__(self, config: dict) -> None:
+        super().__init__(config)
+        self.strategy = vol_momentum_strategy(config)
+
+    def objective(self, trial: optuna.trial) -> float:
+        # The ONLY tuned parameter.
+        self.config["strategy"]["lookback"] = trial.suggest_int("lookback", 3, 60)
+        self.config["strategy"]["k"] = 4
+        self.config["strategy"]["theta"] = 1.0
+        self.strategy.change_config(self.config)
+
+        if self.wfo_windows:
+            result, sharpe_ratio, result_portfolio = self._score_on_windows()
+        else:
+            simulation_df = self.strategy.compute_simulation()
+            result_portfolio = simulation_df["Portfolio"].iloc[-1]
+            result = self._score_simulation(simulation_df)
+            sharpe_ratio = compute_sharpe_ratio(simulation_df)
+
+        config = copy.deepcopy(self.config)
+        self.liste.append(
+            [config, result, result_portfolio, sharpe_ratio, create_signature(self.config)]
+        )
+        return result
+
+
 class optimiser_signal_momentum_strategy(trading_optimisation):
     """
     Optimizer for Momentum Strategy
@@ -730,12 +832,14 @@ if __name__ == "__main__":
     optimiser_class = {
         "plain": optimiser_momentum_strategy,
         "band": optimiser_band_momentum_strategy,
+        "vol": optimiser_vol_momentum_strategy,
         "regime": optimiser_regime_momentum_strategy,
     }[variant]
     # Each non-plain variant runs under its own study name so studies/results
     # never collide.
     variant_strategy_name = {
         "band": "band_momentum_strategy",
+        "vol": "vol_momentum_strategy",
         "regime": "regime_momentum_strategy",
     }
 
