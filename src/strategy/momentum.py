@@ -1,8 +1,29 @@
-from ta.trend import SMAIndicator, EMAIndicator
+from ta.trend import SMAIndicator, EMAIndicator, ADXIndicator
 import pandas as pd
 
 
 class indicator_momentum:
+    @staticmethod
+    def adx(data: pd.DataFrame, window: int = 14) -> pd.Series:
+        """
+        Average Directional Index — trend-strength regime filter.
+
+        ADX measures how strongly a market is trending, independent of
+        direction. Conventionally ADX > 25 ≈ trending, < 20 ≈ ranging.
+        Used to gate the (directional) MAD crossover so it only trades when a
+        trend is actually present.
+
+        :param data: DataFrame containing 'high', 'low', 'close' columns.
+        :param window: Lookback window for the ADX computation.
+        :return: Series of ADX values (0–100).
+        """
+        return ADXIndicator(
+            high=data["high"],
+            low=data["low"],
+            close=data["close"],
+            window=window,
+        ).adx()
+
     @staticmethod
     def indicator(
         data: pd.Series,

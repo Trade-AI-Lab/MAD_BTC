@@ -10,6 +10,7 @@ import multiprocessing
 from itertools import product
 from strategy_utils.launcher_strategy import (
     momentum_strategy,
+    regime_momentum_strategy,
     envelop_strategy,
     signal_momentum_strategy,
 )
@@ -152,7 +153,7 @@ class trading_optimisation:
         s._suppress_save = True
         return s
 
-    def _score_on_windows(self) -> float:
+    def _score_on_windows(self) -> tuple:
         """
         Evaluate the current strategy config across all WFO val windows in parallel.
 
@@ -160,6 +161,10 @@ class trading_optimisation:
         shares the read-only parent_df. ThreadPoolExecutor is chosen over
         ProcessPoolExecutor to avoid serialising the (potentially large)
         parent_df across process boundaries.
+
+        :return: (mean_ir, mean_sharpe, mean_final_portfolio) averaged over the
+            valid OOS folds. The first element is the objective to maximise; the
+            other two are recorded for reporting. All NaN/inf folds are excluded.
         """
         from concurrent.futures import ThreadPoolExecutor
 
@@ -167,16 +172,33 @@ class trading_optimisation:
             val_start, val_end = window
             s = self._make_fold_strategy(val_start, val_end)
             try:
-                return self._score_simulation(s.compute_simulation())
+                sim_df = s.compute_simulation()
             except Exception:
-                return -np.inf
+                return (-np.inf, np.nan, np.nan)
+            if sim_df is None or len(sim_df) < 3:
+                return (-np.inf, np.nan, np.nan)
+            return (
+                self._score_simulation(sim_df),
+                compute_sharpe_ratio(sim_df),
+                sim_df["Portfolio"].iloc[-1],
+            )
 
         n_workers = min(len(self.wfo_windows), os.cpu_count() or 4)
         with ThreadPoolExecutor(max_workers=n_workers) as executor:
-            scores = list(executor.map(_score_fold, self.wfo_windows))
+            fold_results = list(executor.map(_score_fold, self.wfo_windows))
 
-        valid = [s for s in scores if not np.isinf(s)]
-        return float(np.mean(valid)) if valid else -np.inf
+        valid = [r for r in fold_results if not np.isinf(r[0])]
+        if not valid:
+            return (-np.inf, np.nan, np.nan)
+
+        irs, sharpes, portfolios = zip(*valid)
+        mean_sharpe = np.nanmean(sharpes)
+        mean_portfolio = np.nanmean(portfolios)
+        return (
+            float(np.mean(irs)),
+            float(mean_sharpe) if not np.isnan(mean_sharpe) else np.nan,
+            float(mean_portfolio) if not np.isnan(mean_portfolio) else np.nan,
+        )
 
     def optimiser_multiple_currency(
         self,
@@ -361,15 +383,60 @@ class optimiser_momentum_strategy(trading_optimisation):
         self.strategy.change_config(self.config)
 
         if self.wfo_windows:
-            # Score purely on OOS val windows — no in-sample data seen by Optuna
-            result = self._score_on_windows()
-            result_portfolio = np.nan
-            sharpe_ratio = np.nan
+            # Score purely on OOS val windows — no in-sample data seen by Optuna.
+            # The objective is the mean OOS information ratio; mean OOS Sharpe and
+            # final portfolio are recorded alongside it for reporting.
+            result, sharpe_ratio, result_portfolio = self._score_on_windows()
         else:
             simulation_df = self.strategy.compute_simulation()
             result_portfolio = simulation_df["Portfolio"].iloc[-1]
             result = self._score_simulation(simulation_df)
-            sharpe_ratio = np.nan
+            sharpe_ratio = compute_sharpe_ratio(simulation_df)
+
+        config = copy.deepcopy(self.config)
+        self.liste.append(
+            [config, result, result_portfolio, sharpe_ratio, create_signature(self.config)]
+        )
+        return result
+
+
+class optimiser_regime_momentum_strategy(trading_optimisation):
+    """
+    Optimizer for the Regime-Gated Momentum (MAD + ADX) Strategy.
+
+    Searches the same MAD hyperparameters as optimiser_momentum_strategy plus
+    the two ADX regime-filter parameters (window and threshold). Scoring reuses
+    the WFO / information-ratio machinery of the base class unchanged, so the
+    regime gate is judged purely on out-of-sample performance.
+    """
+
+    def __init__(self, config: dict) -> None:
+        super().__init__(config)
+        self.strategy = regime_momentum_strategy(config)
+
+    def objective(self, trial: optuna.trial) -> float:
+        self.config["strategy"]["x"] = trial.suggest_int("x", 1, 35)
+        self.config["strategy"]["y"] = self.config["strategy"]["x"] + trial.suggest_int(
+            "y", 1, 150
+        )
+        self.config["strategy"]["ratio_method"] = trial.suggest_categorical(
+            "ratio_method",
+            ["ma_ratio", "ema_ratio", "zlema_ratio", "dema_ratio", "tema_ratio"],
+        )
+        # Regime-filter parameters — the only additions over plain MAD.
+        self.config["strategy"]["adx_window"] = trial.suggest_int("adx_window", 7, 30)
+        self.config["strategy"]["adx_threshold"] = trial.suggest_int(
+            "adx_threshold", 15, 40
+        )
+        self.strategy.change_config(self.config)
+
+        if self.wfo_windows:
+            result, sharpe_ratio, result_portfolio = self._score_on_windows()
+        else:
+            simulation_df = self.strategy.compute_simulation()
+            result_portfolio = simulation_df["Portfolio"].iloc[-1]
+            result = self._score_simulation(simulation_df)
+            sharpe_ratio = compute_sharpe_ratio(simulation_df)
 
         config = copy.deepcopy(self.config)
         self.liste.append(

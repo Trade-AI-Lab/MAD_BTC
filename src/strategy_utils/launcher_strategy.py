@@ -253,11 +253,22 @@ class momentum_strategy(trading_strategy):
 
         """
         super().compute_needed_features()
+        # Price column the MAD ratio is computed on. Defaults to "open" so the
+        # signal at bar t uses only information available at t's open, matching
+        # the trade-on-open execution engine (no lookahead). Set
+        # strategy.price_column = "close" to follow the close-based MAD of the
+        # original paper.
+        price_column = self.config["strategy"].get("price_column", "open")
         self.strategy_name = f"{self.config['strategy']['ratio_method']}_{self.config['strategy']['x']}_{self.config['strategy']['y']}"
         self.title_image = f"{self.config['exchange']}-{self.config['crypto_currency']}-{self.config['time']}_portfolio_vs_buy_hold_{self.strategy_name}_{self.config['initial_capital']}$"
         self.child_df[self.strategy_name] = getattr(
             indicator_momentum, self.config["strategy"]["ratio_method"]
-        )(self.child_df, self.config["strategy"]["x"], self.config["strategy"]["y"])
+        )(
+            self.child_df,
+            self.config["strategy"]["x"],
+            self.config["strategy"]["y"],
+            column_name=price_column,
+        )
         self.child_df = self.child_df.dropna().reset_index(drop=True)
 
     def strategy_rules(self):
@@ -296,6 +307,52 @@ class momentum_strategy(trading_strategy):
                 self.child_df = None
         else:
             super(momentum_strategy, self).__init__(config)
+
+
+class regime_momentum_strategy(momentum_strategy):
+    """
+    Regime-Gated Momentum (MAD) Strategy.
+
+    Plain MAD is a *trend* signal: it crosses 1 constantly in sideways markets
+    and bleeds money to fees and whipsaws. This subclass gates the MAD crossover
+    with a trend-strength regime filter (ADX): a buy/sell signal is only acted
+    on when ADX exceeds a threshold, i.e. when a trend is actually present.
+    Outside a trend the strategy holds its current position (no new entries).
+
+    It reuses every bit of momentum_strategy (MAD computation, simulation, save)
+    and only adds one indicator and one parameter (adx_threshold), keeping the
+    parameter budget — and therefore the overfitting risk — minimal.
+
+    Extra config under config['strategy']:
+        adx_window:     ADX lookback (int, default 14)
+        adx_threshold:  Minimum ADX to allow a trade (float, default 25)
+    """
+
+    def compute_needed_features(self):
+        super().compute_needed_features()
+        adx_window = self.config["strategy"].get("adx_window", 14)
+        # Recompute on the date-filtered child_df. super() has already dropped
+        # NaNs from the MAD warm-up; ADX adds its own warm-up NaNs which we drop.
+        self.child_df["adx"] = indicator_momentum.adx(self.child_df, window=adx_window)
+        self.child_df = self.child_df.dropna().reset_index(drop=True)
+
+    def strategy_rules(self):
+        self.compute_needed_features() if self.child_df is None else None
+        adx_threshold = self.config["strategy"].get("adx_threshold", 25)
+        trending = self.child_df["adx"] > adx_threshold
+
+        crossover_up = (self.child_df[self.strategy_name] > 1) & (
+            self.child_df[self.strategy_name].shift(1) <= 1
+        )
+        crossover_down = (self.child_df[self.strategy_name] < 1) & (
+            self.child_df[self.strategy_name].shift(1) >= 1
+        )
+        # Only act on a crossover when the market is in a trending regime.
+        self.child_df["buy_signal"] = crossover_up & trending
+        self.child_df["sell_signal"] = crossover_down & trending
+        self.df_filtered = self.child_df[
+            (self.child_df["buy_signal"] > 0) | (self.child_df["sell_signal"] > 0)
+        ].reset_index(drop=True)
 
 
 class signal_momentum_strategy(trading_strategy):
@@ -557,7 +614,7 @@ class envelop_strategy(trading_strategy):
                             envelop_price = (
                                 row[f"envelop_down_{percent_envelop}"]
                                 if row["buy_signal"]
-                                else row[f"envelop_down_{percent_envelop}"]
+                                else row[f"envelop_up_{percent_envelop}"]
                             )
                             crypto_amount = (
                                 portfolio
@@ -631,14 +688,10 @@ class envelop_strategy(trading_strategy):
                 "Position": list_position,
             }
         )
-        self.strategy_folder_path = create_save_one_experience(
-            self.config, self.time_eccefpsn
-        )
-        (
-            save("No strategy", self.strategy_folder_path, self.evolution_df)
-            if self.title_image is None
-            else save(self.title_image, self.strategy_folder_path, self.evolution_df)
-        )
+        # Delegate to the base save_data(): it builds the
+        # RSI_Portfolio/Buy_and_Hold column that save()/core_img() require,
+        # honours _suppress_save, and only writes profitable runs.
+        self.save_data()
 
 
 if __name__ == "__main__":

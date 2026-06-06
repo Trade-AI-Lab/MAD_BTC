@@ -2,7 +2,7 @@
 exchange = ["binance"]
 
 #list of strings. Ex: ["ETHUSDT", "BTCUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT", "LINKUSDT"]
-symbols = ["ETHUSDC", "BTCUSDC", "BNBUSDC", "SOLUSDC", "XRPUSDC", "LINKUSDC"]
+symbols = ["JUVUSDT"]
 
 time_frame = ["1h"]
 
