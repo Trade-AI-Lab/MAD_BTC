@@ -1,4 +1,3 @@
-# init config
 crypto_currency = "BTCUSDT"
 time = "4h"
 exchange = "binance"
@@ -12,22 +11,18 @@ y = 57
 ratio_method = "ma_ratio"
 
 [multi]
-list_brokers = ["binance"]
-list_crypto_currency = ["BTCUSDT", "ETHUSDT", "ADAUSDT", "BNBUSDT", "MATICUSDT", "DOTUSDT"]
-# 1d dropped: daily MAD generates too few crossovers per OOS window to evaluate
-# (long MA is too smooth to cross), regardless of window size.
-list_time = ["1h", "4h"]
+list_brokers = [ "binance",]
+list_crypto_currency = [ "BTCUSDT", "ETHUSDT", "ADAUSDT", "BNBUSDT", "MATICUSDT", "DOTUSDT",]
+list_time = [ "1h", "4h",]
+
+[optuna]
+n_trials = 100
 
 [wfo]
-# Default walk-forward windows. n_splits = 0 spans the entire dataset
-# (~25+ folds over 2019-2026); a positive value caps the number of folds.
 train_months = 12
 val_months = 3
 n_splits = 0
 
-# Per-timeframe overrides. Higher timeframes have fewer bars per month, so the
-# validation window must be longer for a fold to contain enough trades for the
-# information ratio / Sharpe to be meaningful.
 [wfo.per_timeframe.1h]
 train_months = 12
 val_months = 3

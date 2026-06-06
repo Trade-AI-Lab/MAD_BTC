@@ -25,17 +25,45 @@ absolute_path = os.path.abspath(__file__)[
 
 
 def compute_sharpe_ratio(
-    df, column: str = "Portfolio", risk_free_rate=0.0, periods_per_year=365
+    df, column: str = "Portfolio", risk_free_rate=0.0, periods_per_year=None
 ):
+    """
+    Annualised Sharpe ratio.
+
+    IMPORTANT: evolution_df has one row *per trade*, not per day, and trades are
+    irregularly spaced (often ~weeks apart). The annualisation factor must
+    therefore be derived from the actual elapsed time between rows, not a
+    hardcoded sqrt(365) — otherwise the Sharpe is distorted by trade frequency
+    and can land at absurd values like -16 or +14.
+
+    When a 'Time' column is present, periods_per_year is inferred from the mean
+    spacing between rows: periods_per_year = 365 / mean_days_between_trades.
+    Pass an explicit periods_per_year to override (e.g. for genuinely periodic
+    series). Falls back to 365 if the spacing cannot be determined.
+    """
     returns = df[column].pct_change().dropna()
+    if len(returns) < 2:
+        return np.nan
+
+    if periods_per_year is None:
+        if "Time" in df.columns:
+            t = pd.to_datetime(df["Time"])
+            mean_gap_days = t.diff().dropna().dt.total_seconds().mean() / 86400.0
+            periods_per_year = (
+                365.0 / mean_gap_days if mean_gap_days and mean_gap_days > 0 else 365.0
+            )
+        else:
+            periods_per_year = 365.0
 
     excess_returns = returns - risk_free_rate / periods_per_year
 
-    mean_excess_return = excess_returns.mean()
     std_excess_return = excess_returns.std()
+    if std_excess_return == 0 or np.isnan(std_excess_return):
+        return np.nan
 
-    sharpe_ratio = np.sqrt(periods_per_year) * mean_excess_return / std_excess_return
-
+    sharpe_ratio = (
+        np.sqrt(periods_per_year) * excess_returns.mean() / std_excess_return
+    )
     return sharpe_ratio
 
 
@@ -294,8 +322,11 @@ class trading_optimisation:
             n_splits=n_splits,
         )
 
+        # n_trials is configurable via [optuna] n_trials in the config; 100 is
+        # plenty for validating direction (300 was wasteful for these runs).
+        n_trials = self.config.get("optuna", {}).get("n_trials", 100)
         study.optimize(
-            lambda trial: self.objective(trial=trial), n_trials=300
+            lambda trial: self.objective(trial=trial), n_trials=n_trials
         )  # we call optuna to optimize it
         self.save_df()
         self.save_mp4()
@@ -618,19 +649,24 @@ if __name__ == "__main__":
         : os.path.abspath(__file__).find("MAD_BTC") + len("MAD_BTC")
     ]
 
-    # Optional CLI arg selects the strategy variant to optimise:
-    #   python multi_optimiser_momentum_strategy.py [plain|regime]
-    # default: plain. The regime variant runs under its own study name
-    # (strategy.name = "regime_momentum_strategy") so its studies and saved
-    # results never collide with the plain-MAD ones.
+    # Optional CLI args:
+    #   python multi_optimiser_momentum_strategy.py [plain|regime] [config_path]
+    # default: plain, src/configs/optimiser_momentum_config.toml. The regime
+    # variant runs under its own study name (strategy.name =
+    # "regime_momentum_strategy") so its studies and saved results never collide
+    # with the plain-MAD ones.
     variant = sys.argv[1] if len(sys.argv) > 1 else "plain"
+    config_path = (
+        sys.argv[2] if len(sys.argv) > 2
+        else "src/configs/optimiser_momentum_config.toml"
+    )
     optimiser_class = {
         "plain": optimiser_momentum_strategy,
         "regime": optimiser_regime_momentum_strategy,
     }[variant]
 
     # read the config file:
-    with open("src/configs/optimiser_momentum_config.toml", "r") as file:
+    with open(config_path, "r") as file:
         config = toml.load(file)
     if variant == "regime":
         config["strategy"]["name"] = "regime_momentum_strategy"

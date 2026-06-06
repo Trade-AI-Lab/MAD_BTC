@@ -66,47 +66,83 @@ adds `adx_window` / `adx_threshold`). The Merton CLI takes a `plain|regime` arg.
 
 ### Result — Regime-gated MAD vs plain MAD (fresh full-span WFO)
 
-Both variants re-run fresh (stale studies deleted) across 6 coins × {1h, 4h} ×
-300 trials, scored on the full-span per-timeframe WFO. Single "best trial"
-comparison is unreliable (it cherry-picks the luckiest trial and the IR cap
-flattens the top), so the comparison below is **distributional across all
-finite trials** — median and 90th-percentile out-of-sample Sharpe.
+> **RETRACTED — the Sharpe numbers in the first version of this table were
+> wrong.** `compute_sharpe_ratio` annualised trade-to-trade returns with a
+> hardcoded `sqrt(365)`, but `evolution_df` has one row *per trade* (irregularly
+> spaced, often ~3 weeks apart), not one row per day. The annualisation factor
+> was therefore off by a trade-frequency-dependent amount, producing absurd
+> Sharpe values (−16 to +14). See the bug fix below. A corrected comparison on
+> BTC/ETH/BNB is being regenerated and will replace this section.
 
-| study        | plain ShMed | regime ShMed | plain ShP90 | regime ShP90 |
-|--------------|------------:|-------------:|------------:|-------------:|
-| BTCUSDT_1h   |       −0.46 |       −0.19  |        0.00 |        1.35  |
-| BTCUSDT_4h   |        0.22 |        0.62  |        1.37 |        2.45  |
-| ETHUSDT_1h   |       −0.04 |        0.20  |        0.37 |        1.84  |
-| ETHUSDT_4h   |        1.26 |        1.30  |        2.12 |        4.08  |
-| ADAUSDT_1h   |       −0.85 |       −0.95  |        0.06 |        0.44  |
-| ADAUSDT_4h   |        0.35 |        0.21  |        1.91 |        2.98  |
-| BNBUSDT_1h   |       −0.24 |        0.12  |        0.34 |        1.70  |
-| BNBUSDT_4h   |        0.10 |        1.38  |        1.76 |        3.98  |
-| MATICUSDT_1h |        0.38 |        0.32  |        0.93 |        1.96  |
-| MATICUSDT_4h |        0.87 |        1.30  |        2.29 |        4.55  |
-| DOTUSDT_1h   |       −1.02 |       −0.96  |       −0.40 |        0.14  |
-| DOTUSDT_4h   |       −0.35 |       −0.55  |        1.33 |        2.17  |
+**Sharpe bug fix.** `compute_sharpe_ratio` (in both
+`multi_optimiser_momentum_strategy.py` and `renderer_strategy.py`) now infers
+the annualisation factor from the actual mean spacing of the `Time` column
+(`periods_per_year = 365 / mean_days_between_trades`) instead of assuming daily
+rows. Verified on a BTCUSDT 4h fold that previously read −13.5: corrected values
+now fall in the sane −3 to +1 range. The IR objective was *not* affected (it
+compares portfolio vs buy-and-hold at the same row spacing, so the bad factor
+largely cancels); only the recorded/plotted Sharpe was distorted.
 
-**Takeaways:**
-- **Median OOS Sharpe: regime > plain in 8/12 studies.**
-- **Top-decile (p90) OOS Sharpe: regime > plain in 12/12 studies.** The gate
-  shifts the *entire upper distribution* up, not just one lucky config — the
-  signature of a genuine filter rather than overfitting.
-- The effect is **strongest on 4h** (e.g. BNBUSDT_4h median 0.10 → 1.38;
-  ETHUSDT_4h p90 2.12 → 4.08).
-- Caveat: many studies still have negative *median* Sharpe — plain MAD on its
-  own is not a money-maker; the regime gate improves it but does not by itself
-  produce a robustly profitable strategy. The realistic framing remains
-  "higher risk-adjusted return / smaller drawdown," not "beats buy-and-hold on
-  raw return."
+What still holds from the (invalidated) table: the *IR objective* and the WFO
+mechanics are sound, and the **direction** of the regime effect (it removes
+whipsaw trades and tightens drawdowns) was independently confirmed on a
+single-window backtest earlier. The magnitude/Sharpe claims await the corrected
+re-run.
+
+### Corrected comparison — Regime vs plain MAD (BTC/ETH/BNB, fixed Sharpe)
+
+Both variants re-run on BTC/ETH/BNB × {1h, 4h} with the corrected Sharpe.
+Distributional comparison (median / 90th-pct OOS Sharpe across all finite
+trials — resistant to single-trial cherry-picking):
+
+| study      | plain ShMed | regime ShMed | plain ShP90 | regime ShP90 |
+|------------|------------:|-------------:|------------:|-------------:|
+| BTCUSDT_1h |       −0.50 |       −0.26  |       −0.13 |        0.47  |
+| BTCUSDT_4h |       −0.01 |        0.13  |        0.54 |        0.58  |
+| ETHUSDT_1h |       −0.25 |        0.00  |        0.17 |        0.49  |
+| ETHUSDT_4h |        0.39 |        0.33  |        0.79 |        0.92  |
+| BNBUSDT_1h |       −0.28 |       −0.01  |        0.12 |        0.52  |
+| BNBUSDT_4h |       −0.08 |        0.30  |        0.55 |        1.10  |
+
+- **Median OOS Sharpe: regime > plain in 5/6 studies.**
+- **Top-decile OOS Sharpe: regime > plain in 6/6 studies.**
+- The values are now in a believable range (≈ −0.5 to +1.1), unlike the
+  retracted table. The regime edge is **real but modest** — most median Sharpes
+  sit near zero. Plain MAD alone is not a money-maker; the gate consistently
+  nudges the distribution up, especially on 4h.
+
+### Merton stress test — regime strategy does NOT survive synthetic paths
+
+Ran the Merton jump-diffusion stress test on the top-10 WFO trials of each
+regime 4h study (`robustness` = fraction of synthetic paths beating
+buy-and-hold; 3,500 path-evaluations per coin):
+
+| Coin (4h) | Best robustness | Observation |
+|-----------|----------------:|-------------|
+| BNBUSDT   |            0.49 | best trial ≈ coin flip vs B&H |
+| BTCUSDT   |            0.23 | top-WFO trials rank low |
+| ETHUSDT   |            0.17 | all top trials WFO=3.0, robustness ≤0.17 |
+
+Two clear conclusions:
+- **Robustness is low (0.17–0.49) everywhere** — regime-gated MAD beats B&H on
+  synthetic paths well under half the time. As a *standalone* strategy it does
+  not pass stress testing.
+- **The highest-WFO-score trials are NOT the most robust** in any coin — the
+  classic overfitting signature, which Merton successfully exposed. Selecting
+  params by historical OOS score alone would pick overfit configs.
+
+**Net:** the regime gate is a genuine *improvement component* over plain MAD,
+but neither is a finished edge. This motivates the next combination steps
+(equal-weight signal vote, portfolio of sleeves) rather than shipping MAD+ADX.
 
 ### Next
-- [ ] Run the Merton stress test on the regime study
-      (`python src/strategy_utils/merton_stress_test.py regime`) to confirm the
-      4h regime edge survives synthetic paths, not just historical OOS.
-- [ ] Select final params by a robust statistic (e.g. mean of top-decile OOS
-      Sharpe), not the single best trial.
-- [ ] Proceed to the equal-weight signal vote (next combination step).
+- [ ] Select params by a robustness-aware criterion (e.g. WFO score × Merton
+      robustness), not WFO score alone.
+- [ ] Equal-weight signal vote: MAD + time-series momentum + a mean-reversion
+      signal (zero fitted weights).
+- [ ] Portfolio of sleeves (generalize `launcher_multi_strategy`).
+- [ ] Apply the trade-spacing annualisation fix anywhere else Sharpe-like
+      metrics are computed on `evolution_df`.
 
 ---
 

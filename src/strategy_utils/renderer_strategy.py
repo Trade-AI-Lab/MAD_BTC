@@ -5,17 +5,35 @@ import plotly.subplots as sp
 import numpy as np
 
 
-def compute_sharpe_ratio(df, risk_free_rate=0.0, periods_per_year=365):
+def compute_sharpe_ratio(df, risk_free_rate=0.0, periods_per_year=None):
+    """
+    Annualised Sharpe ratio.
+
+    evolution_df rows are trades (irregularly spaced), not daily bars, so the
+    annualisation factor is inferred from the mean spacing of the 'Time' column
+    (periods_per_year = 365 / mean_days_between_trades) rather than a hardcoded
+    sqrt(365). See compute_sharpe_ratio in multi_optimiser_momentum_strategy.py.
+    """
     returns = df["Portfolio"].pct_change().dropna()
+    if len(returns) < 2:
+        return np.nan
+
+    if periods_per_year is None:
+        if "Time" in df.columns:
+            t = pd.to_datetime(df["Time"])
+            mean_gap_days = t.diff().dropna().dt.total_seconds().mean() / 86400.0
+            periods_per_year = (
+                365.0 / mean_gap_days if mean_gap_days and mean_gap_days > 0 else 365.0
+            )
+        else:
+            periods_per_year = 365.0
 
     excess_returns = returns - risk_free_rate / periods_per_year
-
-    mean_excess_return = excess_returns.mean()
     std_excess_return = excess_returns.std()
+    if std_excess_return == 0 or np.isnan(std_excess_return):
+        return np.nan
 
-    sharpe_ratio = np.sqrt(periods_per_year) * mean_excess_return / std_excess_return
-
-    return sharpe_ratio
+    return np.sqrt(periods_per_year) * excess_returns.mean() / std_excess_return
 
 
 def core_img(evolution_df: dict, Title: str):
