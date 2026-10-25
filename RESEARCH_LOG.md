@@ -155,6 +155,27 @@ DSR was 0.80 and 0.44); assets overlap in time; trade counts are 94-100. Not a v
 
 ---
 
+## 2026-10-25 (freeze) — Breakout rule k=12, H=24, volume spike FROZEN
+
+`src/meta_labeling/frozen_breakout.py`, spec in `frozen_breakout.json`, scores appended to
+`frozen_breakout_history.csv`. Rule: first cross of zb>2.0 (12-bar return / (sigma_1bar over 100 bars * sqrt 12)), volume[t-1]
+> 1.5x its 50-bar mean, long at the next open, 24-bar hold, 0.1%/side, no overlap per asset, same 8 assets. Code hashes
+(run_breakout.py, core.py, run_meta.py) are stored; the script warns if they change. Forward scoring starts at entries on/after
+**2026-10-25 20:00** (first bar after the last downloaded one). Nothing before that counts as forward.
+
+Baselines stored at freeze: dev (entries before 2026-02-28) n=529, +2.75%/trade, win 58%, 8/8 assets positive, bootstrap
+5th pct +1.6%, p_random 0.00. Seen window 2026-02-28 -> freeze: n=41, +3.17%, win 59%, 7/8 assets, bootstrap 5th pct
+-1.6%, p_random 0.04 (this window was looked at while choosing the rule, so it is NOT out of sample).
+
+Pre-registered verdict: wait for >= 100 forward trades (about 20 months at ~5 trades/month: the rule is selective).
+ACCEPT if mean net > 0 AND week-block bootstrap 5th percentile > 0 AND p_random < 0.05; REJECT if n >= 100 and mean net <= 0;
+otherwise inconclusive. First re-score (0 forward trades, nothing to score yet): inconclusive.
+
+To re-score: `python src/meta_labeling/frozen_breakout.py` (fetches via `fetch_klines.py` first when run by hand:
+`python src/meta_labeling/fetch_klines.py BTCUSDT ETHUSDT BNBUSDT ADAUSDT DOTUSDT SOLUSDT XRPUSDT LINKUSDT`).
+
+---
+
 ## 2026-10-25 (follow-up round) — lookback ensemble, exposure-matched drawdown, MAD-free breakout, frozen forward test
 
 New code: `core.py` (shared), `fetch_klines.py`, `run_ensemble.py`, `run_frozen.py`, `run_breakout.py`,
