@@ -153,6 +153,16 @@ DSR was 0.80 and 0.44); assets overlap in time; trade counts are 94-100. Not a v
 - [ ] Freeze gboost (4h, lb5/lb10) trained on <=2023 and score 2024+ untouched; add SOL/XRP/LINK 4h data.
 - [ ] Risk-targeted sizing (vol-scaled, probability-scaled) for the filtered trades; report DD at equal exposure.
 
+### Frozen breakout vs buy & hold in the years buy & hold lost (`run_bh_lost.py`)
+Full-history asset-years (65 full calendar years across 8 assets): buy & hold lost in 32. In those 32 the frozen rule made
++7.6% on average (median +8.3%, positive in 62%) against -42.0% for buy & hold, and beat it in all 32. By year: 2018 rule -8.6% vs
+-54.5%, 2019 +20.5% vs -21.8%, 2022 -1.1% vs -71.7%, 2025 +20.2% vs -33.7%, 2026 +9.2% vs -22.2%. Pooled equal-weight: 2022 rule
++0.6% vs -73.4%, 2025 +15.8% vs -28.1%, 2026 (to Oct) +9.8% vs -20.4%. In the 33 asset-years where buy & hold gained, the rule beat it
+in only 9% (mean +48% vs +572%: it keeps ~10% exposure). Bars where an asset sits >40% below its peak are 70% of all bars: annualised
+mean return there is -11.7% for buy & hold and +14.8% for the rule. Weak spots: 2018 and the worst single asset-years
+(ADA 2018 -34%, DOT 2025 -20%, SOL 2022 -12%) still lose, just far less than buy & hold. Summary: the rule is a bear-market and
+sideways-market earner and a bull-market laggard; this is what a ~10%-exposure breakout overlay should look like.
+
 ---
 
 ## 2026-10-25 (freeze) — Breakout rule k=12, H=24, volume spike FROZEN
