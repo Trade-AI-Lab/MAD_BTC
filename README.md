@@ -15,6 +15,22 @@ Chronological log with all numbers: [RESEARCH_LOG.md](RESEARCH_LOG.md).
 | Is there a signal elsewhere? | **Possibly:** a MAD-free volatility-scaled breakout (k=12 bars, z>2, 24-bar hold) beats random entries on all 8 coins. Pooled CAGR 35% vs 33% for BTC buy-and-hold, max drawdown -26% vs -77%, invested ~13% of the time. Borderline Deflated Sharpe (0.90-0.96 at 100-300 trials). |
 | Is it validated? | **No.** Frozen on 2026-10-25 (`frozen_breakout.py`) with a pre-registered verdict at 100 forward trades (~20 months). Status: watch-only. |
 
+## Results at a glance
+
+**The breakout rule against buy-and-hold** (growth of $1, log scale, 0.1% fee per side, equal weight over 8 coins). Orange is the frozen rule
+(k=12, 24-bar hold, volume spike); green is the same rule without the volume filter. The rule is invested about 10-13% of the time, so its
+curve is flat for long stretches, loses far less in bear years (2018, 2022, 2025) and lags in bull years.
+
+![Growth of $1 for the breakout rules against buy-and-hold, pooled 8 coins and per coin](src/meta_labeling/results/breakout_curves.png)
+
+**The MAD filters** (what the closed MAD study led to): MAD trades filtered by gradient boosting or by the `dz` rule, lookbacks 5, 10 and 20,
+original coins (left) and SOL, XRP, LINK (right). The filters help in some cells and hurt in others, which is why none of them passes the
+Deflated Sharpe test.
+
+![Growth of $1 for the filtered MAD strategies at lookbacks 5, 10 and 20, two groups of coins](src/meta_labeling/results/cumulative_returns.png)
+
+Per-coin CAGR, Sharpe and drawdown tables are in the [report](report/2026-10-25/mad_btc_report.pdf).
+
 ## Layout
 
 ```
