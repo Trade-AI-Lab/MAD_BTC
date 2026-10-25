@@ -5,6 +5,42 @@ codebase: what was added/fixed, what we learned, and what to try next.
 
 ---
 
+## 2026-10-25 (later) — Meta-labeling iteration 2: pooled model + permutation control, END OF THREAD
+
+`src/meta_labeling/run_meta_pooled.py`. One model per timeframe trained on events pooled over 5 assets
+(BTC/ETH/BNB/ADA/DOT), time-ordered, purged by timestamp (2-day embargo), lookbacks 5/10/20, 33 cells,
+DSR with 18 trials/timeframe, plus a permutation control (random veto with the same keep count, 2000 draws).
+
+- 1h: nothing. Best DSR 0.27, permutation p-values scattered around 0.5 (noise).
+- 4h gradient boosting is the only hint: lb5 thr0.5 keeps 94 of 1185 trades, mean +2.6% vs +0.07%,
+  permutation p<0.001, DSR 0.80; lb10 thr0.5 mean +3.2% vs +0.55%, p=0.015, DSR 0.44. 7 of 33 cells have
+  p<0.05 (about 2 expected by chance), all but one in 4h gboost.
+- Still fails the 0.95 bar, and the hint looks fragile: kept-trade median is negative (-0.9%/-1.8%), win rate
+  30-43%, mean falls to +1.0-1.5% without the top 3 trades, 2021 contributes most of lb5's mean, and the
+  5 coins' events overlap in time so the 94 kept trades are not independent (DSR is optimistic).
+  Mean is positive in every asset, which is the only robust-looking part.
+- Reading: the model plausibly selects high-volatility trend regimes where the rare large winners occur,
+  not better entries. That is a regime filter, not an entry-timing skill.
+
+Verdict: the ML filter does not rescue MAD under the DSR gate. Thread ended.
+
+### What could still be studied
+- [ ] Confirm or kill the 4h gboost hint with data it has not seen: refit on 2018-2023 only, freeze, and
+      score the untouched post-2024 period; or fetch more 4h assets (SOL, XRP, LINK exist at 1h only).
+- [ ] Cluster-aware inference: block-bootstrap by calendar week across assets, since pooled events overlap.
+- [ ] Combinatorial purged CV (CPCV) to get a distribution of OOS Sharpe rather than one path.
+- [ ] Test the "regime filter" reading directly: replace the model with a rule on the top features
+      (realised-vol percentile, ADX) and compare; if a 1-parameter rule matches gboost, drop ML.
+- [ ] Different label: triple-barrier (profit/stop/time) and a regression on trade return instead of
+      win/lose, since MAD's payoff is a few big winners (median negative, mean positive).
+- [ ] Position sizing from the predicted probability (bet sizing, AFML ch.10) instead of a binary veto.
+- [ ] Cross-asset/macro features (BTC dominance, funding rate, open interest, BTC regime for alts);
+      none of these are in the OHLCV files.
+- [ ] Fix `src/classifier_ai` (argmax on sigmoid, shuffled split) only if a sequence model is wanted;
+      with 100-1000 trades per timeframe a TSMixer is not supported by the sample size.
+
+---
+
 ## 2026-10-25 — Meta-labeling on vol-normalised MAD (ML filter): negative
 
 `src/meta_labeling/run_meta.py`. Primary rule: long on z-cross above 0, exit on cross below, 0.1%/side.
