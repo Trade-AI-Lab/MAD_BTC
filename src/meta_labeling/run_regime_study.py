@@ -16,7 +16,8 @@ ROOT = os.path.abspath(__file__)[: os.path.abspath(__file__).find("MAD_BTC") + l
 sys.path.extend([ROOT, ROOT + "/src"])
 from src.meta_labeling.run_meta import load, events, make_model, FEATS, FEE
 
-ASSETS = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "ADAUSDT", "DOTUSDT"]
+TAG = os.environ.get("TAG", "dev")
+ASSETS = os.environ.get("ASSETS", "BTCUSDT,ETHUSDT,BNBUSDT,ADAUSDT,DOTUSDT").split(",")
 TF = sys.argv[1] if len(sys.argv) > 1 else "4h"
 LB = int(sys.argv[2]) if len(sys.argv) > 2 else 5
 BPY = {"1h": 24 * 365, "4h": 6 * 365}[TF]
@@ -94,6 +95,7 @@ tab = pd.DataFrame({k: stats(v) for k, v in series.items()}).T
 tab["n_trades"] = [np.nan] + [int(m.sum()) for m in masks.values()]
 pd.set_option("display.width", 200)
 print(tab.round(3).to_string())
+pd.DataFrame(series).to_csv(f"{ROOT}/src/meta_labeling/series_{TAG}_{TF}_lb{LB}.csv")
 
 # trade-level DSR (n_trials = 2 timeframes x 3 lookbacks x 6 rules = 36; pooled trades overlap in time, so optimistic)
 from scipy.stats import skew, kurtosis
@@ -126,7 +128,7 @@ for _ in range(B):
         res[k]["sr"] += sr[j] > sr[b]; res[k]["dd"] += dd[j] > dd[b]
 print("\nP(strategy beats base) over week-block bootstrap:")
 print(pd.DataFrame(res).T.div(B).rename(columns={"sr": "P(Sharpe>base)", "dd": "P(smaller maxDD)"}).round(2).to_string())
-tab.to_csv(f"{ROOT}/src/meta_labeling/regime_dz_{TF}_lb{LB}.csv")
+tab.to_csv(f"{ROOT}/src/meta_labeling/regime_dz_{TAG}_{TF}_lb{LB}.csv")
 
 # Exposure-matched control: random veto keeping the same number of trades as each filter.
 # Answers "is the lower drawdown just lower exposure?"

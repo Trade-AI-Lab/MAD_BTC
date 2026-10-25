@@ -51,8 +51,37 @@ Honest status: no filter passes the 0.95 gate; best is 0.75 at the 36-trial coun
 configurations in this thread (more like 100). The Sharpe lift over the base rule and over random vetoes is
 real in this sample, but "significant after multiple testing" is not established.
 
+### Replication on SOL / XRP / LINK (4h rebuilt from 1h) and cumulative returns
+
+`resample_4h.py` rebuilds 4h from the 1h pickles (checked on BTC: open exact, close within 0.36%, volume up to
+18% off in the worst bar). Same rules and settings, models refit walk-forward on the new assets only. This is a
+new-asset test, not a new-time test: the coins are correlated with the original five and the period overlaps.
+Chart: `src/meta_labeling/cumulative_returns.png` (`plot_cumulative.py`, series in `series_*.csv`).
+
+Sharpe, 4h, new assets (base / dz>q67 / dz67&vol / gboost):
+
+| lookback | base | dz>q67 | dz67&vol | gboost | weekly DSR dz67&vol (36 / 100 trials) |
+|---------:|-----:|-------:|---------:|-------:|------:|
+| 5  | 0.43 | 0.23 | **-0.07** | -0.37 | 0.01 / 0.00 |
+| 10 | 0.64 | 0.94 | 1.04 | 0.76 | 0.38 / 0.23 |
+| 20 | 0.75 | 1.35 | 1.39 | 1.06 | 0.65 / 0.47 |
+
+- **The headline did not replicate.** lb5 + volume (Sharpe 1.44, DSR 0.98 in-sample) is *worse than the plain
+  rule* on the new assets (-0.07 vs 0.43), and gboost is negative there too. lb10 and lb20 do replicate in
+  direction (dz rules beat base), with lb20 the strongest, the opposite of the original ordering.
+- Reading: a `dz` filter helps in 4 of 6 (lookback x asset-set) cells and hurts in 1 clearly (lb5 new assets),
+  and lb20 on the original assets was flat. The effect size is not stable across lookbacks. No weekly DSR is
+  above 0.65.
+- Cumulative growth of $1 (original five, lb5): all trades 0.77, gboost 1.47, dz 3.11, dz+volume 3.89,
+  buy & hold 0.73. New assets, lb20: all trades 2.59, dz 5.20, dz+volume 5.20, buy & hold 1.42.
+- Drawdown on the new assets is not reliably lower than the plain rule for `dz` filters (lb10 -41% vs -44%,
+  lb20 -32% vs -44%, lb5 -30% vs -58%), but those are exposure effects as before.
+
+Status: the filter is a plausible idea with mixed replication, not a validated strategy. Stop here unless a
+genuinely new-time test (data after 2026-02) becomes available.
+
 ### Next
-- [ ] Frozen test: fix q=0.67 + volume rule at 4h lb5/lb10 on data not used so far (post-2024 only for the quantile
+- [x] (done above, new assets) Frozen test: fix q=0.67 + volume rule at 4h lb5/lb10 on data not used so far (post-2024 only for the quantile
       refit; SOL/XRP/LINK 4h; or a different exchange).
 - [ ] Cluster-aware DSR/bootstrap (calendar-week blocks across assets) to replace the optimistic pooled DSR.
 - [ ] Risk-targeted sizing to compare drawdown at equal exposure.
