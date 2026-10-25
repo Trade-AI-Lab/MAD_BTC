@@ -5,6 +5,44 @@ codebase: what was added/fixed, what we learned, and what to try next.
 
 ---
 
+## 2026-10-25 (night) — Regime filter vs ML filter on a portfolio equity curve
+
+`run_regime_study.py` (equity curve, drawdown, week-block bootstrap, random-veto control) and
+`feature_importance.py`. Long-only MAD entries on BTC/ETH/BNB/ADA/DOT, equal weight, 0.1%/side, walk-forward
+OOS from 2021 (buy & hold: Sharpe ~0.2-0.3, max DD -80%). Compared: all trades, fixed ADX>25 rule, fixed
+"vol above its 500-bar median" rule, walk-forward gradient boosting (p>=0.5), gboost AND ADX.
+
+| 4h | Sharpe base | Sharpe gboost | maxDD base | maxDD gboost | time in market gboost |
+|----|------------:|--------------:|-----------:|-------------:|----------------------:|
+| lb5  | 0.04 | 0.94 | -57% | -15% | 16% |
+| lb10 | 0.24 | 1.05 | -46% | -13% | 28% |
+| lb20 | 0.81 | 0.58 | -50% | -23% | 24% |
+
+- **Simple regime rules do not reproduce the ML filter.** ADX>25 and the vol rule cut drawdown but do not
+  lift Sharpe (4h lb5: -0.41 and -0.42 vs base 0.04). The earlier reading "gboost = a regime filter" is not
+  supported by these two rules.
+- **Most of the drawdown reduction is just lower exposure.** Random vetoes keeping the same number of trades
+  have median max DD -16% (lb5) / -19% (lb10) vs gboost -14% / -13%: gboost beats 68% / 88% of random
+  vetoes on drawdown. The Sharpe gain is not exposure: gboost beats 99% of random vetoes on Sharpe at both
+  lb5 and lb10 (random median -0.05 / 0.16). Week-block bootstrap: P(Sharpe > base) 0.96 / 0.99.
+- **Not robust across settings:** 4h lb20 gboost is worse than base on Sharpe (0.58 vs 0.81); 1h gboost keeps
+  2-7% of trades and earns ~0 (Sharpe 0.05 / -0.05, drawdown small only because it is almost never invested).
+  gboost AND ADX has the best Sharpe/Calmar in 4h lb10 and lb20 (1.27 / 1.10) but on 16-22 trades.
+- **What the model uses** (permutation importance, AUC 0.59-0.63 on the last 30%): `dz` (how far z jumped on the
+  entry bar, i.e. breakout speed) first, then `vol_ratio` (volume vs its 50-bar mean) and `z`. Realised-vol and
+  ADX features rank low. So it prefers sharp, high-volume crossovers, not a trending/high-vol regime.
+
+Caveats: one OOS path; the 4h lb5/lb10 cells were singled out after the earlier pooled run (selection bias,
+DSR was 0.80 and 0.44); assets overlap in time; trade counts are 94-100. Not a validated strategy.
+
+### Next on this thread
+- [ ] Rule from the finding: 1-parameter filter on entry-bar `dz` (and volume ratio) instead of ML. If it matches
+      gboost, drop the model.
+- [ ] Freeze gboost (4h, lb5/lb10) trained on <=2023 and score 2024+ untouched; add SOL/XRP/LINK 4h data.
+- [ ] Risk-targeted sizing (vol-scaled, probability-scaled) for the filtered trades; report DD at equal exposure.
+
+---
+
 ## 2026-10-25 (later) — Meta-labeling iteration 2: pooled model + permutation control, END OF THREAD
 
 `src/meta_labeling/run_meta_pooled.py`. One model per timeframe trained on events pooled over 5 assets

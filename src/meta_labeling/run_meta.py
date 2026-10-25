@@ -51,6 +51,7 @@ def features(df: pd.DataFrame, z: pd.Series) -> pd.DataFrame:
     f["adx"] = adx
     f["rv_20"] = lr.rolling(20).std()
     f["rv_ratio"] = lr.rolling(20).std() / lr.rolling(100).std()
+    f["rv_rel"] = lr.rolling(20).std() / lr.rolling(20).std().rolling(500, min_periods=100).median()
     for n in (1, 6, 24):
         f[f"ret_{n}"] = np.log(c1 / c1.shift(n))
     f["vol_ratio"] = df["volume"].shift(1) / df["volume"].shift(1).rolling(50).mean()
