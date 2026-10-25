@@ -155,6 +155,68 @@ DSR was 0.80 and 0.44); assets overlap in time; trade counts are 94-100. Not a v
 
 ---
 
+## 2026-10-25 (follow-up round) — lookback ensemble, exposure-matched drawdown, MAD-free breakout, frozen forward test
+
+New code: `core.py` (shared), `fetch_klines.py`, `run_ensemble.py`, `run_frozen.py`, `run_breakout.py`,
+`run_breakout_checks.py`. **Data fixed:** `fetch_klines.py` appended closed 4h bars from the public Binance klines
+endpoint to all 8 assets through 2026-10-25 (BNB/ADA/DOT gap 2024-05 -> now filled; originals backed up in
+`data/backup_4h/`, data/ is gitignored). Everything below uses data through 2026-10-25.
+
+### 1. Lookback ensemble (rule = dz>q67 & volume>mean50, lookbacks 5/10/20 as equal-capital sleeves)
+Walk-forward OOS from 2022-06, 8 assets. Sharpe beats buy & hold on 6/8 assets for the ensemble vs 5/4/5 for lb5/10/20
+alone; the across-asset spread of Sharpe falls from 0.67 (lb5) to 0.42 (ensemble). Pooled portfolio: ensemble Sharpe 1.16,
+DD -27%, $1 -> 2.34 vs buy & hold 0.59, -69%, 2.13. Weekly DSR (12 trials) 0.70. So averaging does smooth the per-asset
+swings, but the result is still below the 0.95 bar.
+
+### 2. Exposure-matched drawdown: the drawdown cut is NOT edge
+Rule ensemble is invested 19% of the time. Buy & hold scaled to 19% has DD -19% (rule: -27%); all-trades ensemble scaled to
+the same exposure has DD -26%. A vol-managed buy & hold at 19% average exposure has Sharpe 0.45, DD -19%.
+The rule's value is return per unit of exposure (ann 21.5% vs 6.6% for scaled buy & hold, Sharpe 1.16 vs 0.59),
+not lower drawdown. Earlier "lower drawdown" claims should be read as exposure.
+
+### 3. Frozen forward test (rule fixed on trades closed before 2026-02-28; thresholds in `frozen_rule.json`)
+Entries 2026-02-28 -> 2026-10-25, 8 assets: all MAD trades have mean net -0.23% to -0.36% per trade; the rule keeps 106/64/33
+trades (lb5/10/20) at +0.19% / +0.04% / -0.15%. Pooled ensemble: Sharpe 0.13, DD -9.7%, $1 -> 1.006, vs buy & hold
+0.45, -33.5%, 1.068 and all-trades ensemble -0.39, -25%, 0.90. The filter improves on the unfiltered MAD rule (in 2 of 3
+lookbacks) but does not beat buy & hold on return in this window. Eight months, ~200 trades: weak evidence either way.
+
+### 4. MAD-free breakout (the new finding)
+Event: first bar where a volatility-scaled k-bar return exceeds 2.0 (zb = log-return over k bars / (sigma_1bar * sqrt(k)),
+sigma over 100 bars), entered at the next open, optional volume spike (volume[t-1] > 1.5x its 50-bar mean), held H bars, long
+only, 0.1%/side, no overlap. Grid fixed in advance: k in {6,12} x H in {6,12,24} x volume {no,yes} = 12 variants, 8 assets,
+2018-2026, no fitting. Control: random entries with the same count and hold per asset.
+
+- Mean net return per trade is positive in all 12 variants, 0.4% to 2.8%, and beats 1000 random-entry draws in every
+  case (p ~ 0). Volume spike adds a little (e.g. k6 H12: 1.15% -> 1.45%; k12 H24: 2.67% -> 2.78%).
+- Best two: k6/H12/volume (n=924, +1.45%/trade, portfolio Sharpe 1.33, DD -22%, 8% exposure) and k12/H24/volume
+  (n=570, +2.78%, Sharpe 1.41, DD -21%, 10% exposure). Equal-weight buy & hold over the same span: Sharpe 0.88, DD -83%.
+- Robustness (both variants): positive on all 8 assets; positive in 7-8 of 9 calendar years (weak: 2018, 2022, and k6 in
+  2025-26); still positive with 0.2%/side fees (+1.25% / +2.57%); week-block bootstrap 95% interval of mean net per
+  trade [+0.9%, +2.0%] and [+1.7%, +3.8%]; MATIC (renamed/delisted, not a survivor) +3.8% / +7.7%, p 0.02-0.03.
+- Weekly-portfolio DSR (12 / 100 / 300 trials): k6/H12/vol 0.99 / 0.91 / 0.82; k12/H24/vol 0.997 / 0.956 / 0.90.
+  First signal in this project that clears the gate at its own grid size and nearly so at 100 trials.
+- Forward window (entries after 2026-02-28, never used): k=12 variants positive (+1.1% to +3.2%/trade, 7 of 8 assets
+  positive, n 41-47 for the volume versions); k=6 variants are flat to negative (-0.3% to +0.1%, 3-5 of 8 assets).
+  So the slower (k=12, H=24) version holds up forward, the faster one does not.
+
+Caveats: long-only crypto 2018-2026 is bull-dominated (the random-entry control removes drift per asset but not regime);
+survivorship (7 of 8 assets survived; MATIC helps but is one asset); the forward window is 8 months; events cluster across
+coins in time (the weekly-portfolio DSR and the week-block bootstrap account for that); the 12-variant grid was chosen by
+me, so the 12-trial count is a lower bound for the whole project (100+ trials is the honest sensitivity).
+
+Verdict: the breakout, not the MAD crossover, is where the signal was. MAD itself remains a weak base (log above); the dz
+filter was partly picking out fast, high-volume moves. This is a hypothesis worth a clean out-of-sample test, not a validated
+strategy.
+
+### Next
+- [ ] Keep `frozen_rule.json` and a frozen version of k12/H24/volume; re-run `fetch_klines.py` + `run_breakout_checks.py`
+      every few weeks and score only newer entries.
+- [ ] Add short side / market-state gate (BTC trend) and a volatility-based exit instead of fixed H; compare at equal exposure.
+- [ ] Test on other venues/assets not in this set (more delisted coins; futures) and on 1h with higher fees.
+- [ ] Portfolio sizing: fixed-risk per trade (vol-scaled) across overlapping signals.
+
+---
+
 ## 2026-10-25 (later) — Meta-labeling iteration 2: pooled model + permutation control, END OF THREAD
 
 `src/meta_labeling/run_meta_pooled.py`. One model per timeframe trained on events pooled over 5 assets
