@@ -42,4 +42,4 @@ for x in [ax] + axes:
     for sp in ("left", "bottom"): x.spines[sp].set_color(GRID)
     x.tick_params(colors=MUTED, labelsize=8); x.margins(x=0.06); x.set_ylabel("growth of $1 (log)", fontsize=8, color=MUTED)
 fig.patch.set_facecolor("#fcfcfb"); fig.tight_layout()
-fig.savefig(f"{ROOT}/src/meta_labeling/breakout_curves.png", dpi=120); print("ok")
+fig.savefig(f"{ROOT}/src/meta_labeling/results/breakout_curves.png", dpi=120); print("ok")

@@ -1,0 +1,20 @@
+{
+ "freeze": "2026-02-28",
+ "quantile": 0.67,
+ "volume_rule": "vol[t-1]/mean50 > 1",
+ "assets": [
+  "BTCUSDT",
+  "ETHUSDT",
+  "BNBUSDT",
+  "ADAUSDT",
+  "DOTUSDT",
+  "SOLUSDT",
+  "XRPUSDT",
+  "LINKUSDT"
+ ],
+ "dz_threshold": {
+  "5": 0.4450265608673221,
+  "10": 0.30341805433736774,
+  "20": 0.2216934545023013
+ }
+}

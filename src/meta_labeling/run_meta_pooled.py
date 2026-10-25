@@ -63,5 +63,5 @@ for tf in ("1h", "4h"):
 res = pd.DataFrame(rows)
 pd.set_option("display.width", 200)
 print(res.round(4).to_string(index=False))
-res.to_csv(f"{ROOT}/src/meta_labeling/results_pooled.csv", index=False)
+res.to_csv(f"{ROOT}/src/meta_labeling/results/results_pooled.csv", index=False)
 print("\nmax DSR", res.dsr.max().round(3), "| min perm-p", res.p_perm.min(), "| cells p<0.05:", (res.p_perm < .05).sum(), "of", len(res))

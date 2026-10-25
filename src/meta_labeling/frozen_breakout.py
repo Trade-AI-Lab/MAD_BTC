@@ -7,7 +7,7 @@ Frozen breakout rule: k=12, H=24, zb>2.0 first cross, volume[t-1]/mean50 > 1.5, 
 import sys, json, hashlib, subprocess, datetime
 from core import *
 from run_breakout import breakout_events, random_mean
-D = f"{ROOT}/src/meta_labeling"; J = f"{D}/frozen_breakout.json"; H_CSV = f"{D}/frozen_breakout_history.csv"
+D = f"{ROOT}/src/meta_labeling"; J = f"{D}/results/frozen_breakout.json"; H_CSV = f"{D}/results/frozen_breakout_history.csv"
 K, H, VOL = 12, 24, True
 rng = np.random.default_rng(7)
 sha = lambda p: hashlib.sha256(open(p, "rb").read()).hexdigest()[:16]

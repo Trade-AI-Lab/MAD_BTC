@@ -5,7 +5,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 ROOT = os.path.abspath(__file__)[: os.path.abspath(__file__).find("MAD_BTC") + len("MAD_BTC")]
-D = f"{ROOT}/src/meta_labeling"
+D = f"{ROOT}/src/meta_labeling/results"
 curves = pd.read_pickle(f"{D}/per_asset_curves.pkl")
 assets = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "ADAUSDT", "DOTUSDT", "SOLUSDT", "XRPUSDT", "LINKUSDT"]
 STYLE = [("buy&hold", "#8a8984", "--", "Buy & hold"), ("rule lb5", "#2a78d6", "-", "Rule, lookback 5"), ("rule lb10", "#eb6834", "-", "Rule, lookback 10")]

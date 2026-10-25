@@ -192,3 +192,6 @@ report/**/*.fls
 report/**/*.fdb_latexmk
 report/**/*.out
 report/**/*.toc
+
+# keep the frozen forward-test record and results
+!src/meta_labeling/results/*.json

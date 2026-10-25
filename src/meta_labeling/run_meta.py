@@ -154,7 +154,7 @@ def run():
     ]
     pd.set_option("display.width", 200)
     print(res.round(4).to_string(index=False))
-    res.to_csv(f"{ROOT}/src/meta_labeling/results.csv", index=False)
+    res.to_csv(f"{ROOT}/src/meta_labeling/results/results.csv", index=False)
     for tf in tfs:
         s = res[res.tf == tf].sort_values("sr_kept", ascending=False).head(1)
         print(f"\nBest {tf} (n_trials={n_trials}):\n", s.round(4).to_string(index=False))

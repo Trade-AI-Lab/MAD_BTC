@@ -6,7 +6,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 ROOT = os.path.abspath(__file__)[: os.path.abspath(__file__).find("MAD_BTC") + len("MAD_BTC")]
-D = f"{ROOT}/src/meta_labeling"
+D = f"{ROOT}/src/meta_labeling/results"
 # fixed order, never cycled (reference categorical palette slots 1,2,3,5; buy & hold = neutral)
 STYLE = {
     "buy&hold": ("#8a8984", "Buy & hold", "--"),

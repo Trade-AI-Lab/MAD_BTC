@@ -4,7 +4,7 @@ ROOT = os.path.abspath(__file__)[: os.path.abspath(__file__).find("MAD_BTC") + l
 sys.path.insert(0, ROOT + "/src/meta_labeling")
 from core import *
 from run_breakout import breakout_events
-T = f"{ROOT}/report/2026-10-25/tables"; S = f"{ROOT}/src/meta_labeling"
+T = f"{ROOT}/report/2026-10-25/tables"; S = f"{ROOT}/src/meta_labeling/results"
 pct = lambda x, d=1: f"{100 * x:.{d}f}\\,\\%".replace("-", "$-$")
 num = lambda x, d=2: f"{x:.{d}f}".replace("-", "$-$")
 

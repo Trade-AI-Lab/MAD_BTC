@@ -1,0 +1,61 @@
+{
+ "rule": {
+  "k": 12,
+  "H": 24,
+  "zb": 2.0,
+  "vol_spike": 1.5,
+  "vol_window": 50,
+  "sigma_window": 100,
+  "fee_per_side": 0.001,
+  "side": "long",
+  "overlap": "none per asset"
+ },
+ "assets": [
+  "BTCUSDT",
+  "ETHUSDT",
+  "BNBUSDT",
+  "ADAUSDT",
+  "DOTUSDT",
+  "SOLUSDT",
+  "XRPUSDT",
+  "LINKUSDT"
+ ],
+ "freeze_ts": "2026-10-25 20:00:00",
+ "frozen_at": "2026-10-25T22:52:18",
+ "git_commit": "6478cd0",
+ "code_sha": {
+  "run_breakout.py": "1bbded4e364e295d",
+  "core.py": "8ffa633aee0fe1d3",
+  "run_meta.py": "e5c8f24dbe7730eb"
+ },
+ "baselines": {
+  "dev_before_2026-02-28": {
+   "n": 529,
+   "mean_net": 0.027452120589735108,
+   "win": 0.5784499054820416,
+   "assets_pos": 8,
+   "boot5": 0.016297460771701786,
+   "p_random": 0.0
+  },
+  "seen_2026-02-28_to_freeze": {
+   "n": 41,
+   "mean_net": 0.0316633556740308,
+   "win": 0.5853658536585366,
+   "assets_pos": 7,
+   "boot5": -0.01615067660393692,
+   "p_random": 0.038
+  }
+ },
+ "preregistered_verdict": {
+  "min_forward_trades": 100,
+  "accept_if": "mean_net > 0 AND week-block bootstrap 5th pct > 0 AND p_random < 0.05",
+  "reject_if": "n >= 100 AND mean_net <= 0",
+  "otherwise": "inconclusive, keep collecting"
+ },
+ "code_sha_at_freeze": {
+  "run_breakout.py": "999dc107cad2b855",
+  "core.py": "8ffa633aee0fe1d3",
+  "run_meta.py": "5a2eac14fe7ca4d9"
+ },
+ "code_sha_note": "2026-10-25 repo cleanup: run_breakout.py and run_meta.py changed only in the output path of one to_csv call (now results/). Logic unchanged; core.py hash is the one used at freeze."
+}

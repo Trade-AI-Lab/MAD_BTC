@@ -14,3 +14,5 @@ backtesting
 image==1.5.33
 imageio==2.34.2
 imageio-ffmpeg==0.5.1
+scikit-learn
+scipy

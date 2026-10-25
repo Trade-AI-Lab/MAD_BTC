@@ -69,5 +69,5 @@ pd.set_option("display.width", 200)
 for a in ASSETS:
     t = tab[tab.asset == a.replace("USDT", "")].drop(columns="asset")
     print("\n" + a.replace("USDT", "")); print(t.round(3).to_string(index=False))
-tab.to_csv(f"{ROOT}/src/meta_labeling/per_asset.csv", index=False)
-pd.to_pickle(curves, f"{ROOT}/src/meta_labeling/per_asset_curves.pkl")
+tab.to_csv(f"{ROOT}/src/meta_labeling/results/per_asset.csv", index=False)
+pd.to_pickle(curves, f"{ROOT}/src/meta_labeling/results/per_asset_curves.pkl")

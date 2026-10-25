@@ -56,4 +56,4 @@ if __name__ == "__main__":
     print(res.round(4).to_string(index=False))
     bh = pd.concat([buyhold(a) for a in ASSETS], axis=1).mean(axis=1)
     print("\nEqual-weight buy & hold, same full span:", {k: round(v, 3) for k, v in stats(bh).items()})
-    res.to_csv(f"{ROOT}/src/meta_labeling/breakout.csv", index=False)
+    res.to_csv(f"{ROOT}/src/meta_labeling/results/breakout.csv", index=False)

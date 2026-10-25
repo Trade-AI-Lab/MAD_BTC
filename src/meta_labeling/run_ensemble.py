@@ -87,6 +87,6 @@ print("\nPooled 8-asset portfolio, equal weight")
 out = pd.DataFrame({k: stats(v) for k, v in cmp.items()}).T
 out["weekly DSR (12 trials)"] = [weekly_dsr(v, 12) for v in cmp.values()]
 print(out.round(3).to_string())
-tab.to_csv(f"{ROOT}/src/meta_labeling/ensemble_per_asset.csv", index=False)
-out.to_csv(f"{ROOT}/src/meta_labeling/ensemble_pooled.csv")
-pd.DataFrame(cmp).to_csv(f"{ROOT}/src/meta_labeling/ensemble_series.csv")
+tab.to_csv(f"{ROOT}/src/meta_labeling/results/ensemble_per_asset.csv", index=False)
+out.to_csv(f"{ROOT}/src/meta_labeling/results/ensemble_pooled.csv")
+pd.DataFrame(cmp).to_csv(f"{ROOT}/src/meta_labeling/results/ensemble_series.csv")

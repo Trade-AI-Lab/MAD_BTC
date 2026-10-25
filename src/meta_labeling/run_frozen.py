@@ -7,7 +7,7 @@ Re-run after fetch_klines.py appends new bars: the forward window just grows.
 import json
 from core import *
 LBS = (5, 10, 20)
-path = f"{ROOT}/src/meta_labeling/frozen_rule.json"
+path = f"{ROOT}/src/meta_labeling/results/frozen_rule.json"
 if os.path.exists(path):
     fr = json.load(open(path))
 else:
@@ -41,4 +41,4 @@ pooled = {k: pd.concat([ (cut(buyhold(a).to_frame("ret")).ret if k == "buy&hold"
           for k in ("buy&hold", "all-trades ensemble", "rule ensemble")}
 print(f"\nPooled 8 assets, {t0.date()} -> {pd.Series(pooled['buy&hold']).index[-1].date()}")
 print(pd.DataFrame({k: stats(v) for k, v in pooled.items()}).T.round(3).to_string())
-tab.to_csv(f"{ROOT}/src/meta_labeling/frozen_per_asset.csv", index=False)
+tab.to_csv(f"{ROOT}/src/meta_labeling/results/frozen_per_asset.csv", index=False)
