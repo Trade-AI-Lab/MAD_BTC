@@ -80,6 +80,35 @@ Sharpe, 4h, new assets (base / dz>q67 / dz67&vol / gboost):
 Status: the filter is a plausible idea with mixed replication, not a validated strategy. Stop here unless a
 genuinely new-time test (data after 2026-02) becomes available.
 
+### Per-asset comparison vs buy & hold (`run_per_asset.py`, `per_asset.png`, `per_asset.csv`)
+
+Rule = `dz` above the 0.67-quantile of earlier pooled trades AND volume above its 50-bar mean, 4h, lookback 5 and 10,
+8 assets, walk-forward OOS from Sep 2021, 0.1%/side. **Data caveat: the 4h files for BNB, ADA and DOT end
+2024-05-27 (others 2026-02-27), so their windows are shorter and not comparable with the other five.** This also
+means the earlier 5-asset equal-weight results stopped including ADA/DOT after May 2024.
+
+Growth of $1 (Sharpe, max DD) per asset:
+
+| asset | buy & hold | rule lb5 | rule lb10 |
+|-------|-----------|----------|-----------|
+| BTC  | 1.52 (0.44, -77%) | **2.14** (0.87, -28%) | 1.19 (0.29, -38%) |
+| ETH  | 0.65 (0.20, -81%) | **3.92** (1.20, -32%) | 1.60 (0.54, -43%) |
+| BNB* | 1.76 (0.65, -72%) | 2.77 (1.42, -27%) | **3.13** (1.51, -27%) |
+| ADA* | 0.21 (-0.30, -90%) | **1.13** (0.31, -41%) | 0.99 (0.18, -44%) |
+| DOT* | 0.26 (-0.17, -93%) | 0.93 (0.10, -55%) | **2.30** (0.93, -33%) |
+| SOL  | 0.61 (0.38, -97%) | 0.89 (0.10, -51%) | **6.56** (1.12, -53%) |
+| XRP  | 1.44 (0.51, -78%) | 0.64 (-0.15, -56%) | **1.57** (0.44, -55%) |
+| LINK | 0.36 (0.20, -87%) | 0.39 (-0.49, -67%) | **0.71** (0.00, -51%) |
+
+- Final value beats buy & hold in 7/8 assets at lb5 (not XRP) and 7/8 at lb10 (not BTC).
+- Sharpe beats buy & hold in only 5/8 at each lookback: lb5 fails on SOL, XRP, LINK; lb10 fails on BTC, XRP, LINK.
+  Where it wins on final value but not Sharpe (SOL lb5, LINK lb5) it is mostly avoiding a crash, not earning.
+- Drawdown is smaller than buy & hold on all 8 (28-67% vs 72-97%), but the rule is invested only 13-24% of the
+  time, so this is mostly exposure.
+- The lookbacks disagree per asset: lb5 is best on BTC/ETH/ADA, lb10 on BNB/DOT/SOL/XRP/LINK (SOL lb5 0.89 vs lb10
+  6.56 on one asset, and lb10 SOL is a single-regime run-up from 2023). No lookback wins everywhere, consistent
+  with the earlier instability finding. LINK is negative or flat in both.
+
 ### Next
 - [x] (done above, new assets) Frozen test: fix q=0.67 + volume rule at 4h lb5/lb10 on data not used so far (post-2024 only for the quantile
       refit; SOL/XRP/LINK 4h; or a different exchange).
