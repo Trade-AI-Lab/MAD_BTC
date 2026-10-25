@@ -182,3 +182,5 @@ doc/
 *.LICENSE.txt
 *.cfg
 *.1
+# Added by code-review-graph
+.code-review-graph/

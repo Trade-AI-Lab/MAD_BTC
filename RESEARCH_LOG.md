@@ -5,6 +5,24 @@ codebase: what was added/fixed, what we learned, and what to try next.
 
 ---
 
+## 2026-10-25 — Meta-labeling on vol-normalised MAD (ML filter): negative
+
+`src/meta_labeling/run_meta.py`. Primary rule: long on z-cross above 0, exit on cross below, 0.1%/side.
+Secondary model (logreg, HistGradientBoosting) predicts net-profitable trade from entry-time features
+(z, dz, ADX, realised vol, returns, volume, hour, gap). Expanding walk-forward on trades, training trades
+purged if not closed (+10-bar embargo) before the first test entry. BTC/ETH/BNB pooled, 1h and 4h,
+lookbacks 5/10/20/40, thresholds 0.5/0.55/0.6; DSR with 24 trials per timeframe.
+
+Result: best DSR 0.20 (bar 0.95). OOS kept-trade counts are 3-140 per cell. No cell is consistently better
+than the unfiltered rule; the few with higher mean (4h gboost lb10: +7.9% vs +1.5%) have kurtosis 40-60,
+i.e. a handful of outlier trades. TSMixer was not run: it only earns a place if gboost beats the rule.
+
+Note on `src/classifier_ai`: it does not find entry points. It labels every bar where the rule is already
+long by whether close rises over n_forward bars, with a random (shuffled) train/val split, and
+`validation_step` takes argmax over a single sigmoid output, so val predictions are always 0.
+
+---
+
 ## PROJECT CLOSED — 2026-06-06
 
 **Status: closed. Negative result, fully documented.**
