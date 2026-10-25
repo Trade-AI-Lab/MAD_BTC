@@ -165,6 +165,16 @@ sideways-market earner and a bull-market laggard; this is what a ~10%-exposure b
 
 ---
 
+## 2026-10-25 (report) — Full written report
+
+`report/2026-10-25/mad_btc_report.pdf` (source `mad_btc_report.tex`, tables built by `build_tables.py` from the study outputs, figures in
+`figures/`). It documents the data and conventions, every metric (CAGR, Sharpe, max drawdown, exposure, Deflated Sharpe, random-entry p, week-block
+bootstrap), how each strategy is computed (MAD, meta-labeling, dz rule, ensemble, breakout, with a worked trade), the results per strategy and
+per coin (CAGR, Sharpe, drawdown, exposure, trades, year by year), the frozen rule and its pre-registered verdict, the corrections made along the
+way, and consistency with herc_llm's KEPT.md / CLOSED #24, #26 (recommended status: watch-only).
+
+---
+
 ## 2026-10-25 (freeze) — Breakout rule k=12, H=24, volume spike FROZEN
 
 `src/meta_labeling/frozen_breakout.py`, spec in `frozen_breakout.json`, scores appended to

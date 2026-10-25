@@ -184,3 +184,11 @@ doc/
 *.1
 # Added by code-review-graph
 .code-review-graph/
+
+# LaTeX build artefacts
+report/**/*.aux
+report/**/*.log
+report/**/*.fls
+report/**/*.fdb_latexmk
+report/**/*.out
+report/**/*.toc
