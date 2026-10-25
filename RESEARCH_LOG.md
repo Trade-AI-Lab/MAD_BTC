@@ -5,6 +5,45 @@ codebase: what was added/fixed, what we learned, and what to try next.
 
 ---
 
+## 2026-10-25 (late night) — One-parameter `dz` rule (+ volume) vs ML filter
+
+`run_regime_study.py` extended. `dz` = z[t] - z[t-1] on the entry bar (size of the crossover jump). Rule:
+keep the trade if `dz` exceeds the q-quantile of `dz` over the purged training trades only (q in 0.5/0.67/0.8);
+`dz67&vol` additionally requires volume[t-1] > its 50-bar mean. Same 5-asset equal-weight walk-forward OOS from 2021,
+0.1%/side. DSR below uses 36 trials (2 timeframes x 3 lookbacks x 6 rules, my count) on pooled trades.
+
+4h Sharpe / max DD / DSR:
+
+| lookback | base | gboost | dz>q67 | dz67&vol |
+|---------:|------|--------|--------|----------|
+| 5  | 0.04 / -57% / 0.04 | 0.94 / -15% / 0.38 | 1.11 / -29% / 0.91 | **1.44 / -21% / 0.98** |
+| 10 | 0.24 / -46% / 0.15 | 1.05 / -13% / 0.26 | 0.78 / -29% / 0.59 | 1.07 / -21% / 0.79 |
+| 20 | 0.81 / -50% / 0.66 | 0.58 / -23% / 0.14 | 1.05 / -30% / 0.74 | 0.99 / -27% / 0.59 |
+
+- **A one-parameter rule matches or beats the ML model on Sharpe**, with 79-423 trades instead of 53-100 and
+  40-47% time in market. Drop-the-model criterion from the previous entry is met: gboost is not needed.
+- Beats random vetoes of equal size on Sharpe at 4h: 100% / 98% / 92% (lb5/10/20, q67). Week-block bootstrap
+  P(Sharpe > base) 1.00 / 0.97 / 0.85.
+- **Drawdown is the weak spot.** `dz` filters keep more exposure than gboost, and their drawdown (-21% to -30%)
+  is no better than random vetoes at lb10/lb20 (beats 54% / 30%); only lb5 clearly beats random on max DD
+  (78%; 92% with volume). The ML model's smaller DD (-13% to -15%) came from being invested 16-28% of the time.
+- **Only 4h lb5 `dz67&vol` clears the DSR bar (0.98 vs 0.95)**, and DSR is optimistic here: pooled trades
+  overlap across coins and the trial count is my estimate. lb10 0.79, lb20 0.59.
+- **1h fails**: lb5 Sharpe -1.06 -> -0.17/-0.22, lb10 -0.33 -> -0.22/-0.17, all negative, DSR <= 0.01. At lb10 the
+  rule is no better than random vetoes (55th percentile Sharpe; drawdown worse than random). Fees dominate at 1h.
+- 4h lb20 volume add-on does not help (0.99 vs 1.05 for `dz` alone): the volume gain is lb5/lb10 only.
+
+Verdict: first filter in this project with a DSR near the bar, and it is a single rule, not a model. Still not
+validated: one OOS path, same data used to pick lb5 4h as the headline, overlapping assets.
+
+### Next
+- [ ] Frozen test: fix q=0.67 + volume rule at 4h lb5/lb10 on data not used so far (post-2024 only for the quantile
+      refit; SOL/XRP/LINK 4h; or a different exchange).
+- [ ] Cluster-aware DSR/bootstrap (calendar-week blocks across assets) to replace the optimistic pooled DSR.
+- [ ] Risk-targeted sizing to compare drawdown at equal exposure.
+
+---
+
 ## 2026-10-25 (night) — Regime filter vs ML filter on a portfolio equity curve
 
 `run_regime_study.py` (equity curve, drawdown, week-block bootstrap, random-veto control) and

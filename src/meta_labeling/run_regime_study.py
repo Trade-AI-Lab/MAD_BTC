@@ -33,13 +33,17 @@ ev = pd.concat(parts).sort_values("t_in").reset_index(drop=True)
 
 # walk-forward probabilities
 n = len(ev); p = np.full(n, np.nan)
+QS = (0.5, 0.67, 0.8); thr = {q: np.full(n, np.nan) for q in QS}
 edges = np.linspace(int(n * 0.4), n, 7).astype(int)
 for a, b in zip(edges[:-1], edges[1:]):
     t0 = ev["t_in"].iloc[a].to_datetime64()
     tr = np.flatnonzero((ev["t_out"].values + EMBARGO) < t0)
     m = make_model("gboost").fit(ev[FEATS].iloc[tr], ev["y"].iloc[tr])
     p[a:b] = m.predict_proba(ev[FEATS].iloc[a:b])[:, 1]
+    for q in QS:  # dz threshold = q-quantile of dz over the purged training trades only
+        thr[q][a:b] = ev["dz"].iloc[tr].quantile(q)
 ev["p"] = p
+for q in QS: ev[f"thr{q}"] = thr[q]
 ev = ev[ev.p.notna()].copy()
 t_start = ev.t_in.min()
 print(f"{TF} lb{LB}: OOS from {t_start.date()}, {len(ev)} trades, {ev.asset.nunique()} assets")
@@ -50,6 +54,8 @@ masks = {
     "rvrel": (ev.rv_rel > 1).values,
     "gboost": (ev.p >= 0.5).values,
     "gb&adx": ((ev.p >= 0.5) & (ev.adx > 25)).values,
+    **{f"dz>q{int(q*100)}": (ev.dz > ev[f"thr{q}"]).values for q in QS},
+    "dz67&vol": ((ev.dz > ev["thr0.67"]) & (ev.vol_ratio > 1)).values,
 }
 
 
@@ -89,6 +95,13 @@ tab["n_trades"] = [np.nan] + [int(m.sum()) for m in masks.values()]
 pd.set_option("display.width", 200)
 print(tab.round(3).to_string())
 
+# trade-level DSR (n_trials = 2 timeframes x 3 lookbacks x 6 rules = 36; pooled trades overlap in time, so optimistic)
+from scipy.stats import skew, kurtosis
+from src.multi_optimiser_momentum_strategy import deflated_sharpe_ratio
+print("trade-level DSR (36 trials):", {k: round(float(deflated_sharpe_ratio(
+    (lambda r: r.mean() / r.std(ddof=1))(ev.ret[m].values), 36, int(m.sum()), skew(ev.ret[m]), kurtosis(ev.ret[m], fisher=False))), 2)
+    for k, m in masks.items() if m.sum() > 10})
+
 # week-block bootstrap vs base
 blk = {"1h": 168, "4h": 42}[TF]
 R = pd.DataFrame(series).fillna(0).values; names = list(series)
@@ -105,13 +118,13 @@ for _ in range(B):
         res[k]["sr"] += sr[j] > sr[b]; res[k]["dd"] += dd[j] > dd[b]
 print("\nP(strategy beats base) over week-block bootstrap:")
 print(pd.DataFrame(res).T.div(B).rename(columns={"sr": "P(Sharpe>base)", "dd": "P(smaller maxDD)"}).round(2).to_string())
-tab.to_csv(f"{ROOT}/src/meta_labeling/regime_{TF}_lb{LB}.csv")
+tab.to_csv(f"{ROOT}/src/meta_labeling/regime_dz_{TF}_lb{LB}.csv")
 
 # Exposure-matched control: random veto keeping the same number of trades as each filter.
 # Answers "is the lower drawdown just lower exposure?"
 NP = 300
 print(f"\nRandom-veto control ({NP} draws, same trade count): percentile of the filter among random vetoes")
-for k in ("adx", "gboost", "gb&adx"):
+for k in ("gboost", "dz>q50", "dz>q67", "dz>q80", "dz67&vol"):
     m = masks[k]; kk = int(m.sum()); sr_l, dd_l = [], []
     for _ in range(NP):
         rm = np.zeros(len(ev), bool); rm[rng.choice(len(ev), kk, replace=False)] = True
