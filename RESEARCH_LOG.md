@@ -36,6 +36,21 @@ keep the trade if `dz` exceeds the q-quantile of `dz` over the purged training t
 Verdict: first filter in this project with a DSR near the bar, and it is a single rule, not a model. Still not
 validated: one OOS path, same data used to pick lb5 4h as the headline, overlapping assets.
 
+### Correction (same night): the DSR 0.98 does not survive a cluster-aware check
+
+DSR recomputed on weekly returns of the equal-weight portfolio (n = 248-258 weeks, so no cross-asset overlap):
+
+| 4h lookback | rule | trials 36 | trials 100 | trials 300 |
+|---|---|---|---|---|
+| 5  | dz67&vol | 0.75 | 0.58 | 0.40 |
+| 10 | dz67&vol | 0.55 | 0.38 | 0.24 |
+| 20 | dz>q67   | 0.49 | 0.33 | 0.20 |
+
+The trade-level 0.98 was inflated by pooling overlapping trades (it treated ~320 correlated trades as independent).
+Honest status: no filter passes the 0.95 gate; best is 0.75 at the 36-trial count, and I have run more than 36
+configurations in this thread (more like 100). The Sharpe lift over the base rule and over random vetoes is
+real in this sample, but "significant after multiple testing" is not established.
+
 ### Next
 - [ ] Frozen test: fix q=0.67 + volume rule at 4h lb5/lb10 on data not used so far (post-2024 only for the quantile
       refit; SOL/XRP/LINK 4h; or a different exchange).

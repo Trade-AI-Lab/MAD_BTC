@@ -102,6 +102,14 @@ print("trade-level DSR (36 trials):", {k: round(float(deflated_sharpe_ratio(
     (lambda r: r.mean() / r.std(ddof=1))(ev.ret[m].values), 36, int(m.sum()), skew(ev.ret[m]), kurtosis(ev.ret[m], fisher=False))), 2)
     for k, m in masks.items() if m.sum() > 10})
 
+# cluster-aware DSR: weekly portfolio returns (assets already averaged -> no cross-asset overlap)
+wk = {k: (1 + v).groupby(pd.to_datetime(v.index).to_period("W")).prod() - 1 for k, v in series.items()}
+print("weekly-return DSR (n=%d weeks):" % len(wk["base"]))
+for nt in (36, 100, 300):
+    print(f"  trials={nt}:", {k: round(float(deflated_sharpe_ratio(w.mean() / w.std(ddof=1), nt, len(w), skew(w), kurtosis(w, fisher=False))), 2)
+                            for k, w in wk.items() if k in ("base", "gboost", "dz>q67", "dz67&vol")})
+if len(sys.argv) > 3: sys.exit()
+
 # week-block bootstrap vs base
 blk = {"1h": 168, "4h": 42}[TF]
 R = pd.DataFrame(series).fillna(0).values; names = list(series)
